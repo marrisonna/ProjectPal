@@ -1,0 +1,67 @@
+﻿** Highlights
+     Tables that will be rebuilt
+       None
+     Clustered indexes that will be dropped
+       None
+     Clustered indexes that will be created
+       None
+     Possible data issues
+       None
+
+** User actions
+     Create
+       [TaskMan] (Schema)
+       [eabs_pp] (User)
+       [TaskMan].[Person] (Table)
+       [TaskMan].[Project] (Table)
+       [TaskMan].[Task] (Table)
+       [TaskMan].[TimeDependency] (Table)
+       [TaskMan].[Remark] (Table)
+       [TaskMan].[Attachment] (Table)
+       [TaskMan].[System] (Table)
+       [TaskMan].[Task2Project] (Table)
+       [TaskMan].[Task2Resource] (Table)
+       [TaskMan].[Component] (Table)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+       Permission (Permission)
+
+** Supporting actions

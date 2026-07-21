@@ -1,0 +1,5 @@
+E:\Users\Neil\Documents\dev\trunk\Apps\ProjectPalDB\ProjectPalDB\bin\Release\ProjectPalDB.dacpac
+E:\Users\Neil\Documents\dev\trunk\Apps\ProjectPalDB\ProjectPalDB\obj\Release\ProjectPalDB.dll
+E:\Users\Neil\Documents\dev\trunk\Apps\ProjectPalDB\ProjectPalDB\obj\Release\ProjectPalDB.pdb
+E:\Users\Neil\Documents\dev\trunk\Apps\ProjectPalDB\ProjectPalDB\bin\Release\ProjectPalDB.dll
+E:\Users\Neil\Documents\dev\trunk\Apps\ProjectPalDB\ProjectPalDB\bin\Release\ProjectPalDB.pdb

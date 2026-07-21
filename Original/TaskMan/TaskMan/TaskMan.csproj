@@ -1,0 +1,487 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{14BF87DD-7380-445E-8631-B01B1423F59D}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TaskMan</RootNamespace>
+    <AssemblyName>ProjectPal</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+    <FileAlignment>512</FileAlignment>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>C:\Users\Neil\Documents\dev\publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Unc</InstallFrom>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <InstallUrl>\\tatooine\Documents\publish\</InstallUrl>
+    <ApplicationRevision>5</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Icons\process.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>29F32AC4BF02C7729F93211487591133E1555085</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestKeyFile>TaskMan_1_TemporaryKey.pfx</ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>false</GenerateManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignManifests>false</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetZone>LocalIntranet</TargetZone>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AdminWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AdminWindow.Designer.cs">
+      <DependentUpon>AdminWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ApplicationTaskMan.cs" />
+    <Compile Include="Attachments\GUIAttachment.cs" />
+    <Compile Include="Attachments\GUIAttachmentColumns.cs" />
+    <Compile Include="Components\ComponentControl.xaml.cs">
+      <DependentUpon>ComponentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Components\ComponentStackControl.xaml.cs">
+      <DependentUpon>ComponentStackControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Components\ComponentWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Components\ComponentWindow.Designer.cs">
+      <DependentUpon>ComponentWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Components\FormComponentMerge.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Components\GUIComponent.cs" />
+    <Compile Include="Components\NewComponent.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Components\NewComponent.Designer.cs">
+      <DependentUpon>NewComponent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ConfigSettings.cs" />
+    <Compile Include="ConfigWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ConfigWindow.Designer.cs">
+      <DependentUpon>ConfigWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Find\FindResult.cs" />
+    <Compile Include="Find\FindResultColumns.cs" />
+    <Compile Include="People\FormManagePeople.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="People\FormManagePeople.Designer.cs">
+      <DependentUpon>FormManagePeople.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormProgress.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormProgress.Designer.cs">
+      <DependentUpon>FormProgress.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Find\FormFind.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Find\FormFind.Designer.cs">
+      <DependentUpon>FormFind.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Functions.cs" />
+    <Compile Include="People\FormNewUser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="People\FormNewUser.Designer.cs">
+      <DependentUpon>FormNewUser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="People\GUIPerson.cs" />
+    <Compile Include="People\GUIPersonColumns.cs" />
+    <Compile Include="PasswordWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PasswordWindow.Designer.cs">
+      <DependentUpon>PasswordWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Permissions.cs" />
+    <Compile Include="GanttDisplayHelper.cs" />
+    <Compile Include="Projects\FormPlanDisplay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Projects\FormPlanDisplay.Designer.cs">
+      <DependentUpon>FormPlanDisplay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Projects\FormProjectMerge.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Projects\GUIProjectColumns.cs" />
+    <Compile Include="Projects\NewProject.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Projects\NewProject.Designer.cs">
+      <DependentUpon>NewProject.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Projects\GUIProject.cs" />
+    <Compile Include="Projects\ProjectControl.xaml.cs">
+      <DependentUpon>ProjectControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Projects\ProjectStackControl.xaml.cs">
+      <DependentUpon>ProjectStackControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Projects\ProjectDetail.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Projects\ProjectDetail.Designer.cs">
+      <DependentUpon>ProjectDetail.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Projects\ProjectWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Projects\ProjectWindow.Designer.cs">
+      <DependentUpon>ProjectWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Remarks\GUIRemark.cs" />
+    <Compile Include="Remarks\GUIRemarkColumns.cs" />
+    <Compile Include="Remarks\RemarkWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Remarks\RemarkWindow.Designer.cs">
+      <DependentUpon>RemarkWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormMerge.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormMerge.Designer.cs">
+      <DependentUpon>FormMerge.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Reports\GUIMainReportItem.cs" />
+    <Compile Include="Reports\GUIMainReportItemColumns.cs" />
+    <Compile Include="Tasks\FormTaskMerge.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Tasks\GUITask.cs" />
+    <Compile Include="MainWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainWindow.Designer.cs">
+      <DependentUpon>MainWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tasks\GUITaskColumns.cs" />
+    <Compile Include="Tasks\TaskDetail.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Tasks\TaskDetail.Designer.cs">
+      <DependentUpon>TaskDetail.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Tasks\TaskWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Tasks\TaskWindow.Designer.cs">
+      <DependentUpon>TaskWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="WPFControls\UserControlMergeField.xaml.cs">
+      <DependentUpon>UserControlMergeField.xaml</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="AdminWindow.resx">
+      <DependentUpon>AdminWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ConfigWindow.resx">
+      <DependentUpon>ConfigWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Find\FormFind.resx">
+      <DependentUpon>FormFind.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="People\FormManagePeople.resx">
+      <DependentUpon>FormManagePeople.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormProgress.resx">
+      <DependentUpon>FormProgress.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MainWindow.resx">
+      <DependentUpon>MainWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Components\NewComponent.resx">
+      <DependentUpon>NewComponent.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PasswordWindow.resx">
+      <DependentUpon>PasswordWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="People\FormNewUser.resx">
+      <DependentUpon>FormNewUser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Projects\FormPlanDisplay.resx">
+      <DependentUpon>FormPlanDisplay.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Projects\NewProject.resx">
+      <DependentUpon>NewProject.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Projects\ProjectDetail.resx">
+      <DependentUpon>ProjectDetail.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Projects\ProjectWindow.resx">
+      <DependentUpon>ProjectWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="Components\ComponentWindow.resx">
+      <DependentUpon>ComponentWindow.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Remarks\RemarkWindow.resx">
+      <DependentUpon>RemarkWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormMerge.resx">
+      <DependentUpon>FormMerge.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Tasks\TaskDetail.resx">
+      <DependentUpon>TaskDetail.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Tasks\TaskWindow.resx">
+      <DependentUpon>TaskWindow.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <None Include="App.Config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="ClassDiagram1.cd" />
+    <None Include="Properties\app.manifest" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Components\ComponentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Components\ComponentStackControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Projects\ProjectControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Projects\ProjectStackControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="WPFControls\UserControlMergeField.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\image-multi.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\window.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\add.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Icons\ComponentProcess.ico" />
+    <Content Include="SupportInfo.txt" />
+    <None Include="Icons\PlanDisplay.png" />
+    <Content Include="Icons\process.ico" />
+    <Content Include="Icons\ProjectProcess.ico" />
+    <Content Include="Icons\TaskListPocess.ico" />
+    <Content Include="Icons\TaskProcess.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4 Client Profile %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="VBIDE">
+      <Guid>{0002E157-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>5</VersionMajor>
+      <VersionMinor>3</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Libs\CustomGUIControls\CustomGUIControls\CustomGUIControls.csproj">
+      <Project>{f91150e1-ec12-4ee9-8714-fb7b8fb7b3e3}</Project>
+      <Name>CustomGUIControls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Libs\DBAccess\DBAccess\DBAccess.csproj">
+      <Project>{EB360B2B-4693-4E21-8C4F-AF8E2B9DE9D6}</Project>
+      <Name>DBAccess</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Libs\DBTaskMan\DBTaskMan\DBTaskMan.csproj">
+      <Project>{37AB781E-951B-4421-B455-8D8F566F04B5}</Project>
+      <Name>DBTaskMan</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Libs\PlanDisplay\PlanDisplay.csproj">
+      <Project>{D9A10FC6-59BB-494C-A598-5EF1683819D4}</Project>
+      <Name>PlanDisplay</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Libs\Utils\Utils\Utils.csproj">
+      <Project>{5D132F11-63D5-42C1-AA61-90C94456B332}</Project>
+      <Name>Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PublishFile Include="SupportInfo.txt">
+      <Visible>False</Visible>
+      <Group>
+      </Group>
+      <TargetPath>
+      </TargetPath>
+      <PublishState>Exclude</PublishState>
+      <IncludeHash>True</IncludeHash>
+      <FileType>File</FileType>
+    </PublishFile>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

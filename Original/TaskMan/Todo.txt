@@ -1,0 +1,157 @@
+Bugs
+
+When the priority of a Plan in the Plan list is changed, update urgency in the Task List.
+
+When the priority of a Plan in a Plan detail is changed, update the Priority on the Plan list.
+
+When a new task is added/deleted – make sure all Task List Windows are aware.
+
+When a Component is deleted, and it owns a component window, close the component window.
+
+Allow a highlight mark/flag on tasks.
+
+Project Priorities
+
+View all tasks of a project, including sub projects, in a simple view.
+
+Navigate from a project window to the parent project window.
+
+
+Unhandled exception at 0x4ec6de16 in ProjectPal.exe: 0xC0000005: Access violation writing location 0x0c34a48c.
+
+
+
+Make ModifiedTime/By apply to everything.
+
+Link tasks (make a task an attachment).
+
+Make 'Show Tasks' work correctly on Components window.
+
+Delegate ownership of Projects/ Components/ Task to other people to modify.
+
+Have personalised favourite views.
+
+Filters need to move if columns are reordered on the grid.
+
+Refresh Views after Project/Component rename.
+
+Refresh Task List after creating new Tasks.
+
+Need to have ‘secure’ Components/Projects/Tasks/Attachments.
+
+Deploy Debug version – crashes
+
+Log data changes and save.
+
+View Project/Component Parent fromProject/Component Window
+
+Find All for Grid
+
+If a Project hierarchy is changed (On Project Window), refresh all tasks and Project Windows for the Project.
+
+Search component/project names (may search all).
+
+Setting priority on Task grid doesn’t save to object if title sort is clicked.
+
+Allow sorting by multiple headers.
+
+Make paste work for different size of selections and paste buffer
+
+
+-----Done----------
+
+
+Make Resource Filter handle multiple people
+
+Fix bug with mail date stamps being incorrect.
+
+On exit, if things are not saved, ask to save them.
+
+Be able to drag attachments to other Windows documents (e.g. emails)
+
+Tidy up temp attachment folder on start up.
+
+Allow drop of attachments on Task Details before the task is first saved.
+
+Add task numbers to display so they can be referred to.
+
+Need a new status – done – to be reviewed -> Ready.
+
+Log details of email drag and drop to find issues with create time setting sometimes.
+
+Make Detailed description area on Task Details bigger / resizeable.
+
+Make ‘Status’ a drop down on the Task View.
+
+Tie ‘Status’ to ‘Priority’ values.
+
+If Status is set to Cancelled on Task Detail, set Priority to Cancelled, check other states
+
+On double click on Task window to open a Component Window – reuse a Window if there is already one.
+
+Double clicking on a Project or Component, the new window doesn’t come to the front
+
+Allow main window to be always on top.
+
+Allow non resource – resources
+
+Don’t expand all sub Projects/Components when opening one of them.
+
+Miss spelt ‘Attachment’ on ‘Are you sure delete?’
+
+Handle null priority 
+
+Compress attachments
+
+Different Icons for Different Windows
+
+Task column order: Description, Urgency, Resource, Status, Priority, Projects, Components, Attachments
+
+Sorting doesn’t always scroll to the top.
+
+Something funny with Drag n Drop from task table when modifying a person in a task table (drag n drop seems to be on).
+
+Can’t resize some columns on Task grid
+
+Drag and drop attachment from sent items doesn’t work
+
+List ABS IT member first on Resources filter
+
+Need SP for task/resource mapping + task/project mapping.
+
+Make Description field wider on Task View at started.
+
+Just show ‘Open’ Tasks by default on Component and Project Views.
+
+Always scroll to top after a sort.
+
+Add ‘Status Date’ to Components Task table (and Projects)
+
+Log to my area / create logs.
+
+\\lonwd013224\NeilsShareWrite\logs\
+
+-------------------
+
+
+Phase 2
+
+
+Comments for projects, components.
+
+Drag and Drop.   Projects/Components on to tasks.
+
+
+Database triggers.
+
+Order Projects + Comonents
+
+Rename Component to Work Area.
+
+Allow 'Resources' to be added/deleted/edited.
+
+
+
+Maybe---
+
+Use the same project/component window if one is already open.
