@@ -1,0 +1,5 @@
+﻿If the path '\\lonwd013774\NeilsShareWrite\logs\' doesn't exist, set E to 'lonwd013774' to 
+cause it to write logs to '\\uk\data\prod\ABS_IT_Shared\logs\' or 'C:\tmp\logs\'
+
+If the number of days since the build is > 60, set D to the number of days limit (>60).  
+This works until number of days since build > 180, then a new build is required.
