@@ -1,0 +1,139 @@
+﻿<UserControl x:Class="PlanDisplay.PlanControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="363" d:DesignWidth="539" Loaded="UserControl_Loaded" SizeChanged="UserControl_SizeChanged">
+    <Grid Name="gridOuter">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" Name="columnDefinition1" />
+            <ColumnDefinition Width="*" Name="columnDefinition2" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44" Name="rowDefinition1" />
+            <RowDefinition Height="160"  Name="rowDefinition2"/>
+            <RowDefinition  Name="rowDefinition3"/>
+        </Grid.RowDefinitions>
+
+        <Label Canvas.Left="12"  Content="Caption Label" Height="25" Name="labelCaption" Margin="5,20,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="1" />
+        <Button Grid.Row="0" Grid.Column="0" Content="Auto Fit" Height="20" Name="button1" HorizontalAlignment="Right" Padding="5,0" VerticalAlignment="Bottom" Click="button1_Click" />
+        <StackPanel Grid.Row="1" Grid.Column="0"  Margin="30,0,0,0">
+            <Label  Name="labelDate" Content="Date Label" HorizontalAlignment="Right"></Label>
+            <CheckBox Name="checkBoxShowTasks" IsChecked="True" Content="Show Tasks" HorizontalAlignment="Right" Checked="checkBoxShowTasks_Checked" Unchecked="checkBoxShowTasks_Checked"> </CheckBox>
+            <GroupBox Header="Effort" Name="groupBox2"  HorizontalAlignment="Right" VerticalAlignment="Top">
+                <StackPanel >
+                    <TextBlock  Text="1.4 months"  Name="labelEffortMonths" HorizontalAlignment="Center" />
+                    <TextBlock  Text="(16 days)"  Name="labelEffortDays" FlowDirection="LeftToRight" HorizontalAlignment="Center" />
+
+                </StackPanel>
+
+            </GroupBox>
+        </StackPanel>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Grid.Column="1" Grid.Row="1" Name="scrollViewerPlan" Grid.RowSpan="2" ScrollChanged="scrollViewerPlan_ScrollChanged">
+            <Grid HorizontalAlignment="Left" Margin="5,5,0,0" Name="canvasOuter" VerticalAlignment="Top" >
+                <Grid.RowDefinitions>
+                    <RowDefinition MinHeight="100" Name="rowDefinitionCanvasOuterRow1" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <StackPanel HorizontalAlignment="Left" Margin="0,0,0,0"  Name="canvasMain" VerticalAlignment="Top" Grid.Row="0" MouseMove="canvasMain_MouseMove">
+                </StackPanel>
+                <Label  Content="Left" Height="28" Name="labelStartDate" Grid.Row="1" />
+                <Label Content="Right" Height="28" Name="labelEndDate" Grid.Row="1" HorizontalContentAlignment="Right"></Label>
+               
+            </Grid>
+        </ScrollViewer>
+
+        <Slider HorizontalAlignment="Left" Margin="1,0,0,0" Name="sliderV" VerticalAlignment="Top" Orientation="Vertical" Height="200" Minimum="1" ValueChanged="sliderV_ValueChanged" Maximum="100" Value="50" Grid.RowSpan="2" Width="22" />
+        <Slider HorizontalAlignment="Left" Margin="25,0,0,0" Name="sliderH" VerticalAlignment="Top" Orientation="Horizontal" Width="200" Minimum="1" ValueChanged="sliderH_ValueChanged" Maximum="100" Value="50" Grid.ColumnSpan="2" Height="22" />
+        <StackPanel Grid.Row="2">
+            <GroupBox Header="People Selector" HorizontalAlignment="Left" Margin="0,0,0,0" Name="groupBoxPeopleSelect" VerticalAlignment="Top" >
+                <StackPanel>
+                    <StackPanel Name="stackPanelPeopleSelector">
+                        <CheckBox Content="Person1" Height ="16"  HorizontalAlignment="Left"  Name="checkBoxPerson1" VerticalAlignment="Top" Checked="checkBoxPerson_Checked"  Unchecked="checkBoxPerson_Unchecked"  IsChecked="True" />
+                        <CheckBox Content="Person2" Height ="16"  HorizontalAlignment="Left"  Name="checkBoxPerson2" VerticalAlignment="Top" Checked="checkBoxPerson_Checked" Unchecked="checkBoxPerson_Unchecked" IsChecked="True" />
+                    </StackPanel>
+                    <Grid >
+                        <Button Content="All" HorizontalAlignment="Left" Margin="10,0,0,0" Click="buttonAll_Click" Name="buttonAll"></Button>
+                        <Button Content="None" Margin="0,0,10,0" HorizontalAlignment="Right" Name="buttonNone" Click="buttonNone_Click"></Button>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+            <GroupBox Header="Highlight Selector    " HorizontalAlignment="Left" Margin="0,0,0,0" Name="groupBox1" VerticalAlignment="Top"  Grid.Column="0">
+                <StackPanel>
+                    <RadioButton Content="None" Height ="16"  HorizontalAlignment="Left"  Name="radioButtonNone" VerticalAlignment="Top" Checked="radioButtonNone_Checked" IsChecked="True" />
+                    <RadioButton Content="Status" Height ="16"  HorizontalAlignment="Left"  Name="radioButtonStatus" VerticalAlignment="Top" Checked="radioButtonStatus_Checked" Unchecked="radioButtonStatus_Unchecked"  />
+                    <RadioButton Content="People" Height ="16"  HorizontalAlignment="Left"  Name="radioButtonPeople" VerticalAlignment="Top" Checked="radioButtonPeople_Checked" Unchecked="radioButtonPeople_Unchecked" />
+                    <RadioButton Content="Priority" Height ="16" HorizontalAlignment="Left"  Name="radioButtonPriority" VerticalAlignment="Top" Grid.Row="1" Checked="radioButtonPriority_Checked" Unchecked="radioButtonPriority_Unchecked" />
+                    <GroupBox Grid.Row="2"  HorizontalAlignment="Left" Name="groupBoxStatus" VerticalAlignment="Top" Visibility="Collapsed">
+                        <StackPanel  Name="stackPanelStatus" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#ff00ee00" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Ready"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxReady" VerticalAlignment="Top" Grid.Row="4" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="Cyan" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="InProgress"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxInProgress" VerticalAlignment="Top" Grid.Row="0" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="Blue" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="NotStarted"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxNotStarted" VerticalAlignment="Top" Grid.Row="1" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="LightSlateGray" VerticalAlignment="Top" Stroke="Black" />
+                                <CheckBox Content="Support"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxSupport" VerticalAlignment="Top" Grid.Row="2" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="WhiteSmoke" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Tentative"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxTentative" VerticalAlignment="Top" Grid.Row="3" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Grid.Row="2"  HorizontalAlignment="Left" Name="groupBoxPriority" VerticalAlignment="Top" Visibility="Collapsed">
+                        <StackPanel  Name="stackPanelPriority" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FFFF0000" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="High"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxHigh" VerticalAlignment="Top" Grid.Row="0" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FFFF8040" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="MedHigh"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxMedHigh" VerticalAlignment="Top" Grid.Row="1" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FFFFFF00" VerticalAlignment="Top" Stroke="Black" />
+                                <CheckBox Content="Med"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxMed" VerticalAlignment="Top" Grid.Row="2" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FF00FFFF" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="MedLow"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxMedLow" VerticalAlignment="Top" Grid.Row="3" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FF0000FF" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Low"  Height ="16" HorizontalAlignment="Left"  Name="checkBoxLow" VerticalAlignment="Top" Grid.Row="4" IsChecked="True" Checked="cb_CheckedChanged" Unchecked="cb_CheckedChanged"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Grid.Row="2"  HorizontalAlignment="Left" Name="groupBoxPeople" VerticalAlignment="Top" Visibility="Collapsed">
+                        <StackPanel Name="stackPanelPeople" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12"   Fill="#FFF1874A" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Neil"  IsChecked="True" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FFF1874A" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Paresh"  IsChecked="True"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle Width="16" Height="12" Fill="#FFF1874A" VerticalAlignment="Top" Stroke="Black"/>
+                                <CheckBox Content="Paresh"  IsChecked="True"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+
+    </Grid>
+</UserControl>
