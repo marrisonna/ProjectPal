@@ -5,4 +5,4 @@ obj/
 # User settings
 .vs/
 #*.user
-#*.suo
+*.suo
