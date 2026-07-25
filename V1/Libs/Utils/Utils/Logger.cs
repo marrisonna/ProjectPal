@@ -20,11 +20,12 @@ namespace Utils
             if (!(System.Environment.MachineName.ToUpper() == "HANSOLO" ||
                System.Environment.MachineName.ToUpper() == "JARJARBINKS" ||
                System.Environment.MachineName.ToUpper() == "CHIRPA" ||
+               System.Environment.MachineName.ToUpper() == "PALPATINE" ||
                System.Environment.MachineName.ToUpper() == "JABBA"))
             {
-                paths.Add(LogPath0);
-                paths.Add(LogPath1);
-                paths.Add(LogPath2);
+                //paths.Add(LogPath0);
+                //paths.Add(LogPath1);
+                //paths.Add(LogPath2);
             }
             paths.Add(@"C:\tmp\logs\");
 

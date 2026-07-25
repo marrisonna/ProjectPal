@@ -55,6 +55,7 @@ namespace DBAccess
                     if (!(System.Environment.MachineName.ToUpper() == "HANSOLO" ||
                           System.Environment.MachineName.ToUpper() == "JARJARBINKS" ||
                           System.Environment.MachineName.ToUpper() == "CHIRPA" ||
+                          System.Environment.MachineName.ToUpper() == "PALPATINE" ||
                           System.Environment.MachineName.ToUpper() == "JABBA"))
                     {
                         //if (Logger.LogPath != Logger.LogPath0)
@@ -490,6 +491,8 @@ namespace DBAccess
             s_allInstancesOfThisType = new Dictionary<int, T>();
 
             Type thisType = typeof(T);
+
+            Logger.Log("Loading type:-" + thisType.FullName);
 
             if (DatabaseBase.DBType == DatabaseBase.DBTypeValues.SQLServer)
             {

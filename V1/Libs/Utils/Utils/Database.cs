@@ -75,6 +75,9 @@ namespace Utils
                         else if (Environment.MachineName == "HANSOLO")
                             s_connectionString = @"Data Source=HANSOLO\TASKMAN; Integrated Security=SSPI;" +
                                 "Initial Catalog = " + datbaseName;
+                        else if (Environment.MachineName == "PALPATINE")
+                            s_connectionString = @"Data Source=PALPATINE; Integrated Security=SSPI;" +
+                                "Initial Catalog = " + datbaseName;
                         else
                         {
                             Utils.Logger.Log("Set 'ConnectionString' in app.config to 'Nomura' for Nomura default, built-in connection string");
