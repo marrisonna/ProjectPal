@@ -1,0 +1,113 @@
+
+CREATE TABLE [Attachment](
+	[AttachmentId] [int] IDENTITY(1,1) NOT NULL,
+	[TaskId] [int] NULL,
+	[ComponentId] [int] NULL,
+	[ProjectId] [int] NULL,
+	[Name] [nvarchar](1000) NOT NULL,
+	[CreateTime] [datetime] NULL,
+	[DataType] [nvarchar](10) NOT NULL,
+	[From] [nvarchar](20) NULL,
+	[Size] [int] NULL,
+	[Data] [image] NULL,
+	[Owner] [nvarchar](50) NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+) 
+go
+
+CREATE TABLE [Component](
+	[ComponentId] [int] IDENTITY(1,1) NOT NULL,
+	[ParentComponentId] [int] NULL,
+	[Name] [nvarchar](1000) NOT NULL,
+	[Owner] [nvarchar](50) NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+)
+go
+
+CREATE TABLE [Person](
+	[PersonId] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](100) NULL,
+	[IsResource] [bit] NULL,
+	[IsActive] [bit] NULL,
+	[DBLogin] [nvarchar](50) NULL,
+	[UserType] [nvarchar](20) NULL,
+	[Colour] [nvarchar](25) NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+) 
+go
+
+CREATE TABLE [Project](
+	[ProjectId] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](1000) NULL,
+	[ParentProjectId] [int] NULL,
+	[Priority] [nvarchar](50) NULL,
+	[DetailedDescription] [ntext] NULL,
+	[Owner] [nvarchar](50) NULL,
+	[DueDate] [datetime] NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+)
+go
+
+CREATE TABLE [Remark](
+	[RemarkId] [int] IDENTITY(1,1) NOT NULL,
+	[TaskId] [int] NULL,
+	[ComponentId] [int] NULL,
+	[ProjectId] [int] NULL,
+	[RemarkText] [ntext] NULL,
+	[Owner] [nvarchar](50) NOT NULL,
+	[ModifiedTime] [datetime] NOT NULL,
+	[ModifiedBy] [nvarchar](50) NULL
+) 
+go
+
+CREATE TABLE [System](
+	[ReleaseVersion] [nvarchar](50) NULL,
+	[LastUpdateTime] [datetime] NULL
+)
+go
+
+CREATE TABLE [Task](
+	[TaskId] [int] IDENTITY(1,1) NOT NULL,
+	[OrigTaskNumber] [nvarchar](50) NULL,
+	[Priority] [nvarchar](16) NULL,
+	[DueDate] [datetime] NULL,
+	[AffectedComponentId] [int] NULL,
+	[Description] [nvarchar](1000) NULL,
+	[RequestorPersonId] [int] NULL,
+	[DateAdded] [datetime] NOT NULL,
+	[EffortInDays] [float] NULL,
+	[EffortType] [nvarchar](50) NULL,
+	[PercentageAllocation] [float] NULL,
+	[TaskType] [nvarchar](50) NULL,
+	[Status] [nvarchar](50) NULL,
+	[StatusDate] [datetime] NULL,
+	[DetailedDescription] [ntext] NULL,
+	[Owner] [nvarchar](50) NULL,
+	[TentativeResourceAssignment] [bit] NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+)
+go
+
+CREATE TABLE [Task2Project](
+	[Task2ProjectId] [int] IDENTITY(1,1) NOT NULL,
+	[TaskId] [int] NULL,
+	[ProjectId] [int] NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+) 
+go
+
+CREATE TABLE [Task2Resource](
+	[Task2ResourceId] [int] IDENTITY(1,1) NOT NULL,
+	[TaskId] [int] NOT NULL,
+	[PersonId] [int] NULL,
+	[OtherResourceId] [int] NULL,
+	[ModifiedBy] [nvarchar](50) NULL,
+	[ModifiedTime] [datetime] NULL
+) 
+go

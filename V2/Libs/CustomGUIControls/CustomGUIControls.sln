@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C# Express 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomGUIControls", "CustomGUIControls\CustomGUIControls.csproj", "{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "..\Utils\Utils\Utils.csproj", "{5D132F11-63D5-42C1-AA61-90C94456B332}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}.Debug|x64.ActiveCfg = Debug|x64
+		{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}.Debug|x64.Build.0 = Debug|x64
+		{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}.Release|x64.ActiveCfg = Release|x64
+		{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}.Release|x64.Build.0 = Release|x64
+		{5D132F11-63D5-42C1-AA61-90C94456B332}.Debug|x64.ActiveCfg = Debug|x64
+		{5D132F11-63D5-42C1-AA61-90C94456B332}.Debug|x64.Build.0 = Debug|x64
+		{5D132F11-63D5-42C1-AA61-90C94456B332}.Release|x64.ActiveCfg = Release|x64
+		{5D132F11-63D5-42C1-AA61-90C94456B332}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

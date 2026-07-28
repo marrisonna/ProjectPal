@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CustomGUIControls</RootNamespace>
+    <AssemblyName>CustomGUIControls</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DisplayItemImpl.cs" />
+    <Compile Include="Grid\GridFilter.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Grid\GridFilter.Designer.cs">
+      <DependentUpon>GridFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Grid\GridFilterItem.cs" />
+    <Compile Include="Grid\GridFilterSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Grid\GridFilterSelect.Designer.cs">
+      <DependentUpon>GridFilterSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Grid\IGridColumns.cs" />
+    <Compile Include="Grid\IGridItem.cs" />
+    <Compile Include="IDisplayItem.cs" />
+    <Compile Include="IView.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Grid\GridControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Grid\GridControl.Designer.cs">
+      <DependentUpon>GridControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="RedisplayManager.cs" />
+    <Compile Include="View2DisplayItemMap.cs" />
+    <Compile Include="ViewImpl.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Grid\GridControl.resx">
+      <DependentUpon>GridControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Grid\GridFilter.resx">
+      <DependentUpon>GridFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Grid\GridFilterSelect.resx">
+      <DependentUpon>GridFilterSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Utils\Utils\Utils.csproj">
+      <Project>{5D132F11-63D5-42C1-AA61-90C94456B332}</Project>
+      <Name>Utils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
