@@ -107,7 +107,7 @@ namespace PlanDisplay
                     List<string> resourcesToConsider = new List<string>(task.Resources);
                     if (resourcesToConsider.Count == 0)
                         resourcesToConsider.Add("Unallocated");
-                    resourcesToConsider.Remove(DBTaskMan.Task.OtherResource);
+                    resourcesToConsider.Remove(DBProjectPal.Task.OtherResource);
 
 
 

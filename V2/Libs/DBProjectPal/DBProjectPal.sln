@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C# Express 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DBProjectPal", "DBProjectPal\DBProjectPal.csproj", "{37AB781E-951B-4421-B455-8D8F566F04B5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{37AB781E-951B-4421-B455-8D8F566F04B5}.Debug|x64.ActiveCfg = Debug|x64
+		{37AB781E-951B-4421-B455-8D8F566F04B5}.Debug|x64.Build.0 = Debug|x64
+		{37AB781E-951B-4421-B455-8D8F566F04B5}.Release|x64.ActiveCfg = Release|x64
+		{37AB781E-951B-4421-B455-8D8F566F04B5}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,32 @@
+﻿<UserControl x:Class="ProjectPal.Projects.ProjectControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="40" d:DesignWidth="296">
+    <Grid Name="GridMainPanel">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"  />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Column="0"   Content="+" Height="17" VerticalAlignment="Top" HorizontalAlignment="Left" Name="buttonDetail" Width="17" Click="buttonDetail_Click" HorizontalContentAlignment="Center" Padding="0,-2,0,0" FontWeight="Bold" />
+        <StackPanel Grid.Column="2"  Name="stackPanel1">
+            <StackPanel Name="stackPanel2" Orientation="Horizontal">
+                <Image  Height="16" Name="imageAddTask" Stretch="Fill" Width="16" Source="..\Icons\add.ico"  Margin="2,2,0,0" VerticalAlignment="Top" MouseUp="imageAddTask_MouseUp" ToolTip="Add New Task" />
+                <Label Content="Project Name" Name="labelProjectName" HorizontalAlignment="Left" FontWeight="Bold" FontSize="13" MouseDown="labelProjectName_MouseDown" MouseLeave="labelProjectName_MouseLeave" MouseUp="labelProjectName_MouseUp" DragEnter="labelProjectName_DragEnter" DragOver="labelProjectName_DragOver" Drop="labelProjectName_Drop" AllowDrop="True" DragLeave="labelProjectName_DragLeave" MouseEnter="labelProjectName_MouseEnter">
+                    <Label.ContextMenu>
+                        <ContextMenu x:Name="contextMenuProject"  Closed="ContextMenu_Closed" Opened="ContextMenu_Opened">
+                            <MenuItem x:Name="menuItemDelete" Header="Delete" Click="menuItemDelete_Click" />
+                            <MenuItem x:Name="menuItemRename" Header="Rename" Click="menuItemRename_Click" />
+
+                        </ContextMenu>
+                    </Label.ContextMenu>
+                </Label>
+                <Label Content="(4 / 12)"  FontSize="13" Name="LabelTaskCount" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
+

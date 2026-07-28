@@ -22,9 +22,9 @@ namespace PlanDisplay
             {
                 DateTime? minDate = null;
 
-                if (m_underlyingTaskOrProject is DBTaskMan.Project)
+                if (m_underlyingTaskOrProject is DBProjectPal.Project)
                 {
-                    minDate = (m_underlyingTaskOrProject as DBTaskMan.Project).StartDate;
+                    minDate = (m_underlyingTaskOrProject as DBProjectPal.Project).StartDate;
                 }
                 foreach (TimeBox item in m_plannedItems)
                 {
@@ -95,7 +95,7 @@ namespace PlanDisplay
             Initialise(dueDate, requiredEvents);
         }
 
-        public Project(DBTaskMan.Project underlyingObject, PlanControl theOwningPlanControl, DateTime? dueDate, EventType requiredEvents)
+        public Project(DBProjectPal.Project underlyingObject, PlanControl theOwningPlanControl, DateTime? dueDate, EventType requiredEvents)
             : base(underlyingObject, theOwningPlanControl)
         {
             Initialise(dueDate, requiredEvents);
@@ -240,7 +240,7 @@ namespace PlanDisplay
                                             DragDropEffects.Link :
                                             DragDropEffects.Move;
 
-                        DBTaskMan.Project theProject = UnderlyingObject as DBTaskMan.Project;
+                        DBProjectPal.Project theProject = UnderlyingObject as DBProjectPal.Project;
 
                         if (Permissions.IsAllowed(theProject.Owner, Permissions.EntityType.Project, Permissions.ChangeType.Edit))
                         {
@@ -521,7 +521,7 @@ namespace PlanDisplay
                 if (currentItem.Visibility != System.Windows.Visibility.Visible)
                     continue;
 
-                List<DBTaskMan.ITaskOrProject> dependants = currentItem.GetDependants();
+                List<DBProjectPal.ITaskOrProject> dependants = currentItem.GetDependants();
 
                 foreach (TimeBox currentCheckItem in m_allDisplayedItems)
                 {

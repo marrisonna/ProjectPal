@@ -12,7 +12,7 @@ namespace PlanDisplay
 
         abstract public DateTime? MinStartDate { get; }
 
-        protected TimeBox(DBTaskMan.ITaskOrProject underlyingObject, PlanControl theOwningPlanControl)
+        protected TimeBox(DBProjectPal.ITaskOrProject underlyingObject, PlanControl theOwningPlanControl)
         {
             m_underlyingTaskOrProject = underlyingObject;
             m_theOwningPlanControl = theOwningPlanControl;
@@ -38,7 +38,7 @@ namespace PlanDisplay
 
         internal object UnderlyingObject { get { return m_underlyingTaskOrProject ?? m_underlyingObject; } }
 
-        internal DBTaskMan.ITaskOrProject m_underlyingTaskOrProject = null;
+        internal DBProjectPal.ITaskOrProject m_underlyingTaskOrProject = null;
         internal object m_underlyingObject = null;
 
         protected PlanControl m_theOwningPlanControl;
@@ -71,10 +71,10 @@ namespace PlanDisplay
         protected EventFn m_eventFunction = null;
 
 
-        internal List<DBTaskMan.ITaskOrProject> GetDependants()
+        internal List<DBProjectPal.ITaskOrProject> GetDependants()
         {
             if (m_underlyingTaskOrProject == null)
-                return new List<DBTaskMan.ITaskOrProject>();
+                return new List<DBProjectPal.ITaskOrProject>();
 
             return m_underlyingTaskOrProject.PostDependencies;
 

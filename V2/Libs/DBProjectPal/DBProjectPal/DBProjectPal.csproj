@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{D9A10FC6-59BB-494C-A598-5EF1683819D4}</ProjectGuid>
+    <ProjectGuid>{37AB781E-951B-4421-B455-8D8F566F04B5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PlanDisplay</RootNamespace>
-    <AssemblyName>PlanDisplay</AssemblyName>
+    <RootNamespace>DBProjectPal</RootNamespace>
+    <AssemblyName>DBProjectPal</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -34,59 +34,45 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xaml" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="PlanControl.xaml.cs">
-      <DependentUpon>PlanControl.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="Attachment.cs" />
+    <Compile Include="Component.cs" />
+    <Compile Include="Enums.cs" />
+    <Compile Include="Functions.cs" />
+    <Compile Include="Internal\ITaskOrProject.cs" />
+    <Compile Include="Internal\LinkTable_Task2Project.cs" />
+    <Compile Include="Internal\LinkTable_Task2Resource.cs" />
+    <Compile Include="Internal\LinkTable_TimeDependency.cs" />
+    <Compile Include="IResource.cs" />
+    <Compile Include="ISearchable.cs" />
+    <Compile Include="Person.cs" />
     <Compile Include="Project.cs" />
-    <Compile Include="ResourceLevel.cs" />
-    <Compile Include="ResourceLevelTask.cs" />
-    <Compile Include="Task.cs" />
-    <Compile Include="TestCtrl.xaml.cs">
-      <DependentUpon>TestCtrl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="TimeBox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Remark.cs" />
+    <Compile Include="Task.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="PlanControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="TestCtrl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DBAccess\DBAccess\DBAccess.csproj">
+    <ProjectReference Include="..\..\CustomGUIControls\CustomGUIControls\CustomGUIControls.csproj">
+      <Project>{F91150E1-EC12-4EE9-8714-FB7B8FB7B3E3}</Project>
+      <Name>CustomGUIControls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\DBAccess\DBAccess\DBAccess.csproj">
       <Project>{EB360B2B-4693-4E21-8C4F-AF8E2B9DE9D6}</Project>
       <Name>DBAccess</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DBProjectPal\DBProjectPal\DBProjectPal.csproj">
-      <Project>{37AB781E-951B-4421-B455-8D8F566F04B5}</Project>
-      <Name>DBProjectPal</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Utils\Utils\Utils.csproj">
+    <ProjectReference Include="..\..\Utils\Utils\Utils.csproj">
       <Project>{5D132F11-63D5-42C1-AA61-90C94456B332}</Project>
       <Name>Utils</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Images\PlanDisplay.ico" />
-    <Content Include="Images\PlanDisplay.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

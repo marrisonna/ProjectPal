@@ -142,7 +142,7 @@ namespace PlanDisplay
 
 
 
-        public Task(DBTaskMan.Task underlyingObject, PlanControl theOwningPlanControl, DateTime? startDate, DateTime? endDate,
+        public Task(DBProjectPal.Task underlyingObject, PlanControl theOwningPlanControl, DateTime? startDate, DateTime? endDate,
                     List<string> resources, PriorityValue priority, StatusValue status,
                     double? effortInDays)
             : base(underlyingObject, theOwningPlanControl)
@@ -264,7 +264,7 @@ namespace PlanDisplay
                                             DragDropEffects.Link :
                                             DragDropEffects.Move;
 
-                        DBTaskMan.Task theTask = UnderlyingObject as DBTaskMan.Task;
+                        DBProjectPal.Task theTask = UnderlyingObject as DBProjectPal.Task;
 
                         if (Permissions.IsAllowed(theTask.Owner, Permissions.EntityType.Task, Permissions.ChangeType.Edit))
                         {

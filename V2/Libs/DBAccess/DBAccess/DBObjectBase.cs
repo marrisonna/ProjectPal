@@ -190,7 +190,7 @@ namespace DBAccess
         }
 
 
-        //static private Database s_theDatabase = new Database("TaskMan");
+        //static private Database s_theDatabase = new Database("ProjectPal");
 
         static protected DbDataReader ExecuteReader(string querySQL)
         {

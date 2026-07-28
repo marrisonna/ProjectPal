@@ -308,21 +308,21 @@ namespace PlanDisplay
             m_resourceColourMap = resourceColourMap;
             List<string> newResources = new List<string>(resources);
             newResources.Sort();
-            if (newResources.Contains(DBTaskMan.Task.OtherResource))
+            if (newResources.Contains(DBProjectPal.Task.OtherResource))
             {
-                newResources.Remove(DBTaskMan.Task.OtherResource);
-                newResources.Add(DBTaskMan.Task.OtherResource);
+                newResources.Remove(DBProjectPal.Task.OtherResource);
+                newResources.Add(DBProjectPal.Task.OtherResource);
             }
 
             int newIndex = 0, existingIndex = 0;
-            int newEnd = newResources.Count - (newResources.Contains(DBTaskMan.Task.OtherResource) ? 1 : 0);
+            int newEnd = newResources.Count - (newResources.Contains(DBProjectPal.Task.OtherResource) ? 1 : 0);
             if (m_resources == null)
             {
                 m_resources = new List<string>();
                 stackPanelPeopleSelector.Children.Clear();
                 stackPanelPeople.Children.Clear();
             }
-            int existingEnd = m_resources.Count - (m_resources.Contains(DBTaskMan.Task.OtherResource) ? 1 : 0);
+            int existingEnd = m_resources.Count - (m_resources.Contains(DBProjectPal.Task.OtherResource) ? 1 : 0);
 
             while (newIndex < newEnd && existingIndex < existingEnd)
             {
@@ -384,10 +384,10 @@ namespace PlanDisplay
             {
                 if (m_resources.Count < newResources.Count)
                 {
-                    m_resources.Add(DBTaskMan.Task.OtherResource);
-                    StackPanel horizontalPanel = MakePersonPanel(DBTaskMan.Task.OtherResource);
+                    m_resources.Add(DBProjectPal.Task.OtherResource);
+                    StackPanel horizontalPanel = MakePersonPanel(DBProjectPal.Task.OtherResource);
                     stackPanelPeople.Children.Insert(existingIndex, horizontalPanel);
-                    stackPanelPeopleSelector.Children.Insert(existingIndex, MakePersonCheckBox(DBTaskMan.Task.OtherResource));
+                    stackPanelPeopleSelector.Children.Insert(existingIndex, MakePersonCheckBox(DBProjectPal.Task.OtherResource));
                     existingEnd++;
                 }
                 else
