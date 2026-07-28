@@ -196,7 +196,7 @@ namespace Utils.DragDrop
                 string[] fileNames = new string[fgd.cItems];
 
                 //get the pointer to the first file descriptor
-                IntPtr fdPtr = (IntPtr)((int)fgdaPtr + Marshal.SizeOf(fgdaPtr));
+                IntPtr fdPtr = IntPtr.Add(fgdaPtr, sizeof(uint));
 
                 //loop for the number of files acording to the file group descriptor
                 for (int fdIndex = 0; fdIndex < fgd.cItems; fdIndex++)
@@ -213,7 +213,7 @@ namespace Utils.DragDrop
 
 
                     //move the file descriptor pointer to the next file descriptor
-                    fdPtr = (IntPtr)((int)fdPtr + Marshal.SizeOf(fd));
+                    fdPtr = IntPtr.Add(fdPtr, Marshal.SizeOf(fd));
                 }
 
                 for (int messageIndex = 0; messageIndex < fileNames.Length; messageIndex++)
