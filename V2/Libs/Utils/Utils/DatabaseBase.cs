@@ -25,7 +25,7 @@ namespace Utils
             }
         }
 
-        private string m_sqlServerDBName = "TaskMan";
+        private string m_sqlServerDBName = "ProjectPalDB_1";
         static public string Schema
         {
             get

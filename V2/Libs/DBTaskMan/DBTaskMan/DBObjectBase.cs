@@ -46,13 +46,13 @@ namespace DBTaskMan
 
         static protected SqlDataReader ExecuteReader(string querySQL)
         {
-            Database theDatabase = new Database("TaskMan");
+            Database theDatabase = new Database("ProjectPalDB_1");
             return theDatabase.ExecuteReader(querySQL);
         }
 
         static protected SqlDataReader ExecuteReader(SqlCommand querySQL)
         {
-            Database theDatabase = new Database("TaskMan");
+            Database theDatabase = new Database("ProjectPalDB_1");
             return theDatabase.ExecuteReader(querySQL);
         }
 
