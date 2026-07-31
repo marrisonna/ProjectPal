@@ -46,13 +46,13 @@ namespace DBProjectPal
 
         static protected SqlDataReader ExecuteReader(string querySQL)
         {
-            Database theDatabase = new Database("ProjectPalDB_1");
+            Database theDatabase = new Database("ProjectPalDB_2");
             return theDatabase.ExecuteReader(querySQL);
         }
 
         static protected SqlDataReader ExecuteReader(SqlCommand querySQL)
         {
-            Database theDatabase = new Database("ProjectPalDB_1");
+            Database theDatabase = new Database("ProjectPalDB_2");
             return theDatabase.ExecuteReader(querySQL);
         }
 

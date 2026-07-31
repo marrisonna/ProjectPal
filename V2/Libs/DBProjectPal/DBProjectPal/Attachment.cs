@@ -172,12 +172,12 @@ namespace DBProjectPal
                 if (m_data == null && !m_attachmentHasBeenRetrieved && DatabaseId >= 0)
                 {
                     m_attachmentHasBeenRetrieved = true;
-                    //string query = "execute TaskMan.SelectAttachementData " + DatabaseId.ToString();
+                    //string query = "execute ProjectPal.SelectAttachementData " + DatabaseId.ToString();
 
                     if (DatabaseBase.DBType == DatabaseBase.DBTypeValues.SQLServer)
                     {
 
-                        string query = "select Data from TaskMan.Attachment	where AttachmentId = " + DatabaseId.ToString();
+                        string query = "select Data from ProjectPal.Attachment	where AttachmentId = " + DatabaseId.ToString();
 
                         using (DbDataReader queryResult = ExecuteReader(query, "Attachement.Data"))
                         {
@@ -387,7 +387,7 @@ namespace DBProjectPal
 
         static Attachment()
         {
-            //AllInstanceQuery = "execute TaskMan.SelectAllAttachements";
+            //AllInstanceQuery = "execute ProjectPal.SelectAllAttachements";
 
             AllInstanceQuery =
                 "select " +

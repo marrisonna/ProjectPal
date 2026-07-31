@@ -1062,7 +1062,7 @@ namespace DBProjectPal
 
         //protected override string SaveToDataBaseSQLString()
         //{
-        //    StringBuilder sql = new StringBuilder("exec TaskMan.UpdateTask  ");
+        //    StringBuilder sql = new StringBuilder("exec ProjectPal.UpdateTask  ");
         //    sql.Append(DatabaseId + ",");
         //    sql.Append(Database.AsSqlString(Description) + ",");
         //    sql.Append(Database.AsSqlString(Priority) + ",");

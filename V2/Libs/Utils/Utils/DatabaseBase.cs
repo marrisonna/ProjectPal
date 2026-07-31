@@ -25,13 +25,13 @@ namespace Utils
             }
         }
 
-        private string m_sqlServerDBName = "ProjectPalDB_1";
+        private string m_sqlServerDBName = "ProjectPalDB_2";
         static public string Schema
         {
             get
             {
                 if (m_dbType == DBTypeValues.SQLServer)
-                    return "TaskMan.";
+                    return "ProjectPal.";
                 return "";
             }
         }
