@@ -1,0 +1,106 @@
+# ProjectPal — Modernization Goals
+
+## Vision
+
+Take the concepts, domain model, and use cases proven out by the existing ProjectPal desktop application (Windows/WinForms + SQL Server, single team, single organisation) and rebuild them as a modern, cloud-hosted, multi-tenant SaaS product — accessible from Windows and Mac desktops, and eventually from iOS/Android — suitable for adoption by multiple organisations, each with multiple teams, with strong security and data isolation between them.
+
+## How to Think About the Current Application (V2)
+
+The current C#/WinForms/SQL Server app should be treated as a **prototype and reference**, not a codebase to evolve incrementally. It's valuable for what it teaches us, not for the code itself:
+
+**Worth carrying forward (concepts, not code):**
+- The domain model: `Task`, `Project`, `Component`, `Person`, `Attachment`, `Remark`, and the relationships between them (task↔project, task↔resource, task dependencies, etc.)
+- The workflows and use cases embedded in the UI (task/project merging, Gantt-style resource/plan display, find/search, attachments from email/documents, admin/people management)
+- The business rules buried in the data-access layer (e.g. the update-or-insert logic in `SqlInsert`, merge/hide-private-instance semantics)
+
+**Not worth carrying forward:**
+- The WinForms UI and the custom hand-rolled grid/Gantt controls (`CustomGUIControls`, `PlanDisplay`) — no path to a cross-platform or web client
+- Direct client-to-SQL-Server access (`System.Data.SqlClient` from the desktop process) — a non-starter for multi-tenant, internet-facing use
+- Windows-only COM interop (Word automation, Outlook drag-drop) — these are single-platform integrations that will need re-imagining, not porting
+- The single-tenant schema (one `TaskMan`/`ProjectPal` schema, one set of tables, no organisation/team boundary anywhere in the data model)
+
+In short: this is a **green-field rebuild informed by a working prototype**, not a migration.
+
+## Target Capabilities
+
+### 1. Backend / API
+- All data access goes through a secured web API — no client (desktop, web, or mobile) ever connects to the database directly.
+- Authentication and authorization built in from day one (not retrofitted), including per-organisation and per-team roles/permissions.
+
+### 2. Multi-tenancy
+
+**Decision:** a **tenant is an organisation** (the billing/contractual/isolation boundary), and the model is **database-per-tenant**. Teams are a grouping *within* an organisation's database — separated from each other by application-level authorization (a `team_id`/role check), not by a separate database per team.
+
+Rationale:
+- Orgs are the natural billing/contractual unit; teams are an internal subdivision that org admins need to manage, report across, and move people between — all of which is trivial within one database and painful across separate ones.
+- Database-per-org gives the strongest practical isolation between customers, and lets each organisation be upgraded to a new schema version independently of the others.
+- Team-as-tenant would multiply the database count (orgs × teams-per-org) without a corresponding isolation benefit, since teams within the same org don't need billing or contractual separation from each other.
+
+**Costs this decision brings** (accepted, but worth designing for deliberately rather than discovering later):
+- **Migration orchestration** — schema changes must be tracked and rolled out per tenant database rather than once. Needs tooling to know which schema version each tenant is on and to run/verify migrations database-by-database (the existing `CreateDB.sql`-style script is a reasonable seed for the *provisioning* half of this, but the *upgrade* half — versioned, repeatable migrations applied to N live databases — still needs to be built).
+- **Connection routing** — every API request needs a "which tenant → which database/connection string" resolution step, instead of a single static connection pool. This adds a lookup and connection-management layer that a shared-database design wouldn't need.
+- **Cross-tenant operations are harder** — anything the vendor (us) needs to do across all tenants at once (usage analytics, a super-admin view, aggregate reporting, incident response across customers) has no single database to query; it needs a separate mechanism, e.g. a shared metadata/control-plane database that references but doesn't contain tenant data.
+- **Cost model depends on how "database-per-tenant" is hosted** — one database *server instance* hosting many tenant *databases* is inexpensive and operationally simple; a dedicated server/instance per tenant is far more expensive and only justified for large or compliance-sensitive customers. Default assumption should be the former (shared instance, isolated databases), with dedicated instances as a later, premium option if needed.
+- **Onboarding a new tenant is an operation, not a config change** — creating a new organisation means provisioning an actual new database, which needs to be automated, monitored, and made idempotent/retriable from day one rather than treated as a manual step.
+
+### 3. Clients
+- **Desktop (Windows + Mac):** either a browser-based web app, or a single cross-platform client codebase that runs on both OSes. Needs a deliberate choice, not a default.
+- **Mobile (iOS + Android):** a future target. A responsive/PWA-style web client would reach mobile with the least additional investment; a native app is a separate, larger commitment best deferred until there's a concrete need (offline use, push notifications, deep OS integration).
+
+### 4. Data protection & operational resilience
+- The data is the core asset and must be protected accordingly: encryption in transit and at rest, regular backups with tested restore procedures, disaster recovery plan, high availability, audit logging of who changed what.
+- Hosted on cloud infrastructure suited to "Google/cloud-oriented" organisations — implies thinking about identity (e.g. supporting Google Workspace / OIDC sign-in) alongside pure hosting choice.
+
+## Delivery Stages
+
+Rather than one long list of open questions, the work splits into three stages with different goals, different risk tolerances, and different infrastructure. The organising principle: **most decisions can be scoped to the stage that actually needs them — except decisions that are foundational to the end goal and expensive to retrofit, which need a stated direction of travel now even if they aren't fully built until later.** Each stage below calls those out explicitly.
+
+### Stage 1 — Demonstrator
+
+**Scope:** one organisation only, deployed *inside* that organisation's own infrastructure. Security is not the top concern. Infrastructure is deliberately cut down (simple database, minimal moving parts). Purpose: let real users try the concepts and the GUI and give feedback, as cheaply as possible.
+
+**Decisions/work needed now:**
+- **Client technology** — this is the whole point of the demonstrator, since it's what users will actually react to. Framing question: *should users open a browser pointed at a server running inside their own network, or install a client app?* A browser-based app avoids building separate Windows/Mac clients and is trivial to stand up on one internal server.
+- **Feature scope** — the current app has ~20 windows/dialogs. Framing question: *which subset of workflows (task/project management, Gantt/plan view, find, merge, attachments, admin) are essential to make the trial meaningful, and which can be stubbed or left out entirely?*
+- **Database choice** — framing question: *does the demonstrator reuse SQL Server (matches the existing prototype, and likely matches what an enterprise customer already runs), or use something with less deployment friction for a single-site install (e.g. Postgres/SQLite)?*
+- **Deployment/packaging** — framing question: *how does someone at the customer site actually stand this up — a Docker container, a simple installer, a VM image?* Whoever runs the trial needs to do this without a dedicated ops team.
+- **Auth** — framing question: *is a single shared login sufficient, or do individual named users matter even now (e.g. because permission-related workflows are part of what's being trialled)?*
+
+**Foundational decisions to lock in now even though nothing is built yet:**
+- **API-first boundary.** Even with no security requirement yet, keep the client talking to an API rather than the database directly. Stage 2 requires this anyway (hosted outside the customer's network), so building it this way from day one avoids a rewrite rather than saving effort now.
+- **Tenant-shaped data model.** Even though there's only one organisation, consider including an `OrganisationId` (and possibly `TeamId`) on core tables now — trivially always the same value at this stage, but far cheaper than retrofitting tenant scoping into every table and query once Stage 3 needs it for real.
+- **Identity direction.** Doesn't need building now, but decide the intended long-term approach (e.g. federate to external identity providers) so the demonstrator's login isn't built in a way that's a dead end.
+
+### Stage 2 — Minimum Viable Product (MVP)
+
+**Scope:** a small customer base (perhaps 1–2 organisations), infrastructure still kept light, but now hosted *outside* the customer's own network — the first point where real, internet-facing security matters, because data is now leaving the customer's own IT boundary.
+
+**Decisions/work needed now:**
+- **Hosting/cloud choice** — framing question: *where does this actually run, and how minimal can the setup be for 1–2 customers (a single small server / managed database) while still being reasonably safe?*
+- **Real security baseline** — framing question: *what's the minimum acceptable bar now that data is hosted by us — TLS in transit, encryption at rest, real authentication — even if full audit logging and compliance are still deferred to Stage 3?*
+- **Database-per-tenant in practice, at small scale** — framing question: *with only 1–2 customers, is manual/scripted provisioning of each tenant database sufficient, deferring the fully automated onboarding pipeline to Stage 3?* (Likely yes — this is the point where the Stage-3 architecture gets validated for real, without needing to build the automation yet.)
+- **Identity, for real** — framing question: *build minimal custom auth now, or integrate a real external identity provider (e.g. Google sign-in) at this stage, given it may be cheaper long-term than building throwaway auth twice?*
+- **Backup/recovery baseline** — framing question: *who is responsible for backing up customer data now that it's hosted by us, and what's the minimum acceptable recovery story, even if a full DR plan is still Stage 3?*
+- **Migration from demonstrator data** — framing question: *if a demonstrator customer converts into an MVP customer, does their trial data need to move into the hosted environment — and is a manual one-off export/import acceptable, rather than building a repeatable migration tool?*
+
+**Foundational decisions to lock in now:**
+- Confirm the database-per-tenant pattern actually works operationally at small scale — this is the cheap, low-risk moment to validate the Stage 3 architecture before it needs to handle many tenants.
+- Commit to the identity direction concretely (even if the implementation is still minimal), since the login/session model touches every client and is painful to change once clients depend on it.
+
+### Stage 3 — Everything Else
+
+**Scope:** the full vision described earlier in this document — many self-service organisations, multiple teams per organisation, mobile clients, full high-availability/disaster-recovery, compliance and audit, automated tenant provisioning and migration, and cross-tenant admin/reporting tooling for us as the vendor.
+
+Nothing here should be *designed* from scratch at this point — Stages 1 and 2 exist specifically to have already established the direction of travel for the items called out above (API-first boundary, tenant-shaped data model, identity approach, database-per-tenant pattern). Stage 3's work is mostly building out automation and depth on top of a foundation that shouldn't need to change shape:
+- Automated tenant onboarding (self-service database provisioning, versioned migrations applied across all tenant databases)
+- Full team model and per-team permissions within an organisation
+- Native/PWA mobile clients
+- Full data protection posture: HA, DR, audit logging, compliance as required by target customers
+- Cross-tenant tooling for the vendor: usage analytics, aggregate reporting, incident response across customers
+- Revisiting the deferred desktop integrations (Outlook/Word) via a non-COM mechanism (e.g. inbound email processing via the API, server-side document generation), if still required
+
+## Non-Goals (for now)
+
+- Not attempting to port the WinForms/WPF UI code directly to any new client framework.
+- Not preserving direct Office COM automation (Word/Outlook) in its current form — revisit only once the core product exists, and likely via a different mechanism (e.g. inbound email processing via the API, server-side document generation library) rather than desktop COM.
+- Not trying to keep the old SQL Server schema/stored procedures as the system of record — the new data model should be designed for multi-tenancy from scratch, informed by but not constrained by the old schema.
