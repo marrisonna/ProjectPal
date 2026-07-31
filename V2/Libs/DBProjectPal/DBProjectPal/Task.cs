@@ -10,40 +10,7 @@ namespace DBProjectPal
     public class Task : DBAccess.DBObject<Task>, ISearchable, ITaskOrProject
     {
 
-        //protected override int RecursiveHidePrivateObjects()
-        //{
-        //    List<Task> allInstances = new List<Task>(AllInstances);
-
-
-        //    int hiddenCount = 0;
-        //    foreach (Task t in allInstances)
-        //    {
-
-        //        if (t.Projects.Count() > 0)
-        //        {
-        //            bool allAreHidden = true;
-        //            foreach (Project p in t.Projects)
-        //            {
-        //                if (p != null)
-        //                {
-        //                    allAreHidden = false;
-        //                    break;
-        //                }
-        //            }
-        //            if (allAreHidden)
-        //            {
-        //                hiddenCount++;
-        //                MakePrivateInstanceAndHidden(t);
-        //            }
-        //        }
-        //    }
-        //    if (hiddenCount > 0)
-        //        RecursiveHidePrivateObjects();
-
-        //    DBProjectPal.Internal.LinkTable_Task2Project.RemoveLinksToPrivateProjects();
-
-        //    return 0;
-        //}
+       
 
         public const string OtherResource = "Other";
 

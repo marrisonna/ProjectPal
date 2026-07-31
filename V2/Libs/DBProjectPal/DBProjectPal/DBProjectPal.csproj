@@ -49,7 +49,6 @@
     <Compile Include="Enums.cs" />
     <Compile Include="Functions.cs" />
     <Compile Include="Internal\ITaskOrProject.cs" />
-    <Compile Include="Internal\LinkTable_Task2Project.cs" />
     <Compile Include="Internal\LinkTable_Task2Resource.cs" />
     <Compile Include="Internal\LinkTable_TimeDependency.cs" />
     <Compile Include="IResource.cs" />
