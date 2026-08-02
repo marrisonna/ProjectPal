@@ -1,0 +1,122 @@
+Claude code should not read or modify this file.
+
+
+QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+In the local folder is a C# solution 'TaskMan.sln'.  This loads other C# projects.
+  All this code is quite old - what needs to be done to move it onto the latest relevant .Net framework?
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Current state
+
+- TaskMan.sln (VS2013 format) + 5 project references: TaskMan (the exe), Utils, PlanDisplay, DBTaskMan, DBAccess, CustomGUIControls.
+- TaskMan.exe is a hybrid WinForms + WPF app (WinForms Forms host WPF UserControls via WindowsFormsIntegration/ElementHost).
+- COM interop: Utils/DocumentSearch.cs actively drives Word via Microsoft.Office.Interop.Word (embedded PIA). 
+- No packages.config anywhere — every reference is a GAC/framework/COM assembly ref, no NuGet packages to fight with.
+- ClickOnce publish is configured (System.Deployment, BootstrapperPackages, publish URLs pointing at \\tatooine) — that whole mechanism changes shape outside .NET Framework.
+
+What moving to modern .NET involves
+
+Since this is Windows-only desktop (WinForms+WPF+COM), the realistic target is .NET 8 (LTS) with the Windows Desktop workload, not .NET Framework 4.8 (which is EOL-of-the-road, no further evolution) and not a cross-platform target (WPF/WinForms/COM interop tie it to Windows anyway).
+
+1. Convert all 6 .csproj files to SDK-style, targeting net8.0-windows, with <UseWindowsForms> / <UseWPF> set as needed. The dotnet-upgrade-assistant tool can automate most of this mechanically.
+3. Re-resolve COM interop for Word — SDK-style projects support <COMReference> under net8.0-windows, but embedded interop types need regenerating; alternative is switching to the Microsoft.Office.Interop.Word NuGet PIA package.
+4. Fix the Security.dll reference — either bring Libs/Security into the solution as a real ProjectReference and retarget it too, or rebuild/retarget that DLL for net8.0 independently. Right now it's a loose binary dependency outside source control's build graph.
+5. Replace System.DirectoryServices/AccountManagement framework refs with their NuGet package equivalents (still Windows-only, still supported on net8.0-windows).
+6. Decide on a deployment story to replace ClickOnce/System.Deployment — .NET has ClickOnce support again since .NET 6, but the publish profile mechanics differ from the old bootstrapper items; MSIX is the modern alternative if you want to reconsider.
+7. Rationalize build configs/platforms (drop Win32/Mixed Platforms, decide if x86 is still needed — likely only if Office interop forces 32-bit).
+8. Recompile and fix the inevitable small API breaks (obsoletions, C# language version jumps to 12 automatically under net8.0 SDK).
+9. Clean up: delete the stray TaskMan - Copy.sln.
+
+The COM interop (Office + Security.dll dependency resolution) is the part with real risk/unknowns; everything else is mechanical.
+
+Want me to start with the mechanical SDK-style conversion (step 1) as a first PR, or do you want to resolve the Security.dll/VBIDE questions first since those affect how far the conversion can go before it actually builds?
+Suggested next move: Start with the SDK-style conversion first
+
+
+QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+
+The Security DLL is built from the solution at C:\Users\Neil\source\repos\ProjectPal\Original\Libs\Security\Security\Security.sln
+  I believe this is a C++ Solution
+  It won't compile and gives the following error.
+  "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(473,5): error MSB8020: The
+  build tools for Visual Studio 2013 (Platform Toolset = 'v120') cannot be found. To build using the v120 build tools, please install
+  Visual Studio 2013 build tools.  Alternatively, you may upgrade to the current Visual Studio tools by selecting the Project menu or
+  right-click the solution, and then selecting "Retarget solution"."
+  This is old code too, which I need to work with 'TaskMan'.
+  How do I update 'Security' to the latest and also so it can be used with 'TaskMan'?
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Only Utils.csproj consumes it, and that's the complete source — good, this is a self-contained, low-risk piece.
+
+  What "Security" actually is
+
+  I read through Security.cpp/SecurityInternal.cpp — it's a C++/CLI wrapper (CLRSupport=true, "ManagedCProj") around ~100 lines of pure algorithmic code:
+
+  - Encrypt/Decrypt — a rolling character-substitution cipher over wchar_t strings.
+  - EncryptBytes/DecryptBytes — a rolling XOR cipher over a byte array.
+
+  Critically, there is no native/unmanaged code here at all — no Win32 API calls, no P/Invoke, no pointers to anything outside the managed heap beyond the
+  standard C++/CLI string-marshaling boilerplate (pin_ptr, PtrToStringChars). It's C++ syntax, but it's 100% safe managed logic. (Side note, not urgent: this
+  is a fixed, keyless substitution/XOR cipher, not real cryptography — worth knowing if Encrypt/Decrypt is protecting anything you actually care about being
+  unreadable.)
+
+  Your two options
+
+  Option A — retarget the C++/CLI project. Install the VS2022 "C++/CLI support for v143 build tools" (and, since you want latest .NET rather than .NET
+  Framework, also the ".NET Core" C++/CLI component), bump PlatformToolset to v143, retarget TargetFrameworkVersion/CLRSupport to net8.0. Workable, but it's a
+  heavier toolchain (full C++ workload + C++/CLI's newer, stricter .NET-Core support) for what's ultimately ~100 lines of pointer-juggling.
+
+  Option B — port it to C# (recommended). Since none of the logic touches unmanaged memory or native APIs, it translates 1:1 into a small SDK-style C# class
+  library — same namespace (Security), same class (Functions), same four method signatures — so Utils.csproj just swaps its binary hint-path reference for a
+  normal ProjectReference, no call sites elsewhere change. It becomes a first-class project in the solution/build graph instead of a stray prebuilt DLL, and
+  it retargets to net8.0 alongside everything else with zero extra tooling.
+
+  I'd go with B: it's less risky, removes a whole toolchain dependency, and fixes the "DLL isn't in source control's build graph" problem at the same time.
+  Want me to go ahead and write the C# Security project and wire it into TaskMan.sln as a ProjectReference from Utils?
+
+QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+Yes, create a new C# SDK-style class library for the current 'Security' and name it 'SimpleSecurity' and wire it into the current 'Utils' so it works with
+  minimal changes to Utils.
+  We'll need to think about moving everything to the latest .Net (not .Net Framework), but to start, just focus on 'SimpleSecurity' as a C# solution/project and getting 'Utils' to work with it.
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Good — bin/ and obj/ are gitignored, so the new project's build output won't accidentally get staged. Everything is in order and I haven't committed anything (per convention, only on request).
+
+  Summary
+
+  New project: V1/Libs/SimpleSecurity/ — an SDK-style netstandard2.0 class library (SimpleSecurity.sln + SimpleSecurity.csproj), with Functions.cs a line-by-line C# port of the original C++/CLI
+  Security::Functions class, same namespace Security { public static class Functions } shape. I verified it's byte-for-byte compatible with the original DLL by loading a prebuilt copy of the old
+  Security.dll in a throwaway harness and comparing outputs — string and byte cipher results match exactly, so anything already encrypted with the old assembly still decrypts correctly.
+
+  Wired into Utils: swapped the Security.dll hint-path <Reference> for a <ProjectReference> to SimpleSecurity. SecurityFunctions.cs — the only consumer in the whole solution — needed zero code
+  changes.
+
+  Unavoidable knock-on change: a netstandard2.0 project can't be consumed by a project targeting .NET Framework v4.0 (that pairing isn't supported at all), so Utils had to move to v4.8. That in turn
+  meant every project that depends on Utils (CustomGUIControls, DBAccess, DBTaskMan, PlanDisplay, TaskMan) also needed the same one-line TargetFrameworkVersion bump, since .NET Framework refuses
+  references to assemblies built against a higher version. This is just moving everyone to the top of the .NET Framework 4.x ladder (purely additive, no API removals) — not the eventual .NET 8
+  migration.
+
+  Verified: full TaskMan.sln rebuilds clean via real MSBuild (0 errors, only one pre-existing unrelated warning), producing ProjectPal.exe.
+
+  Left alone / worth knowing about:
+  - Libs/Security/ (the old C++/CLI project) and Libs/NomuraUtils/ (an unrelated stray duplicate) weren't touched — neither is part of TaskMan.sln.
+  - The old Security.dll binaries still sit in various bin/ folders; harmless, and gitignored.
+  - SimpleSecurity is deliberately netstandard2.0 rather than net48, so when you're ready to move Utils and the rest to real modern .NET (net8.0-windows), SimpleSecurity won't need to change at all.
+
+  Want me to move on to the next piece of the modernization (e.g., converting Utils itself to SDK-style), or pause here?
+
+QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+
+
+Hints
+
+/desktop – continue conversation with Calude Desktop
+
+-----------------
+
+Look through the old ProjectPal code and find the algorithm that defines 'Urgency'.  Add this to the KeyConcepts.md document.
+
+Read the document 'Claude/Guidelines/document-guidelines.md' then give each of the 4 main documents a table of contents.
+
+KeyConcepts.md is to be more than just a Glossary.  It will define key concepts, explain what they are and why they are key.  It will also elaborate on where this concepts fit into the overall solution.

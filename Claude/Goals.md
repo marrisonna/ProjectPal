@@ -1,10 +1,27 @@
 # ProjectPal — Modernization Goals
 
-## Vision
+## Contents
+
+1. [Vision](#vision)
+2. [How to Think About the Current Application (V2)](#how-to-think-about-the-current-application)
+3. [Target Capabilities](#target-capabilities)
+   - [Backend / API](#backend-api)
+   - [Multi-tenancy](#multi-tenancy)
+   - [Clients](#clients)
+   - [Data protection & operational resilience](#data-protection-and-operational-resilience)
+4. [Delivery Stages](#delivery-stages)
+   - [Stage 1 — Demonstrator](#stage-1-demonstrator)
+   - [Stage 2 — Minimum Viable Product (MVP)](#stage-2-mvp)
+   - [Stage 3 — Everything Else](#stage-3-everything-else)
+5. [Non-Goals (for now)](#non-goals)
+
+<a id="vision"></a>
+## 1. Vision
 
 Take the concepts, domain model, and use cases proven out by the existing ProjectPal desktop application (Windows/WinForms + SQL Server, single team, single organisation) and rebuild them as a modern, cloud-hosted, multi-tenant SaaS product — accessible from Windows and Mac desktops, and eventually from iOS/Android — suitable for adoption by multiple organisations, each with multiple teams, with strong security and data isolation between them.
 
-## How to Think About the Current Application (V2)
+<a id="how-to-think-about-the-current-application"></a>
+## 2. How to Think About the Current Application (V2)
 
 The current C#/WinForms/SQL Server app should be treated as a **prototype and reference**, not a codebase to evolve incrementally. It's valuable for what it teaches us, not for the code itself:
 
@@ -21,13 +38,16 @@ The current C#/WinForms/SQL Server app should be treated as a **prototype and re
 
 In short: this is a **green-field rebuild informed by a working prototype**, not a migration.
 
-## Target Capabilities
+<a id="target-capabilities"></a>
+## 3. Target Capabilities
 
-### 1. Backend / API
+<a id="backend-api"></a>
+### Backend / API
 - All data access goes through a secured web API — no client (desktop, web, or mobile) ever connects to the database directly.
 - Authentication and authorization built in from day one (not retrofitted), including per-organisation and per-team roles/permissions.
 
-### 2. Multi-tenancy
+<a id="multi-tenancy"></a>
+### Multi-tenancy
 
 **Decision:** a **tenant is an organisation** (the billing/contractual/isolation boundary), and the model is **database-per-tenant**. Teams are a grouping *within* an organisation's database — separated from each other by application-level authorization (a `team_id`/role check), not by a separate database per team.
 
@@ -43,18 +63,22 @@ Rationale:
 - **Cost model depends on how "database-per-tenant" is hosted** — one database *server instance* hosting many tenant *databases* is inexpensive and operationally simple; a dedicated server/instance per tenant is far more expensive and only justified for large or compliance-sensitive customers. Default assumption should be the former (shared instance, isolated databases), with dedicated instances as a later, premium option if needed.
 - **Onboarding a new tenant is an operation, not a config change** — creating a new organisation means provisioning an actual new database, which needs to be automated, monitored, and made idempotent/retriable from day one rather than treated as a manual step.
 
-### 3. Clients
+<a id="clients"></a>
+### Clients
 - **Desktop (Windows + Mac):** either a browser-based web app, or a single cross-platform client codebase that runs on both OSes. Needs a deliberate choice, not a default.
 - **Mobile (iOS + Android):** a future target. A responsive/PWA-style web client would reach mobile with the least additional investment; a native app is a separate, larger commitment best deferred until there's a concrete need (offline use, push notifications, deep OS integration).
 
-### 4. Data protection & operational resilience
+<a id="data-protection-and-operational-resilience"></a>
+### Data protection & operational resilience
 - The data is the core asset and must be protected accordingly: encryption in transit and at rest, regular backups with tested restore procedures, disaster recovery plan, high availability, audit logging of who changed what.
 - Hosted on cloud infrastructure suited to "Google/cloud-oriented" organisations — implies thinking about identity (e.g. supporting Google Workspace / OIDC sign-in) alongside pure hosting choice.
 
-## Delivery Stages
+<a id="delivery-stages"></a>
+## 4. Delivery Stages
 
-Rather than one long list of open questions, the work splits into three stages with different goals, different risk tolerances, and different infrastructure. The organising principle: **most decisions can be scoped to the stage that actually needs them — except decisions that are foundational to the end goal and expensive to retrofit, which need a stated direction of travel now even if they aren't fully built until later.** Each stage below calls those out explicitly.
+Rather than one long list of open questions, the work splits into three stages with different goals, different risk tolerances, and different infrastructure. The organising principle: most decisions can be scoped to the stage that actually needs them, except **Foundational Decisions** (see `KeyConcepts.md`), which need a stated direction of travel now even if they aren't fully built until later. Each stage below calls those out explicitly.
 
+<a id="stage-1-demonstrator"></a>
 ### Stage 1 — Demonstrator
 
 **Scope:** one organisation only, deployed *inside* that organisation's own infrastructure. Security is not the top concern. Infrastructure is deliberately cut down (simple database, minimal moving parts). Purpose: let real users try the concepts and the GUI and give feedback, as cheaply as possible.
@@ -71,6 +95,7 @@ Rather than one long list of open questions, the work splits into three stages w
 - **Tenant-shaped data model.** Even though there's only one organisation, consider including an `OrganisationId` (and possibly `TeamId`) on core tables now — trivially always the same value at this stage, but far cheaper than retrofitting tenant scoping into every table and query once Stage 3 needs it for real.
 - **Identity direction.** Doesn't need building now, but decide the intended long-term approach (e.g. federate to external identity providers) so the demonstrator's login isn't built in a way that's a dead end.
 
+<a id="stage-2-mvp"></a>
 ### Stage 2 — Minimum Viable Product (MVP)
 
 **Scope:** a small customer base (perhaps 1–2 organisations), infrastructure still kept light, but now hosted *outside* the customer's own network — the first point where real, internet-facing security matters, because data is now leaving the customer's own IT boundary.
@@ -87,6 +112,7 @@ Rather than one long list of open questions, the work splits into three stages w
 - Confirm the database-per-tenant pattern actually works operationally at small scale — this is the cheap, low-risk moment to validate the Stage 3 architecture before it needs to handle many tenants.
 - Commit to the identity direction concretely (even if the implementation is still minimal), since the login/session model touches every client and is painful to change once clients depend on it.
 
+<a id="stage-3-everything-else"></a>
 ### Stage 3 — Everything Else
 
 **Scope:** the full vision described earlier in this document — many self-service organisations, multiple teams per organisation, mobile clients, full high-availability/disaster-recovery, compliance and audit, automated tenant provisioning and migration, and cross-tenant admin/reporting tooling for us as the vendor.
@@ -99,7 +125,8 @@ Nothing here should be *designed* from scratch at this point — Stages 1 and 2 
 - Cross-tenant tooling for the vendor: usage analytics, aggregate reporting, incident response across customers
 - Revisiting the deferred desktop integrations (Outlook/Word) via a non-COM mechanism (e.g. inbound email processing via the API, server-side document generation), if still required
 
-## Non-Goals (for now)
+<a id="non-goals"></a>
+## 5. Non-Goals (for now)
 
 - Not attempting to port the WinForms/WPF UI code directly to any new client framework.
 - Not preserving direct Office COM automation (Word/Outlook) in its current form — revisit only once the core product exists, and likely via a different mechanism (e.g. inbound email processing via the API, server-side document generation library) rather than desktop COM.
