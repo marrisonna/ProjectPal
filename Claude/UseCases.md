@@ -31,7 +31,7 @@ This is the core of the product and carries forward directly as a use case, deli
 
 **Actor:** anyone with edit rights on the Task.
 
-Assign one or more People (marked as resources) to a Task; effort is then split across the assigned people (see `DomainModel.md` Effort/Duration). In the old app this is a checklist in the Task detail screen. Worth confirming that's still the intended model, rather than drag-and-drop directly onto the Gantt view, before designing the new UI.
+Assign one or more People (marked as resources) to a Task — see `KeyConcepts.md`'s Effort vs. Duration entry for how this affects scheduling. In the old app this is a checklist in the Task detail screen. Worth confirming that's still the intended model, rather than drag-and-drop directly onto the Gantt view, before designing the new UI.
 
 <a id="view-the-plan"></a>
 ## 3. View the Plan (Gantt / Resource-Loading View)
@@ -84,7 +84,7 @@ See `KeyConcepts.md`'s Merge/Conflict entry for the concept, and `DomainModel.md
 
 **Actor:** SuperUser/organisation-admin.
 
-Add a Person, mark them active/inactive, set whether they're a resource, set their role, delete them (blocked while they still own or are assigned to anything). Carries forward directly as a use case, but the *identity* side (how a Person's login maps to an actual authenticated account) needs to move from a raw DB/Windows login string to real external identity integration (see `Goals.md` identity direction, `DomainModel.md`).
+Add a Person, mark them active/inactive, set whether they're a resource, set their role, delete them (blocked while they still own or are assigned to anything). Carries forward directly as a use case; the *identity* side needs rework — see `DomainModel.md`'s Person entry and `Goals.md`'s identity direction.
 
 At the Organisation/Team level, this use case also needs to grow: inviting people into an Organisation, assigning them to Teams, and (per Stage 3 in `Goals.md`) eventually self-service tenant onboarding — all of which is new design work.
 
