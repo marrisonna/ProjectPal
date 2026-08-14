@@ -145,3 +145,15 @@ Since the concept of Stages has come up, in DomainModel.md, we want to focus on 
 I want to create a new doucment under 'Claude' called 'User Interface Windows'.  In it I want to list each Window type the information it contains and how a user may interact with it.  To prime this document, sweep the V1.2 code, gather all of the
 C# windows that are in use and capture the information each displays and the different ways the user can interact, i.e., what information is presented (and whether it is read-only or editable) and how a use may navigate from one window to another.
 
+----------
+
+Take a look at DataBaseHostingOptions.md
+I want you to create a plan of everything I need to do to put in place a database to support Stage 1 on my local PC, using the recommendations in DataBaseHostingOptions.md.
+I want to to know what I need to download and install (and where from).
+What needs to be configured.
+What code needs to be written and by whom.
+I'd like you to look at the DomainMondel.md and design a suitable schema, then produce the required code to implement that schema.
+I'd like some notes on how to set up the database, install the schema and test it.
+I'd also like some example data in the database.
+If you wish and are able, you can look on this machine at the SQLServer database ProjectPalDB_1 for ideas on the data.
+Please document this all and place any files/code in 'Claude/DatabaseSetUp1', we'll find a better home for it once I see what it is.
