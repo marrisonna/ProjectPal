@@ -16,13 +16,12 @@
 12. [Urgency](#urgency)
     - [Current Urgency Algorithm](#current-urgency-algorithm)
     - [Current Urgency-to-Colour Algorithm](#current-urgency-to-colour-algorithm)
-13. [Private (Visibility)](#private-visibility)
-14. [Role / Permission Level](#role-permission-level)
-15. [Merge / Conflict](#merge-conflict)
-16. [Attachment](#attachment)
-17. [Remark](#remark)
-18. [Demonstrator / MVP / (Stage 3) "Everything Else"](#delivery-stage-terms)
-19. [Foundational Decision](#foundational-decision)
+13. [Role / Permission Level](#role-permission-level)
+14. [Merge / Conflict](#merge-conflict)
+15. [Attachment](#attachment)
+16. [Remark](#remark)
+17. [Demonstrator / MVP / (Stage 3) "Everything Else"](#delivery-stage-terms)
+18. [Foundational Decision](#foundational-decision)
 
 This document defines the concepts that are central to ProjectPal's design. For each one, it covers what the concept is, why it matters enough to call out on its own, and how it fits into the overall solution described in `Goals.md`, `DomainModel.md`, and `UseCases.md`. Where a concept is still an open decision rather than a settled one, that's noted inline — this document should be updated as decisions are made.
 
@@ -42,7 +41,7 @@ A Team is a grouping of People within an Organisation, used to scope day-to-day 
 
 It's key because real customers aren't flat: an Organisation adopting ProjectPal will typically have multiple groups (departments, product teams) that want their own view of "our work" without needing to be treated as separate paying customers. Without Team as a first-class concept, an Organisation with several such groups has no way to scope a task list or report to just one of them.
 
-It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Stage 3 in `Goals.md`, but its basic shape needs deciding well before then, because Project, Task, and Person all eventually need to know which Team they belong to — see `DomainModel.md`'s open question on Team scoping. This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
+It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Stage 3 in `Goals.md`, but its basic shape needed deciding well before then, because Project, Task, and Person all need to know which Team they belong to — see `DomainModel.md`'s Team-scoping decision (a Person can belong to several Teams with an independent role in each; a Project belongs to exactly one Team for Stage 1). This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
 
 <a id="tenant"></a>
 ## 3. Tenant
@@ -78,7 +77,7 @@ A Project is a container for related work, arranged in a tree so large initiativ
 
 It's key because it's the organizing unit people think in terms of first — "what am I working on" is answered by Project before it's answered by Task — and it's the natural place to attach priority, ownership, and an overall schedule.
 
-It's central to the plan view, to the visibility model (a private Project hides everything beneath it, per Private (Visibility) below), and to the still-open decision about derived-vs-stored scheduling in `DomainModel.md` — whichever way that's decided, Project is where the top-level schedule computation lives.
+It's central to the plan view and to derived scheduling (see `DomainModel.md`) — Project is where the top-level schedule computation lives.
 
 <a id="task"></a>
 ## 7. Task
@@ -87,7 +86,7 @@ A Task is the atomic unit of work — closer to a ticket than a bare to-do, carr
 
 It's key because it's the entity everything else attaches to (Attachments, Remarks, Dependencies, resource assignment) and the one users spend most of their time looking at and updating. It's also the primary input to Urgency, the mechanism the system uses to tell a user what to look at next.
 
-It sits at the center of the domain model (`DomainModel.md`): it belongs to exactly one Project, tags itself with one Component, and is where the Effort-vs-Duration and derived-scheduling decisions actually get applied day to day.
+It sits at the center of the domain model (`DomainModel.md`): it belongs to exactly one Project, optionally relates to one Component, and is where the Effort-vs-Duration and derived-scheduling decisions actually get applied day to day.
 
 <a id="component"></a>
 ## 8. Component
@@ -125,7 +124,7 @@ Priority (e.g. High → Low, plus Closed/Cancelled as special values) and Status
 
 They're key because they're the two most basic triage signals a user or a report relies on — importance versus lifecycle state — and together they're the primary inputs to Urgency.
 
-They're used throughout reporting, visibility, and the Urgency calculation below. The exact status vocabulary is open to revisiting for the new system, but the two-field shape (importance vs. lifecycle state) is worth keeping.
+They're used throughout reporting and the Urgency calculation below. The exact status vocabulary is open to revisiting for the new system, but the two-field shape (importance vs. lifecycle state) is worth keeping.
 
 <a id="urgency"></a>
 ## 12. Urgency
@@ -275,44 +274,35 @@ Urgency = 250 (e.g. a very overdue, very high-priority task). `u = 250`, `m = ma
 `mixMax = 1.0`. `G = B = 255 − 127 × 1.0 = 128`.
 Colour = `RGB(255, 128, 128)` — the full `maxUrgencyColour`. Any Urgency ≥ 200 produces exactly this same saturated colour, since `m` is clamped at 100.
 
-<a id="private-visibility"></a>
-## 13. Private (Visibility)
-
-Private is an owner-settable flag on a Project, Task, or Component that hides it from everyone except the owner and administrators, propagating down hierarchies (a private Project hides its sub-projects and tasks too).
-
-It's key because not all planning data is meant for the whole team — a task might reference something sensitive (personnel, contractual, security-related) that still needs to exist in the same system without being broadcast to every user who can otherwise see the Project it lives in.
-
-Today it's expressed as a single boolean checked ad hoc throughout the old application's code. In the new system it needs to be a first-class part of the authorization model (see Role / Permission Level below, and `Goals.md`'s identity direction) so it composes properly with Organisation- and Team-level access instead of being a bolt-on flag layered on top.
-
 <a id="role-permission-level"></a>
-## 14. Role / Permission Level
+## 13. Role / Permission Level
 
 A Role or Permission Level classifies what a Person is allowed to do — create, edit, delete — against each entity type.
 
 It's key because not every user should be able to edit or delete everything; a multi-user tool needs a shared, enforceable understanding of who can change what before real customers trust it with real data.
 
-The old model's roles (SuperUser/PowerUser/NormalUser/ReadOnlyUser) are flat and system-wide, which won't survive Organisation and Team becoming real concepts. `DomainModel.md` calls this out explicitly as needing to become per-organisation and/or per-team, and it's one of the concepts most directly tied to the "identity direction" foundational decision in `Goals.md` — the login/session model and the permission model need to be designed together.
+The old model's roles (SuperUser/PowerUser/NormalUser/ReadOnlyUser) were flat and system-wide; `DomainModel.md` settles this into two tiers now that Organisation and Team are real concepts: a per-Team role (`UserType` on PersonRole — create/edit/delete rights scoped to that Team) plus a separate organisation-wide administrator flag (`IsOrganisationAdmin` directly on Person, independent of Team membership). This is one of the concepts most directly tied to the "identity direction" foundational decision in `Goals.md` — the login/session model and the permission model need to be designed together.
 
 <a id="merge-conflict"></a>
-## 15. Merge / Conflict
+## 14. Merge / Conflict
 
 Merge/Conflict describes what happens when two people edit the same record at the same time.
 
 It's key because any tool used by more than one person concurrently has to have an answer for this — even if the answer is "make it rare and simple to recover from" rather than "build an elaborate resolution UI."
 
-It directly shapes the API's concurrency model (optimistic locking vs. an interactive field-by-field merge, as the old system does) and the client UX for editing. This is an open decision in `DomainModel.md`, and one of the use cases in `UseCases.md` worth deliberately scoping — or explicitly scoping out — for the Demonstrator, where a single organisation's worth of users may make conflicts rare enough to defer handling gracefully.
+It directly shapes the API's concurrency model and the client UX for editing. `DomainModel.md` settles this by stage: the Demonstrator assumes a single user at a time, so no conflict-handling is built at all; later stages need real-time multi-user editing (users see each other's changes live), a materially bigger commitment than the old system's interactive field-by-field merge dialog, which remains a fallback worth keeping in mind for cases live sync doesn't cover.
 
 <a id="attachment"></a>
-## 16. Attachment
+## 15. Attachment
 
-An Attachment is a file or a captured email attached to exactly one Task, Project, or Component.
+An Attachment is a file, a captured email, or a hyperlink, attached to exactly one Task, Project, or Component.
 
-It's key because planning data is rarely self-contained — a task often needs its supporting email thread, spec document, or screenshot kept alongside it rather than filed somewhere else that gets forgotten.
+It's key because planning data is rarely self-contained — a task often needs its supporting email thread, spec document, screenshot, or a link to where the real detail lives, kept alongside it rather than filed somewhere else that gets forgotten.
 
-The concept survives into the new system; the old ingestion mechanism (Outlook drag-and-drop, Word COM automation) does not, and needs reinventing as an API-first upload and, if still required, an inbound-email mechanism (see `Goals.md` Non-Goals and `UseCases.md` #5).
+The concept survives into the new system; the old ingestion mechanism (Outlook drag-and-drop, Word COM automation) does not, and needs reinventing as an API-first upload, a simple URL entry for the hyperlink kind, and, if still required, an inbound-email mechanism (see `Goals.md` Non-Goals and `UseCases.md` #5).
 
 <a id="remark"></a>
-## 17. Remark
+## 16. Remark
 
 A Remark is a comment or note attached to exactly one Task, Project, or Component.
 
@@ -321,7 +311,7 @@ It's key because it's the system's lightweight collaboration mechanism — a way
 See `DomainModel.md`'s Remark entry for the structural fix needed to correct a data-integrity quirk in the old model, where editing a Remark silently reassigned it to whoever last touched it — a small change, but an important one for Remark to actually function as a trustworthy record of who said what.
 
 <a id="delivery-stage-terms"></a>
-## 18. Demonstrator / MVP / (Stage 3) "Everything Else"
+## 17. Demonstrator / MVP / (Stage 3) "Everything Else"
 
 These are the three delivery stages defined in `Goals.md`, distinguished by customer count, security posture, and hosting location rather than by a fixed feature list.
 
@@ -330,10 +320,10 @@ They're key because, without this framing, every design conversation risks eithe
 They act as the lens the rest of the plan is viewed through: nearly every concept above gets evaluated against them at some point — does the Demonstrator need Merge/Conflict handling? Does Role/Permission Level need to be per-Team by MVP? — which is why `DomainModel.md` and `UseCases.md` both reference these stages directly when flagging open questions.
 
 <a id="foundational-decision"></a>
-## 19. Foundational Decision
+## 18. Foundational Decision
 
 A Foundational Decision is one that's cheap to make correctly now and expensive to retrofit once real data and real clients depend on it (e.g. the API-first boundary, the tenant-shaped data model, the identity direction).
 
 It's key because it's the escape valve in the staged approach above: without it, "defer everything possible to a later stage" would also defer decisions that actually need to be right from the very first line of code, turning a cheap early choice into an expensive later rewrite.
 
-It's used throughout `Goals.md` and `DomainModel.md` to flag which open questions can't simply be left until later — derived-vs-stored scheduling, identity direction, and Team scoping are all treated as foundational for exactly this reason, even though the full features built on top of them are scoped to later stages.
+It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can't simply be left until later. Identity direction is still open; derived-vs-stored scheduling and (for Stage 1) Team scoping have already been decided this way — settled early, even though the full features built on top of them (real identity federation, full Team management) are scoped to later stages.

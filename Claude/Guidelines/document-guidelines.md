@@ -25,9 +25,10 @@ Create the table of contents using the following mechanism (as used in
      anchor/entry when a new section is introduced, and remove both together when a section is deleted.
 
 2. Avoid repetition across documents.  That is, when an idea, concept, requirement, or whatever is described/defined, it
-   should be done in one place.  Other documents that need it should then reference the source.  So we have a 'single source
+   should be done in one place.  Other documents that need it should then reference the source.  So we have a 'single canonical source
    of truth' and we don't have multiple descriptions of the same thing in multiple places that may become inconsistent with
-   each other and are a burden to maintain.
+   each other and are a burden to maintain.  To make this easier, use upto three
+level of heading numbering in the documents and reflect that in the table of contents of each document.
 
 
 Claude should ignore all the text below this line.  This will be used at a later date.

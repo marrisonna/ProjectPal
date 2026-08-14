@@ -120,3 +120,28 @@ Look through the old ProjectPal code and find the algorithm that defines 'Urgenc
 Read the document 'Claude/Guidelines/document-guidelines.md' then give each of the 4 main documents a table of contents.
 
 KeyConcepts.md is to be more than just a Glossary.  It will define key concepts, explain what they are and why they are key.  It will also elaborate on where this concepts fit into the overall solution.
+
+
+
+---------------
+
+A person can belong to more than one team.  In each team they may have a different role.
+
+Let's loose the concept of a visibility flag.
+
+You said a Task has "an optional Component classification".  Please check the code under 'V1.2' and determine if this is really optional.  Also, it isn't a 'Component classification", it should be "relates to a component"
+
+Attachments my also be hyperlinks.
+
+Looking at the open questions
+1. For Stage 1 (see Goals.md) every Project belongs to exactly one team, this may change in the later stages.
+2. Derived is the way I want to go
+3. For Stage 1, there is only one user at a time.  For later stages, multiple users may use the tool at the same time and see each others updates in real time.
+4. I think we need an organisation-level administrator role.  This can be an attribute attached to a Person, i.e., many people could have this and it is not team specific.
+5. Yes, there is.  In this domain a resource is something that is responsible for getting something done, which means an external vendor can be a resource, however, an item of equipment is not, since it is not responsible.  However, let's leave this out of Stage 1.
+
+Since the concept of Stages has come up, in DomainModel.md, we want to focus on Stage 1, but also record what is out of scope for Stage 1.  Please add a section for extensions to the Domain Model that will or may be needed after Stage 1.
+
+I want to create a new doucment under 'Claude' called 'User Interface Windows'.  In it I want to list each Window type the information it contains and how a user may interact with it.  To prime this document, sweep the V1.2 code, gather all of the
+C# windows that are in use and capture the information each displays and the different ways the user can interact, i.e., what information is presented (and whether it is read-only or editable) and how a use may navigate from one window to another.
+

@@ -5,14 +5,14 @@
 1. [Vision](#vision)
 2. [How to Think About the Current Application (V2)](#how-to-think-about-the-current-application)
 3. [Target Capabilities](#target-capabilities)
-   - [Backend / API](#backend-api)
-   - [Multi-tenancy](#multi-tenancy)
-   - [Clients](#clients)
-   - [Data protection & operational resilience](#data-protection-and-operational-resilience)
+   - 3.1 [Backend / API](#backend-api)
+   - 3.2 [Multi-tenancy](#multi-tenancy)
+   - 3.3 [Clients](#clients)
+   - 3.4 [Data protection & operational resilience](#data-protection-and-operational-resilience)
 4. [Delivery Stages](#delivery-stages)
-   - [Stage 1 — Demonstrator](#stage-1-demonstrator)
-   - [Stage 2 — Minimum Viable Product (MVP)](#stage-2-mvp)
-   - [Stage 3 — Everything Else](#stage-3-everything-else)
+   - 4.1 [Stage 1 — Demonstrator](#stage-1-demonstrator)
+   - 4.2 [Stage 2 — Minimum Viable Product (MVP)](#stage-2-mvp)
+   - 4.3 [Stage 3 — Everything Else](#stage-3-everything-else)
 5. [Non-Goals (for now)](#non-goals)
 
 <a id="vision"></a>
@@ -42,12 +42,12 @@ In short: this is a **green-field rebuild informed by a working prototype**, not
 ## 3. Target Capabilities
 
 <a id="backend-api"></a>
-### Backend / API
+### 3.1 Backend / API
 - All data access goes through a secured web API — no client (desktop, web, or mobile) ever connects to the database directly.
 - Authentication and authorization built in from day one (not retrofitted), including per-organisation and per-team roles/permissions.
 
 <a id="multi-tenancy"></a>
-### Multi-tenancy
+### 3.2 Multi-tenancy
 
 **Decision:** a **tenant is an organisation** (the billing/contractual/isolation boundary), and the model is **database-per-tenant**. Teams are a grouping *within* an organisation's database — separated from each other by application-level authorization (a `team_id`/role check), not by a separate database per team.
 
@@ -64,12 +64,12 @@ Rationale:
 - **Onboarding a new tenant is an operation, not a config change** — creating a new organisation means provisioning an actual new database, which needs to be automated, monitored, and made idempotent/retriable from day one rather than treated as a manual step.
 
 <a id="clients"></a>
-### Clients
+### 3.3 Clients
 - **Desktop (Windows + Mac):** either a browser-based web app, or a single cross-platform client codebase that runs on both OSes. Needs a deliberate choice, not a default.
 - **Mobile (iOS + Android):** a future target. A responsive/PWA-style web client would reach mobile with the least additional investment; a native app is a separate, larger commitment best deferred until there's a concrete need (offline use, push notifications, deep OS integration).
 
 <a id="data-protection-and-operational-resilience"></a>
-### Data protection & operational resilience
+### 3.4 Data protection & operational resilience
 - The data is the core asset and must be protected accordingly: encryption in transit and at rest, regular backups with tested restore procedures, disaster recovery plan, high availability, audit logging of who changed what.
 - Hosted on cloud infrastructure suited to "Google/cloud-oriented" organisations — implies thinking about identity (e.g. supporting Google Workspace / OIDC sign-in) alongside pure hosting choice.
 
@@ -79,7 +79,7 @@ Rationale:
 Rather than one long list of open questions, the work splits into three stages with different goals, different risk tolerances, and different infrastructure. The organising principle: most decisions can be scoped to the stage that actually needs them, except **Foundational Decisions** (see `KeyConcepts.md`), which need a stated direction of travel now even if they aren't fully built until later. Each stage below calls those out explicitly.
 
 <a id="stage-1-demonstrator"></a>
-### Stage 1 — Demonstrator
+### 4.1 Stage 1 — Demonstrator
 
 **Scope:** one organisation only, deployed *inside* that organisation's own infrastructure. Security is not the top concern. Infrastructure is deliberately cut down (simple database, minimal moving parts). Purpose: let real users try the concepts and the GUI and give feedback, as cheaply as possible.
 
@@ -96,7 +96,7 @@ Rather than one long list of open questions, the work splits into three stages w
 - **Identity direction.** Doesn't need building now, but decide the intended long-term approach (e.g. federate to external identity providers) so the demonstrator's login isn't built in a way that's a dead end.
 
 <a id="stage-2-mvp"></a>
-### Stage 2 — Minimum Viable Product (MVP)
+### 4.2 Stage 2 — Minimum Viable Product (MVP)
 
 **Scope:** a small customer base (perhaps 1–2 organisations), infrastructure still kept light, but now hosted *outside* the customer's own network — the first point where real, internet-facing security matters, because data is now leaving the customer's own IT boundary.
 
@@ -113,7 +113,7 @@ Rather than one long list of open questions, the work splits into three stages w
 - Commit to the identity direction concretely (even if the implementation is still minimal), since the login/session model touches every client and is painful to change once clients depend on it.
 
 <a id="stage-3-everything-else"></a>
-### Stage 3 — Everything Else
+### 4.3 Stage 3 — Everything Else
 
 **Scope:** the full vision described earlier in this document — many self-service organisations, multiple teams per organisation, mobile clients, full high-availability/disaster-recovery, compliance and audit, automated tenant provisioning and migration, and cross-tenant admin/reporting tooling for us as the vendor.
 
