@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16
+    container_name: projectpal-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-projectpal}
+      POSTGRES_USER: ${POSTGRES_USER:-projectpal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env before starting}
+    ports:
+      # Bound to localhost only — never publish this to 0.0.0.0. Per
+      # DataBaseHostingOptions.md, nothing outside this machine's own API layer
+      # (not built yet) should ever talk to PostgreSQL directly.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - projectpal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-projectpal} -d ${POSTGRES_DB:-projectpal}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  projectpal-db-data:
