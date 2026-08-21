@@ -11,7 +11,7 @@
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
 
-See [`Plan.md`](Plan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
+See [`Plan.md`](../Claude/DatabaseSetUp1/Plan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
@@ -22,7 +22,7 @@ A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 sc
 ## 2. First-Time Setup
 
 1. **Install Docker Desktop**: <https://www.docker.com/products/docker-desktop/>. Accept the WSL2 backend prompt if asked. Reboot if the installer asks you to, then start Docker Desktop and wait for it to say it's running.
-2. **Open a PowerShell prompt in this folder** (`Claude/DatabaseSetUp1`).
+2. **Open a PowerShell prompt in this folder** (`V2`).
 3. **Create your `.env` file**:
    ```powershell
    Copy-Item .env.example .env

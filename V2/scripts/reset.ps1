@@ -1,5 +1,5 @@
-# Stops the container and DELETES the local database volume, so the next
-# .\scripts\setup.ps1 rebuilds everything from scratch. Destructive — asks first.
+﻿# Stops the container and DELETES the local database volume, so the next
+# .\scripts\setup.ps1 rebuilds everything from scratch. Destructive - asks first.
 # Usage: .\scripts\reset.ps1
 
 $ErrorActionPreference = "Stop"
@@ -10,7 +10,7 @@ try {
     Write-Host "This will DELETE the local 'projectpal-db-data' volume and everything in it." -ForegroundColor Yellow
     $confirm = Read-Host "Type 'yes' to continue"
     if ($confirm -ne 'yes') {
-        Write-Host "Cancelled — nothing was changed."
+        Write-Host "Cancelled - nothing was changed."
         return
     }
     docker compose down -v
