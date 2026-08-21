@@ -1,4 +1,4 @@
--- ProjectPal V2 — Stage 1 example data
+-- ProjectPal V2 — Level 1 example data
 -- Entirely fictional: people, teams, projects, and tasks invented for demonstration
 -- purposes. Shaped (status/priority/effort-type mix, dependency chains, resourcing
 -- patterns) after real usage patterns observed in the old V1.2 database (ProjectPalDB_1)

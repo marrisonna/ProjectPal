@@ -1,4 +1,4 @@
--- ProjectPal V2 — Stage 1 smoke test
+-- ProjectPal V2 — Level 1 smoke test
 -- Read-only sanity checks: confirms the schema and example data loaded correctly.
 -- Run via scripts/verify.ps1, or paste into psql/pgAdmin/DBeaver by hand.
 

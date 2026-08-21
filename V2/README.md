@@ -1,4 +1,4 @@
-# ProjectPal V2 — Stage 1 Local Database
+# ProjectPal V2 — Level 1 Local Database
 
 ## Contents
 
@@ -11,12 +11,12 @@
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
 
-See [`InitialDatabaseSetupPlan.md`](../Claude/Stage1_Implementation/DatabaseSetup/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
+See [`InitialDatabaseSetupPlan.md`](../Claude/Level1_Implementation/DatabaseSetup/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `InitialDatabaseSetupPlan.md` §8.
+A PostgreSQL database, running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `InitialDatabaseSetupPlan.md` §8.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup

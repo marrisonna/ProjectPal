@@ -1,4 +1,4 @@
-# ProjectPal V2 — Stage 1 Local Database: Plan
+# ProjectPal V2 — Level 1 Local Database: Plan
 
 ## Contents
 
@@ -14,7 +14,7 @@
 <a id="what-this-covers"></a>
 ## 1. What This Covers
 
-This is the plan for standing up the **database** half of a Stage 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/Stage1_Implementation/DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../../V2) — this document stays here in `Claude/Stage1_Implementation/DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
+This is the plan for standing up the **database** half of a Level 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/Level1_Implementation/DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../../V2) — this document stays here in `Claude/Level1_Implementation/DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
 
 <a id="downloads-and-installs"></a>
 ## 2. What to Download and Install
@@ -58,7 +58,7 @@ Nothing here requires you to hand-write SQL yourself unless you want to — the 
 
 Full DDL is in [`database/migrations/001_initial_schema.sql`](../../../V2/database/migrations/001_initial_schema.sql) — this section is a summary, not a restatement (per `Claude/Guidelines/document-guidelines.md` rule 2, `DomainModel.md` remains the canonical description of *why* each entity/relationship exists).
 
-- One PostgreSQL schema, `projectpal`, containing every Stage 1 entity from `DomainModel.md` §2: `team`, `person`, `person_role`, `component`, `project`, `task`, `task_resource`, `dependency`, `attachment`, `remark`. No `organisation` table — per `DomainModel.md`'s Tenancy Scope Note, this whole database *is* the one Organisation for Stage 1, so there's nothing to store.
+- One PostgreSQL schema, `projectpal`, containing every Level 1 entity from `DomainModel.md` §2: `team`, `person`, `person_role`, `component`, `project`, `task`, `task_resource`, `dependency`, `attachment`, `remark`. No `organisation` table — per `DomainModel.md`'s Tenancy Scope Note, this whole database *is* the one Organisation for Level 1, so there's nothing to store.
 - Enumerated types for Priority, Task Status, Task Type, Effort Type, Team Role, and Attachment Kind, matching the value sets confirmed against both `DomainModel.md`/`KeyConcepts.md` and the old `ProjectPalDB_1` data (§6).
 - Three business rules from `DomainModel.md` are enforced at the database layer, not left to be re-implemented later in application code:
   - **Dependency cycle prevention** (`DomainModel.md`'s Dependency entity) — a trigger walks the existing dependency graph before allowing a new edge, and rejects it if it would close a loop.
@@ -90,7 +90,7 @@ I wasn't able to run this myself in this session — this machine has neither Do
 Deliberately not built yet, per the user's request to focus on "a database" and per `DataBaseHostingOptions.md`'s own phased approach:
 
 - **REST API** — `DataBaseHostingOptions.md` suggests PostgREST (auto-generates CRUD endpoints from the schema) as the fastest starting point, with hand-written endpoints (e.g. FastAPI) added later for real business operations. Next step once you're ready.
-- **GUI / web client** — depends on `Goals.md` Stage 1's still-open "client technology" question.
+- **GUI / web client** — depends on `Goals.md` Level 1's still-open "client technology" question.
 - **Authentication** — `DataBaseHostingOptions.md` suggests starting simple (e.g. PostgREST + JWT) rather than building this into the database layer.
 - **HTTPS / reverse proxy** — only relevant once there's an API in front of the database to secure.
 - **Automated backups** — worth a manual `docker compose exec db pg_dump ...` habit even at this stage, but a scheduled/automated backup wasn't part of this request.

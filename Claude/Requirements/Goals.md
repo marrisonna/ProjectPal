@@ -9,10 +9,10 @@
    - 3.2 [Multi-tenancy](#multi-tenancy)
    - 3.3 [Clients](#clients)
    - 3.4 [Data protection & operational resilience](#data-protection-and-operational-resilience)
-4. [Delivery Stages](#delivery-stages)
-   - 4.1 [Stage 1 — Demonstrator](#stage-1-demonstrator)
-   - 4.2 [Stage 2 — Minimum Viable Product (MVP)](#stage-2-mvp)
-   - 4.3 [Stage 3 — Everything Else](#stage-3-everything-else)
+4. [Delivery Levels](#delivery-levels)
+   - 4.1 [Level 1 — Demonstrator](#level-1-demonstrator)
+   - 4.2 [Level 2 — Minimum Viable Product (MVP)](#level-2-mvp)
+   - 4.3 [Level 3 — Everything Else](#level-3-everything-else)
 5. [Non-Goals (for now)](#non-goals)
 
 <a id="vision"></a>
@@ -73,13 +73,13 @@ Rationale:
 - The data is the core asset and must be protected accordingly: encryption in transit and at rest, regular backups with tested restore procedures, disaster recovery plan, high availability, audit logging of who changed what.
 - Hosted on cloud infrastructure suited to "Google/cloud-oriented" organisations — implies thinking about identity (e.g. supporting Google Workspace / OIDC sign-in) alongside pure hosting choice.
 
-<a id="delivery-stages"></a>
-## 4. Delivery Stages
+<a id="delivery-levels"></a>
+## 4. Delivery Levels
 
-Rather than one long list of open questions, the work splits into three stages with different goals, different risk tolerances, and different infrastructure. The organising principle: most decisions can be scoped to the stage that actually needs them, except **Foundational Decisions** (see `KeyConcepts.md`), which need a stated direction of travel now even if they aren't fully built until later. Each stage below calls those out explicitly.
+Rather than one long list of open questions, the work splits into three levels with different goals, different risk tolerances, and different infrastructure. The organising principle: most decisions can be scoped to the level that actually needs them, except **Foundational Decisions** (see `KeyConcepts.md`), which need a stated direction of travel now even if they aren't fully built until later. Each level below calls those out explicitly.
 
-<a id="stage-1-demonstrator"></a>
-### 4.1 Stage 1 — Demonstrator
+<a id="level-1-demonstrator"></a>
+### 4.1 Level 1 — Demonstrator
 
 **Scope:** one organisation only, deployed *inside* that organisation's own infrastructure. Security is not the top concern. Infrastructure is deliberately cut down (simple database, minimal moving parts). Purpose: let real users try the concepts and the GUI and give feedback, as cheaply as possible.
 
@@ -91,33 +91,33 @@ Rather than one long list of open questions, the work splits into three stages w
 - **Auth** — framing question: *is a single shared login sufficient, or do individual named users matter even now (e.g. because permission-related workflows are part of what's being trialled)?*
 
 **Foundational decisions to lock in now even though nothing is built yet:**
-- **API-first boundary.** Even with no security requirement yet, keep the client talking to an API rather than the database directly. Stage 2 requires this anyway (hosted outside the customer's network), so building it this way from day one avoids a rewrite rather than saving effort now.
-- **Tenant-shaped data model.** Even though there's only one organisation, consider including an `OrganisationId` (and possibly `TeamId`) on core tables now — trivially always the same value at this stage, but far cheaper than retrofitting tenant scoping into every table and query once Stage 3 needs it for real.
+- **API-first boundary.** Even with no security requirement yet, keep the client talking to an API rather than the database directly. Level 2 requires this anyway (hosted outside the customer's network), so building it this way from day one avoids a rewrite rather than saving effort now.
+- **Tenant-shaped data model.** Even though there's only one organisation, consider including an `OrganisationId` (and possibly `TeamId`) on core tables now — trivially always the same value at this level, but far cheaper than retrofitting tenant scoping into every table and query once Level 3 needs it for real.
 - **Identity direction.** Doesn't need building now, but decide the intended long-term approach (e.g. federate to external identity providers) so the demonstrator's login isn't built in a way that's a dead end.
 
-<a id="stage-2-mvp"></a>
-### 4.2 Stage 2 — Minimum Viable Product (MVP)
+<a id="level-2-mvp"></a>
+### 4.2 Level 2 — Minimum Viable Product (MVP)
 
 **Scope:** a small customer base (perhaps 1–2 organisations), infrastructure still kept light, but now hosted *outside* the customer's own network — the first point where real, internet-facing security matters, because data is now leaving the customer's own IT boundary.
 
 **Decisions/work needed now:**
 - **Hosting/cloud choice** — framing question: *where does this actually run, and how minimal can the setup be for 1–2 customers (a single small server / managed database) while still being reasonably safe?*
-- **Real security baseline** — framing question: *what's the minimum acceptable bar now that data is hosted by us — TLS in transit, encryption at rest, real authentication — even if full audit logging and compliance are still deferred to Stage 3?*
-- **Database-per-tenant in practice, at small scale** — framing question: *with only 1–2 customers, is manual/scripted provisioning of each tenant database sufficient, deferring the fully automated onboarding pipeline to Stage 3?* (Likely yes — this is the point where the Stage-3 architecture gets validated for real, without needing to build the automation yet.)
-- **Identity, for real** — framing question: *build minimal custom auth now, or integrate a real external identity provider (e.g. Google sign-in) at this stage, given it may be cheaper long-term than building throwaway auth twice?*
-- **Backup/recovery baseline** — framing question: *who is responsible for backing up customer data now that it's hosted by us, and what's the minimum acceptable recovery story, even if a full DR plan is still Stage 3?*
+- **Real security baseline** — framing question: *what's the minimum acceptable bar now that data is hosted by us — TLS in transit, encryption at rest, real authentication — even if full audit logging and compliance are still deferred to Level 3?*
+- **Database-per-tenant in practice, at small scale** — framing question: *with only 1–2 customers, is manual/scripted provisioning of each tenant database sufficient, deferring the fully automated onboarding pipeline to Level 3?* (Likely yes — this is the point where the Level-3 architecture gets validated for real, without needing to build the automation yet.)
+- **Identity, for real** — framing question: *build minimal custom auth now, or integrate a real external identity provider (e.g. Google sign-in) at this level, given it may be cheaper long-term than building throwaway auth twice?*
+- **Backup/recovery baseline** — framing question: *who is responsible for backing up customer data now that it's hosted by us, and what's the minimum acceptable recovery story, even if a full DR plan is still Level 3?*
 - **Migration from demonstrator data** — framing question: *if a demonstrator customer converts into an MVP customer, does their trial data need to move into the hosted environment — and is a manual one-off export/import acceptable, rather than building a repeatable migration tool?*
 
 **Foundational decisions to lock in now:**
-- Confirm the database-per-tenant pattern actually works operationally at small scale — this is the cheap, low-risk moment to validate the Stage 3 architecture before it needs to handle many tenants.
+- Confirm the database-per-tenant pattern actually works operationally at small scale — this is the cheap, low-risk moment to validate the Level 3 architecture before it needs to handle many tenants.
 - Commit to the identity direction concretely (even if the implementation is still minimal), since the login/session model touches every client and is painful to change once clients depend on it.
 
-<a id="stage-3-everything-else"></a>
-### 4.3 Stage 3 — Everything Else
+<a id="level-3-everything-else"></a>
+### 4.3 Level 3 — Everything Else
 
 **Scope:** the full vision described earlier in this document — many self-service organisations, multiple teams per organisation, mobile clients, full high-availability/disaster-recovery, compliance and audit, automated tenant provisioning and migration, and cross-tenant admin/reporting tooling for us as the vendor.
 
-Nothing here should be *designed* from scratch at this point — Stages 1 and 2 exist specifically to have already established the direction of travel for the items called out above (API-first boundary, tenant-shaped data model, identity approach, database-per-tenant pattern). Stage 3's work is mostly building out automation and depth on top of a foundation that shouldn't need to change shape:
+Nothing here should be *designed* from scratch at this point — Levels 1 and 2 exist specifically to have already established the direction of travel for the items called out above (API-first boundary, tenant-shaped data model, identity approach, database-per-tenant pattern). Level 3's work is mostly building out automation and depth on top of a foundation that shouldn't need to change shape:
 - Automated tenant onboarding (self-service database provisioning, versioned migrations applied across all tenant databases)
 - Full team model and per-team permissions within an organisation
 - Native/PWA mobile clients

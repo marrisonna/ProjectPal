@@ -20,7 +20,7 @@
 14. [Merge / Conflict](#merge-conflict)
 15. [Attachment](#attachment)
 16. [Remark](#remark)
-17. [Demonstrator / MVP / (Stage 3) "Everything Else"](#delivery-stage-terms)
+17. [Demonstrator / MVP / (Level 3) "Everything Else"](#delivery-level-terms)
 18. [Foundational Decision](#foundational-decision)
 
 This document defines the concepts that are central to ProjectPal's design. For each one, it covers what the concept is, why it matters enough to call out on its own, and how it fits into the overall solution described in `Goals.md`, `DomainModel.md`, and `UseCases.md`. Where a concept is still an open decision rather than a settled one, that's noted inline — this document should be updated as decisions are made.
@@ -41,7 +41,7 @@ A Team is a grouping of People within an Organisation, used to scope day-to-day 
 
 It's key because real customers aren't flat: an Organisation adopting ProjectPal will typically have multiple groups (departments, product teams) that want their own view of "our work" without needing to be treated as separate paying customers. Without Team as a first-class concept, an Organisation with several such groups has no way to scope a task list or report to just one of them.
 
-It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Stage 3 in `Goals.md`, but its basic shape needed deciding well before then, because Project, Task, and Person all need to know which Team they belong to — see `DomainModel.md`'s Team-scoping decision (a Person can belong to several Teams with an independent role in each; a Project belongs to exactly one Team for Stage 1). This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
+It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Level 3 in `Goals.md`, but its basic shape needed deciding well before then, because Project, Task, and Person all need to know which Team they belong to — see `DomainModel.md`'s Team-scoping decision (a Person can belong to several Teams with an independent role in each; a Project belongs to exactly one Team for Level 1). This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
 
 <a id="tenant"></a>
 ## 3. Tenant
@@ -290,7 +290,7 @@ Merge/Conflict describes what happens when two people edit the same record at th
 
 It's key because any tool used by more than one person concurrently has to have an answer for this — even if the answer is "make it rare and simple to recover from" rather than "build an elaborate resolution UI."
 
-It directly shapes the API's concurrency model and the client UX for editing. `DomainModel.md` settles this by stage: the Demonstrator assumes a single user at a time, so no conflict-handling is built at all; later stages need real-time multi-user editing (users see each other's changes live), a materially bigger commitment than the old system's interactive field-by-field merge dialog, which remains a fallback worth keeping in mind for cases live sync doesn't cover.
+It directly shapes the API's concurrency model and the client UX for editing. `DomainModel.md` settles this by level: the Demonstrator assumes a single user at a time, so no conflict-handling is built at all; later levels need real-time multi-user editing (users see each other's changes live), a materially bigger commitment than the old system's interactive field-by-field merge dialog, which remains a fallback worth keeping in mind for cases live sync doesn't cover.
 
 <a id="attachment"></a>
 ## 15. Attachment
@@ -310,20 +310,20 @@ It's key because it's the system's lightweight collaboration mechanism — a way
 
 See `DomainModel.md`'s Remark entry for the structural fix needed to correct a data-integrity quirk in the old model, where editing a Remark silently reassigned it to whoever last touched it — a small change, but an important one for Remark to actually function as a trustworthy record of who said what.
 
-<a id="delivery-stage-terms"></a>
-## 17. Demonstrator / MVP / (Stage 3) "Everything Else"
+<a id="delivery-level-terms"></a>
+## 17. Demonstrator / MVP / (Level 3) "Everything Else"
 
-These are the three delivery stages defined in `Goals.md`, distinguished by customer count, security posture, and hosting location rather than by a fixed feature list.
+These are the three delivery levels defined in `Goals.md`, distinguished by customer count, security posture, and hosting location rather than by a fixed feature list.
 
-They're key because, without this framing, every design conversation risks either over-building for a future that hasn't arrived yet, or under-building foundations that are expensive to retrofit later. The stages give a shared vocabulary for "is this needed now, or can it wait" that applies consistently across every concept in this document.
+They're key because, without this framing, every design conversation risks either over-building for a future that hasn't arrived yet, or under-building foundations that are expensive to retrofit later. The levels give a shared vocabulary for "is this needed now, or can it wait" that applies consistently across every concept in this document.
 
-They act as the lens the rest of the plan is viewed through: nearly every concept above gets evaluated against them at some point — does the Demonstrator need Merge/Conflict handling? Does Role/Permission Level need to be per-Team by MVP? — which is why `DomainModel.md` and `UseCases.md` both reference these stages directly when flagging open questions.
+They act as the lens the rest of the plan is viewed through: nearly every concept above gets evaluated against them at some point — does the Demonstrator need Merge/Conflict handling? Does Role/Permission Level need to be per-Team by MVP? — which is why `DomainModel.md` and `UseCases.md` both reference these levels directly when flagging open questions.
 
 <a id="foundational-decision"></a>
 ## 18. Foundational Decision
 
 A Foundational Decision is one that's cheap to make correctly now and expensive to retrofit once real data and real clients depend on it (e.g. the API-first boundary, the tenant-shaped data model, the identity direction).
 
-It's key because it's the escape valve in the staged approach above: without it, "defer everything possible to a later stage" would also defer decisions that actually need to be right from the very first line of code, turning a cheap early choice into an expensive later rewrite.
+It's key because it's the escape valve in the level-based approach above: without it, "defer everything possible to a later level" would also defer decisions that actually need to be right from the very first line of code, turning a cheap early choice into an expensive later rewrite.
 
-It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can't simply be left until later. Identity direction is still open; derived-vs-stored scheduling and (for Stage 1) Team scoping have already been decided this way — settled early, even though the full features built on top of them (real identity federation, full Team management) are scoped to later stages.
+It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can't simply be left until later. Identity direction is still open; derived-vs-stored scheduling and (for Level 1) Team scoping have already been decided this way — settled early, even though the full features built on top of them (real identity federation, full Team management) are scoped to later levels.

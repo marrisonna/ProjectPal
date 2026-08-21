@@ -1,9 +1,9 @@
--- ProjectPal V2 — Stage 1 database schema
--- PostgreSQL. Implements the Stage 1 scope of Claude/Requirements/DomainModel.md.
+-- ProjectPal V2 — Level 1 database schema
+-- PostgreSQL. Implements the Level 1 scope of Claude/Requirements/DomainModel.md.
 -- This is migration 001 — the whole schema, since there's no prior version to migrate from.
 -- Later structural changes should be added as new, additive migration files (002_..., 003_...),
 -- never by editing this file, so the database can always be rebuilt from an ordered list of migrations
--- (see Claude/Stage1_Implementation/DatabaseSetup/DataBaseHostingOptions.md's "database migrations" section).
+-- (see Claude/Level1_Implementation/DatabaseSetup/DataBaseHostingOptions.md's "database migrations" section).
 
 BEGIN;
 
@@ -61,7 +61,7 @@ CREATE TABLE person (
     -- because it isn't scoped to any one Team (DomainModel.md Open Questions/Decisions #4).
     is_organisation_admin boolean NOT NULL DEFAULT false,
     -- Placeholder for a real external identity reference (Goals.md's identity
-    -- direction). Stage 1 can put a simple username/email here for now.
+    -- direction). Level 1 can put a simple username/email here for now.
     external_login        text,
     -- Gantt bar colour, a per-Person per-Organisation setting (DomainModel.md PersonRole entry).
     colour                text,
@@ -104,7 +104,7 @@ CREATE INDEX ix_component_parent ON component(parent_component_id);
 CREATE TABLE project (
     project_id        serial PRIMARY KEY,
     parent_project_id integer REFERENCES project(project_id),
-    -- Stage 1: every Project belongs to exactly one Team
+    -- Level 1: every Project belongs to exactly one Team
     -- (DomainModel.md Open Questions/Decisions #1; may broaden later — see Future Extensions).
     team_id             integer NOT NULL REFERENCES team(team_id),
     name                 text NOT NULL,
