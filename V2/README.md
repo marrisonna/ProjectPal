@@ -11,12 +11,12 @@
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
 
-See [`Plan.md`](../Claude/DatabaseSetUp1/Plan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
+See [`InitialDatabaseSetupPlan.md`](../Claude/DatabaseSetUp1/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `Plan.md` §8.
+A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `InitialDatabaseSetupPlan.md` §8.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup
@@ -59,7 +59,7 @@ If you'd rather load the schema without the example data (e.g. to start from a g
 <a id="connecting-a-gui-tool"></a>
 ## 5. Connecting a GUI Tool
 
-If you installed DBeaver or pgAdmin (`Plan.md` §2), connect with:
+If you installed DBeaver or pgAdmin (`InitialDatabaseSetupPlan.md` §2), connect with:
 
 | Setting | Value |
 |---|---|
@@ -74,7 +74,7 @@ All the tables live in the `projectpal` schema (not the default `public` schema)
 <a id="trying-out-the-business-rules"></a>
 ## 6. Trying Out the Business Rules
 
-Three rules from `DomainModel.md` are enforced by the database itself (`Plan.md` §5). Worth trying by hand once, e.g. via `docker compose exec db psql -U projectpal -d projectpal` (adjust the username if you changed it):
+Three rules from `DomainModel.md` are enforced by the database itself (`InitialDatabaseSetupPlan.md` §5). Worth trying by hand once, e.g. via `docker compose exec db psql -U projectpal -d projectpal` (adjust the username if you changed it):
 
 - **Dependency cycles are rejected**: task 1 already depends-on task 2 in the example data (`INSERT INTO dependency (pre_task_id, post_task_id) VALUES (1, 2);`). Try the reverse — `INSERT INTO dependency (pre_task_id, post_task_id) VALUES (2, 1);` — and it should fail with `This dependency would create a cycle`.
 - **Remarks can't be edited or deleted**: `UPDATE remark SET remark_text = 'edited' WHERE remark_id = 1;` should fail with `Remarks are append-only and cannot be updated or deleted`.
