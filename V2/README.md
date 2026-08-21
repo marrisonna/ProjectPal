@@ -11,7 +11,7 @@
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
 
-See [`InitialDatabaseSetupPlan.md`](../Claude/Implementation/DatabaseSetup/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
+See [`InitialDatabaseSetupPlan.md`](../Claude/Stage1_Implementation/DatabaseSetup/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
