@@ -30,7 +30,22 @@ Subfolders are prefixed with the phase number so they sort in order (see `Claude
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
 
-- **O1-3: Deployment/packaging mechanism** — how a customer site actually stands this up (Docker container, simple installer, or VM image). Not yet started as its own phase; may need to become one.
+- **O1-3: Deployment/packaging mechanism** — how a customer site actually stands this up. Not yet started as its own phase; may need to become one.
+
+  **Needed by:** not urgent. No other Level 1 phase depends on this being resolved, and the actual packaging work can't complete until Phases 2–5 (REST API, Authentication, HTTPS/Reverse Proxy, GUI/Web Client) exist to be packaged. Latest it can be decided: before the Demonstrator is first handed to a real trial site, i.e. by the time Phase 5 (GUI/Web Client) wraps up. It can be settled earlier as just a direction, without blocking anything.
+
+  **Options considered:**
+  - *Docker Compose bundle* — extend the existing `docker-compose.yml` (already built for Postgres in Phase 1) to add the API, web app, and reverse proxy as more services.
+    - **Pros:** reuses the tooling and skills already built for Database Setup; cross-platform; easy to update (`docker compose pull && up -d`) and cleanly reset, matching `1_DatabaseSetup/DataBaseHostingOptions.md`'s existing architecture.
+    - **Cons:** requires Docker installed at the customer site — and Docker Desktop's licensing terms require a paid subscription for larger companies, which may matter for some prospective customers; whoever stands it up needs to be comfortable with a terminal.
+  - *Simple installer* — a native Windows/Mac installer bundling Postgres, the API, and a web server into one install.
+    - **Pros:** most approachable for a non-technical customer-site person — no Docker or terminal knowledge needed, feels like installing an ordinary desktop app.
+    - **Cons:** substantial new engineering effort (a separate installer per OS, embedding/managing Postgres, ongoing installer maintenance) that's disproportionate for a trial-only Demonstrator, and reuses none of the Docker-based tooling already built.
+  - *VM image* — a pre-built VM with everything installed and configured; the customer imports and boots it.
+    - **Pros:** fully self-contained regardless of the host OS's installed software.
+    - **Cons:** large download size; still needs the customer to have virtualization software and be reasonably comfortable importing a VM — a similar bar to Docker, for a heavier resource footprint; building and maintaining the image is itself ongoing work, comparable to or more than the Docker Compose option.
+
+  **Current lean (not a decision):** Docker Compose bundle — it's the lowest-effort extension of what Phase 1 already built, and fits Level 1's "as cheaply as possible, minimal moving parts" framing (`Scope.md` §1) better than building new packaging machinery from scratch.
 
 <a id="decisions"></a>
 ## 4. Decisions (Level-Wide)
