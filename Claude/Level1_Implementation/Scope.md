@@ -17,7 +17,7 @@ One organisation only, deployed *inside* that organisation's own infrastructure.
 <a id="in-scope"></a>
 ## 2. In Scope
 
-- **Client technology** — a decision, not yet made: should users open a browser pointed at a server running inside their own network, or install a client app? Tracked as a Level-wide open question in `ImplementationPlan.md`.
+- **Client technology** — settled (`D1-1`): a browser-based web app. See the GUI / Web Client phase.
 - **Feature scope** — a workable subset of the ~20 windows/dialogs from `V1.2` (task/project management, Gantt/plan view, find, merge, attachments, admin) sufficient to make a trial meaningful — informed by `Requirements/UseCases.md`.
 - **Database choice** — settled: PostgreSQL, locally hosted (see the Database Setup phase).
 - **Deployment/packaging** — something a customer site can stand up without a dedicated ops team (Docker container, simple installer, or VM image).

@@ -28,4 +28,4 @@ Per `Requirements/Goals.md` §4.2, likely decisions/work for this Level:
 <a id="deferred-from-level-1"></a>
 ## 3. Deferred From Level 1
 
-Nothing recorded yet. Items intentionally pushed out of Level 1 scope land here as they arise — see `Claude/Level1_Implementation/Scope.md` §4 and `Claude/Guidelines/ImplementationApproach.md` §4.
+- **Installable cross-platform client, alongside the web app.** Level 1 builds a browser-based web app only (`D1-1` in `Claude/Level1_Implementation/ImplementationPlan.md`). A native/installable cross-platform client (in the way a tool like Slack offers both a browser app and a desktop app) wasn't ruled out, just deferred — not yet committed to this Level specifically, but worth considering here as customer needs become clearer.
