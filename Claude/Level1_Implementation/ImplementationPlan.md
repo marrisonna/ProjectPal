@@ -16,15 +16,15 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 
 | # | Phase | Status | Details |
 |---|---|---|---|
-| 1 | Database Setup | Done | [`DatabaseSetup/`](DatabaseSetup/) |
-| 2 | REST API | Not started | [`RestApi/`](RestApi/) |
-| 3 | Authentication | Not started | [`Authentication/`](Authentication/) |
-| 4 | HTTPS / Reverse Proxy | Not started | [`HttpsReverseProxy/`](HttpsReverseProxy/) |
-| 5 | GUI / Web Client | Not started | [`GuiClient/`](GuiClient/) |
-| 6 | Automated Backups | Not started | [`AutomatedBackups/`](AutomatedBackups/) |
-| 7 | Urgency Calculation | Not started | [`UrgencyCalculation/`](UrgencyCalculation/) |
+| 1 | Database Setup | Done | [`1_DatabaseSetup/`](1_DatabaseSetup/) |
+| 2 | REST API | Not started | [`2_RestApi/`](2_RestApi/) |
+| 3 | Authentication | Not started | [`3_Authentication/`](3_Authentication/) |
+| 4 | HTTPS / Reverse Proxy | Not started | [`4_HttpsReverseProxy/`](4_HttpsReverseProxy/) |
+| 5 | GUI / Web Client | Not started | [`5_GuiClient/`](5_GuiClient/) |
+| 6 | Automated Backups | Not started | [`6_AutomatedBackups/`](6_AutomatedBackups/) |
+| 7 | Urgency Calculation | Not started | [`7_UrgencyCalculation/`](7_UrgencyCalculation/) |
 
-This initial breakdown and ordering is provisional — carried over from `DatabaseSetup/InitialDatabaseSetupPlan.md` §8's "Out of Scope for This Pass" list — and is likely to be refined (reordered, split, or merged — e.g. Urgency Calculation may end up folding into the REST API phase) as work on each phase actually begins.
+Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). This initial breakdown and ordering is provisional — carried over from `1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8's "Out of Scope for This Pass" list — and is likely to be refined (reordered, split, or merged — e.g. Urgency Calculation may end up folding into the REST API phase) as work on each phase actually begins.
 
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)

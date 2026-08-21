@@ -2,7 +2,7 @@
 
 **Status:** Not started
 
-**Objective:** Move from the manual `docker compose exec db pg_dump ...` habit noted in `../DatabaseSetup/InitialDatabaseSetupPlan.md` §8 to a scheduled/automated backup, once the Demonstrator is holding data anyone cares about losing.
+**Objective:** Move from the manual `docker compose exec db pg_dump ...` habit noted in `../1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8 to a scheduled/automated backup, once the Demonstrator is holding data anyone cares about losing.
 
 **Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts.
 

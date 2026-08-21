@@ -35,6 +35,8 @@ What is in and out of scope for that Level, seeded from `Requirements/Goals.md`'
 
 Each phase of a Level's implementation gets its own subfolder inside that Level's folder. All documentation for that phase — plans, decisions, supporting research, open questions specific to it — lives there. `ImplementationPlan.md` links to it rather than duplicating its content.
 
+Phase subfolders are named `N_PhaseName` (e.g. `1_DatabaseSetup`, `2_RestApi`), where `N` is the phase's position in `ImplementationPlan.md`'s phase table, so they sort in build order when listed. If a phase later needs to split into sub-phases, name those `NaPhaseName`, `NbPhaseName`, etc. (e.g. `2a_RestApiCrud`, `2b_RestApiBusinessRules`), keeping them sorted immediately after phase `N` and before phase `N+1`.
+
 <a id="open-questions-placement"></a>
 ## 3. Open Questions: Level-Wide vs. Phase-Specific
 

@@ -14,7 +14,7 @@
 <a id="what-this-covers"></a>
 ## 1. What This Covers
 
-This is the plan for standing up the **database** half of a Level 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/Level1_Implementation/DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../../V2) — this document stays here in `Claude/Level1_Implementation/DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
+This is the plan for standing up the **database** half of a Level 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/Level1_Implementation/1_DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../../V2) — this document stays here in `Claude/Level1_Implementation/1_DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
 
 <a id="downloads-and-installs"></a>
 ## 2. What to Download and Install
