@@ -157,3 +157,28 @@ I'd like some notes on how to set up the database, install the schema and test i
 I'd also like some example data in the database.
 If you wish and are able, you can look on this machine at the SQLServer database ProjectPalDB_1 for ideas on the data.
 Please document this all and place any files/code in 'Claude/DatabaseSetUp1', we'll find a better home for it once I see what it is.
+
+
+Rename the concept of 'Stages' in Goals.md do be 'Levels', update other documents and file/directory names to match
+
+
+In the Level1_Implemenation folder, create a new document called 'ImplementationPlan.md' - This will be the core plan for the project in the scope of Level 1.
+It will be broken down into phases.
+The initial set of phases consists of the Database setup (which is done), followed by additional phases which can be taken from section 8 of InitialDatabaseSetupPlan.md.
+In the Level1_Implemenation folder also create a 'Scope.md' document that will detail what is in and out of scope for this Level.  You can use 'Goals.md' to seed this.
+Inside the Level1_Implemenation folder there will be additional folders, one for each phase.
+Details of each phase will be documented in each subfolder, with any supporting documention.
+There is already one called 'DatabaseSetup' which was the first phase.
+The 'ImplementationPlan.md' will reference the documents in subfolder for details, rather than contain the details itself.
+The 'ImplementationPlan.md' will track all of the phases and their status.
+The 'ImplementationPlan.md' can contain open questions related to the Level as a whole, but open question specific to individual phases should be contained in
+plan related documents in the phase subdirectory.
+
+We will also need folders Level2_Implemenation and Level3_Implemenation, each of these will need their own 'ImplementationPlan.md' and 'Scope.md' documents.
+These will be used as place holders intially, but things that are deferred from Level 1 can be placed in these as they arise.
+
+We will work together on fleshing out all of the above as we proceed with the implemention.  The information will come together as the implementation evolves.
+
+Create a new document in 'Guidelines' called 'ImplementationApproach.md' that documents the approach described above.
+
+Then create and populate all of the directories and documents, as far as can be resonably done at this moment in time. 
