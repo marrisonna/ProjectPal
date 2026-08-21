@@ -14,7 +14,7 @@
 <a id="what-this-covers"></a>
 ## 1. What This Covers
 
-This is the plan for standing up the **database** half of a Stage 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../V2) — this document stays here in `Claude/DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
+This is the plan for standing up the **database** half of a Stage 1 Demonstrator (`Goals.md` §4.1) on this PC, following the locally-hosted architecture recommended in `Claude/Implementation/DatabaseSetup/DataBaseHostingOptions.md`: **PostgreSQL, run in Docker, with nothing else talking to it directly** — no REST API, GUI, or authentication layer is built in this pass (see §8). The resulting code and schema now live under [`V2/`](../../../V2) — this document stays here in `Claude/Implementation/DatabaseSetup/` as the historical planning record; it isn't needed by the application itself.
 
 <a id="downloads-and-installs"></a>
 ## 2. What to Download and Install
@@ -56,7 +56,7 @@ Nothing here requires you to hand-write SQL yourself unless you want to — the 
 <a id="schema-design"></a>
 ## 5. Schema Design
 
-Full DDL is in [`database/migrations/001_initial_schema.sql`](../../V2/database/migrations/001_initial_schema.sql) — this section is a summary, not a restatement (per `Claude/Guidelines/document-guidelines.md` rule 2, `DomainModel.md` remains the canonical description of *why* each entity/relationship exists).
+Full DDL is in [`database/migrations/001_initial_schema.sql`](../../../V2/database/migrations/001_initial_schema.sql) — this section is a summary, not a restatement (per `Claude/Guidelines/document-guidelines.md` rule 2, `DomainModel.md` remains the canonical description of *why* each entity/relationship exists).
 
 - One PostgreSQL schema, `projectpal`, containing every Stage 1 entity from `DomainModel.md` §2: `team`, `person`, `person_role`, `component`, `project`, `task`, `task_resource`, `dependency`, `attachment`, `remark`. No `organisation` table — per `DomainModel.md`'s Tenancy Scope Note, this whole database *is* the one Organisation for Stage 1, so there's nothing to store.
 - Enumerated types for Priority, Task Status, Task Type, Effort Type, Team Role, and Attachment Kind, matching the value sets confirmed against both `DomainModel.md`/`KeyConcepts.md` and the old `ProjectPalDB_1` data (§6).
@@ -73,14 +73,14 @@ Full DDL is in [`database/migrations/001_initial_schema.sql`](../../V2/database/
 <a id="example-data"></a>
 ## 6. Example Data
 
-[`database/seed/001_example_data.sql`](../../V2/database/seed/001_example_data.sql) loads a small, entirely fictional dataset: 2 Teams, 7 People (one belonging to both Teams with a different role in each, one an organisation admin), a 4-Component tree, 4 Projects (one with two sub-projects), 11 Tasks covering every Priority/Status/Task Type/Effort Type combination worth exercising, a few resource assignments, four Dependencies (including a Project-to-Project one), three Attachments (one of each kind — File/Mail/Link), and four Remarks.
+[`database/seed/001_example_data.sql`](../../../V2/database/seed/001_example_data.sql) loads a small, entirely fictional dataset: 2 Teams, 7 People (one belonging to both Teams with a different role in each, one an organisation admin), a 4-Component tree, 4 Projects (one with two sub-projects), 11 Tasks covering every Priority/Status/Task Type/Effort Type combination worth exercising, a few resource assignments, four Dependencies (including a Project-to-Project one), three Attachments (one of each kind — File/Mail/Link), and four Remarks.
 
 No real names, descriptions, or content were copied from anywhere. Its *shape* — status/priority mix, how resourcing and dependencies tend to be used — was informed by looking at the old `V1.2` SQL Server database (`ProjectPalDB_1`, on this machine): its table/column layout (confirmed via `INFORMATION_SCHEMA.COLUMNS`) and its distinct enum-like values (e.g. `Priority`, `Status`, `TaskType`, `UserType`) directly informed the enum types in the schema. Actual row content (real people's names, real task descriptions — 43 People, 1,542 Tasks in that database) was **not** read or copied, since that's real historical work data, not example data.
 
 <a id="setup-install-test"></a>
 ## 7. Setup, Install, and Test
 
-See [`README.md`](../../V2/README.md) for the step-by-step instructions (first-time setup, everyday use, verifying the install, connecting a GUI tool, resetting, and adding a future migration). In short: install Docker Desktop (§2), copy `.env.example` to `.env` (§3), then run `.\scripts\setup.ps1` and `.\scripts\verify.ps1` from the `V2` folder.
+See [`README.md`](../../../V2/README.md) for the step-by-step instructions (first-time setup, everyday use, verifying the install, connecting a GUI tool, resetting, and adding a future migration). In short: install Docker Desktop (§2), copy `.env.example` to `.env` (§3), then run `.\scripts\setup.ps1` and `.\scripts\verify.ps1` from the `V2` folder.
 
 I wasn't able to run this myself in this session — this machine has neither Docker nor a PostgreSQL client installed (confirmed by trying), so the SQL and scripts here have been carefully reviewed but not executed end-to-end. Please run `.\scripts\setup.ps1` and `.\scripts\verify.ps1` after installing Docker Desktop and report back anything that doesn't work as described.
 

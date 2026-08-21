@@ -3,7 +3,7 @@
 -- This is migration 001 — the whole schema, since there's no prior version to migrate from.
 -- Later structural changes should be added as new, additive migration files (002_..., 003_...),
 -- never by editing this file, so the database can always be rebuilt from an ordered list of migrations
--- (see Claude/DatabaseSetup/DataBaseHostingOptions.md's "database migrations" section).
+-- (see Claude/Implementation/DatabaseSetup/DataBaseHostingOptions.md's "database migrations" section).
 
 BEGIN;
 
