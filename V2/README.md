@@ -16,7 +16,7 @@ See [`Plan.md`](../Claude/DatabaseSetUp1/Plan.md) for the full plan (downloads, 
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 schema from `Claude/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `Plan.md` §8.
+A PostgreSQL database, running in Docker on this PC, implementing the Stage 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `Plan.md` §8.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup

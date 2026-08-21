@@ -1,5 +1,5 @@
 -- ProjectPal V2 — Stage 1 database schema
--- PostgreSQL. Implements the Stage 1 scope of Claude/DomainModel.md.
+-- PostgreSQL. Implements the Stage 1 scope of Claude/Requirements/DomainModel.md.
 -- This is migration 001 — the whole schema, since there's no prior version to migrate from.
 -- Later structural changes should be added as new, additive migration files (002_..., 003_...),
 -- never by editing this file, so the database can always be rebuilt from an ordered list of migrations
