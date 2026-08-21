@@ -65,12 +65,19 @@ Within a given scope, `<N>` is drawn from a single counter shared by that scope'
 <a id="recording-a-decision"></a>
 ### 3.2 Recording a Decision
 
-When an open question is answered, remove its entry from "Open Questions" and add a corresponding entry to "Decisions", using the same number with the `D` prefix (§3.1). A decision entry records:
+When an open question is answered, remove its entry from "Open Questions" and add a corresponding entry to "Decisions", using the same number with the `D` prefix (§3.1). A decision entry is always three lines, in this order and format:
 
-- The ID (e.g. `D1.2-2`).
-- The original question, restated (not just a link back, since the "Open Questions" entry it came from no longer exists once it moves).
-- The decision that was made.
-- The date the decision was made.
+1. `**D<ID>** (decided <YYYY-MM-DD>)` — the ID and the date the decision was made.
+2. `**Question:** <question text>` — the original question, restated (not just a link back, since the "Open Questions" entry it came from no longer exists once it moves).
+3. `**Decision:** <decision text>` — the decision that was made.
+
+Write it as a single list item with the three lines separated by `<br>` (not blank lines, and not three separate list items), so it reads as one entry:
+
+```
+- **D1-2** (decided 2026-08-21)<br>
+  **Question:** Auth model for the Demonstrator: a single shared login vs. individually named users.<br>
+  **Decision:** individually named users, not a shared login, because ...
+```
 
 <a id="placeholder-levels"></a>
 ## 4. Placeholder Levels and Deferral
