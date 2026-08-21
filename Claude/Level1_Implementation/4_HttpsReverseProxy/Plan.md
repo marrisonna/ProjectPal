@@ -6,4 +6,6 @@
 
 **Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts, numbered `O1.4-1`, `O1.4-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
 
+**Decisions (Phase-Specific):** none yet. When an open question above is answered, its entry moves here as `D1.4-<N>` (same number, `D` prefix), recording the original question, the decision, and the date.
+
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.

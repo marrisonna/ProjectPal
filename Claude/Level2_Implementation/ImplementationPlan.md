@@ -5,6 +5,7 @@
 1. [Purpose](#purpose)
 2. [Phases](#phases)
 3. [Open Questions (Level-Wide)](#open-questions)
+4. [Decisions (Level-Wide)](#decisions)
 
 <a id="purpose"></a>
 ## 1. Purpose
@@ -20,3 +21,8 @@ None defined yet.
 ## 3. Open Questions (Level-Wide)
 
 None recorded yet. When added, they'll be numbered `O2-1`, `O2-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
+
+<a id="decisions"></a>
+## 4. Decisions (Level-Wide)
+
+None yet. When a Level-wide open question above is answered, its entry moves here as `D2-<N>` (same number, `D` prefix), recording the original question, the decision, and the date.

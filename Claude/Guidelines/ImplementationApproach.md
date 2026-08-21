@@ -7,8 +7,9 @@
    - 2.1 [ImplementationPlan.md](#implementation-plan)
    - 2.2 [Scope.md](#scope-doc)
    - 2.3 [Phase Subfolders](#phase-subfolders)
-3. [Open Questions: Level-Wide vs. Phase-Specific](#open-questions-placement)
+3. [Open Questions and Decisions](#open-questions-placement)
    - 3.1 [Numbering Scheme](#open-questions-numbering)
+   - 3.2 [Recording a Decision](#recording-a-decision)
 4. [Placeholder Levels and Deferral](#placeholder-levels)
 
 <a id="purpose"></a>
@@ -39,25 +40,37 @@ Each phase of a Level's implementation gets its own subfolder inside that Level'
 Phase subfolders are named `N_PhaseName` (e.g. `1_DatabaseSetup`, `2_RestApi`), where `N` is the phase's position in `ImplementationPlan.md`'s phase table, so they sort in build order when listed. If a phase later needs to split into sub-phases, name those `NaPhaseName`, `NbPhaseName`, etc. (e.g. `2a_RestApiCrud`, `2b_RestApiBusinessRules`), keeping them sorted immediately after phase `N` and before phase `N+1`.
 
 <a id="open-questions-placement"></a>
-## 3. Open Questions: Level-Wide vs. Phase-Specific
+## 3. Open Questions and Decisions
 
-An open question belongs in a Level's `ImplementationPlan.md` if it affects how more than one phase of that Level is approached, or the Level's scope/direction as a whole. A question that only affects one phase's design belongs among that phase's own documents instead.
+An open question, and later the decision that answers it, belongs in a Level's `ImplementationPlan.md` if it affects how more than one phase of that Level is approached, or the Level's scope/direction as a whole. One that only affects a single phase's design belongs among that phase's own documents instead. Every document that has an "Open Questions" section also has a "Decisions" section immediately after it, even while that section is still empty.
 
 <a id="open-questions-numbering"></a>
 ### 3.1 Numbering Scheme
 
-Per `document-guidelines.md` rule 3, every open question is given a stable ID so it can be referenced from elsewhere without restating it, in the form `O<Level>[.<Phase>]-<N>`:
+Per `document-guidelines.md` rule 3, every open question and decision is given a stable ID so it can be referenced from elsewhere without restating it:
 
-- `O` marks the ID as an open-question reference.
-- `<Level>` is the Level number the question belongs to.
-- `.<Phase>`, if present, is the phase number (from that Level's `ImplementationPlan.md` phase table) the question is specific to. It's omitted for a Level-wide question.
-- `-<N>` is the question's sequential number within its scope (its Level, or its Level+Phase), starting at 1.
+- An open question is `O<Level>[.<Phase>]-<N>`; the decision that answers it is `D<Level>[.<Phase>]-<N>` — the same `<Level>`, `<Phase>`, and `<N>` as the question it resolves, only the letter changes.
+- `<Level>` is the Level number the item belongs to.
+- `.<Phase>`, if present, is the phase number (from that Level's `ImplementationPlan.md` phase table) the item is specific to. It's omitted for a Level-wide item.
+- `<N>` is the item's sequential number within its scope (its Level, or its Level+Phase).
 
 Examples:
-- `O1-2` — Level 1's 2nd Level-wide open question (recorded in `Level1_Implementation/ImplementationPlan.md`).
-- `O1.2-3` — Level 1, Phase 2's 3rd open question (recorded among Phase 2's own documents, e.g. `Level1_Implementation/2_RestApi/Plan.md`).
+- `O1-2` / `D1-2` — Level 1's 2nd Level-wide open question, and the decision that answers it (recorded in `Level1_Implementation/ImplementationPlan.md`).
+- `O1.2-3` / `D1.2-3` — Level 1, Phase 2's 3rd open question, and the decision that answers it (recorded among Phase 2's own documents, e.g. `Level1_Implementation/2_RestApi/Plan.md`).
 
-A sub-phase (§2.3) keeps its parent phase's number for this purpose — a question specific to sub-phase `2a` is still numbered `O1.2-<N>`, since the `.<Phase>` component identifies the phase, not the sub-phase.
+A sub-phase (§2.3) keeps its parent phase's number for this purpose — an item specific to sub-phase `2a` is still numbered `O1.2-<N>` / `D1.2-<N>`, since the `.<Phase>` component identifies the phase, not the sub-phase.
+
+Within a given scope, `<N>` is drawn from a single counter shared by that scope's open questions and decisions together, and is permanent and immutable once assigned: it is never reassigned, reused, or changed, whether or not the question it was given to is later answered. Concretely, if `O1.2-1`, `O1.2-2`, and `O1.2-3` exist and `O1.2-2` is answered, it becomes `D1.2-2` (the number doesn't change, only the letter) — `O1.2-3` is unaffected, and the next new question raised in that scope is `O1.2-4`, never a reused `O1.2-2`.
+
+<a id="recording-a-decision"></a>
+### 3.2 Recording a Decision
+
+When an open question is answered, remove its entry from "Open Questions" and add a corresponding entry to "Decisions", using the same number with the `D` prefix (§3.1). A decision entry records:
+
+- The ID (e.g. `D1.2-2`).
+- The original question, restated (not just a link back, since the "Open Questions" entry it came from no longer exists once it moves).
+- The decision that was made.
+- The date the decision was made.
 
 <a id="placeholder-levels"></a>
 ## 4. Placeholder Levels and Deferral

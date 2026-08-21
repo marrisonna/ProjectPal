@@ -32,9 +32,11 @@ level of heading numbering in the documents and reflect that in the table of con
 
 3. Give recurring items that get cross-referenced from other documents (e.g. open questions, decisions) a stable,
    unique ID, so they can be referenced by that ID elsewhere instead of being restated (per rule 2's single
-   canonical source of truth). The concrete ID format is chosen per document family rather than fixed here — e.g.
-   `Claude/Guidelines/ImplementationApproach.md` §3.1 defines the ID scheme used for open questions in the
-   Level/Phase implementation-tracking documents.
+   canonical source of truth). Once assigned, an ID is permanent: never reassigned to a different item, reused
+   after the item it named is resolved/removed, or renumbered because a neighboring item changed. The concrete ID
+   format is chosen per document family rather than fixed here — e.g. `Claude/Guidelines/ImplementationApproach.md`
+   §3.1 defines the ID scheme used for open questions and decisions in the Level/Phase implementation-tracking
+   documents.
 
 
 Claude should ignore all the text below this line.  This will be used at a later date.

@@ -5,6 +5,7 @@
 1. [Purpose](#purpose)
 2. [Phases](#phases)
 3. [Open Questions (Level-Wide)](#open-questions)
+4. [Decisions (Level-Wide)](#decisions)
 
 <a id="purpose"></a>
 ## 1. Purpose
@@ -32,3 +33,8 @@ Subfolders are prefixed with the phase number so they sort in order (see `Claude
 - **O1-1: Client technology** — browser-based web app vs. an installable cross-platform client (`Scope.md` §2, `Requirements/Goals.md` §4.1). Affects both the GUI / Web Client phase and the Deployment/packaging choice, so it's tracked here rather than in one phase's folder alone.
 - **O1-2: Auth model for the Demonstrator** — a single shared login vs. individually named users (`Scope.md` §2). Affects both the Authentication phase and the REST API phase's design.
 - **O1-3: Deployment/packaging mechanism** — how a customer site actually stands this up (Docker container, simple installer, or VM image). Not yet started as its own phase; may need to become one.
+
+<a id="decisions"></a>
+## 4. Decisions (Level-Wide)
+
+None yet. When a Level-wide open question above is answered, its entry moves here as `D1-<N>` (same number, `D` prefix — see `Claude/Guidelines/ImplementationApproach.md` §3.1), recording the original question, the decision, and the date.
