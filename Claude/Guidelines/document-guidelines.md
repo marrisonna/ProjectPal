@@ -30,11 +30,17 @@ Create the table of contents using the following mechanism (as used in
    each other and are a burden to maintain.  To make this easier, use upto three
 level of heading numbering in the documents and reflect that in the table of contents of each document.
 
+3. Give recurring items that get cross-referenced from other documents (e.g. open questions, decisions) a stable,
+   unique ID, so they can be referenced by that ID elsewhere instead of being restated (per rule 2's single
+   canonical source of truth). The concrete ID format is chosen per document family rather than fixed here — e.g.
+   `Claude/Guidelines/ImplementationApproach.md` §3.1 defines the ID scheme used for open questions in the
+   Level/Phase implementation-tracking documents.
+
 
 Claude should ignore all the text below this line.  This will be used at a later date.
-#. As a document evolves, avoid adding asides that clutter the document with details about how it has evolved.  A 
+4. As a document evolves, avoid adding asides that clutter the document with details about how it has evolved.  A 
   reader is not interested in how the document has evolved, they are only interested in the final state.
-#. State each point directly in its final form.  Do not describe what something *is not*, or contrast it
+5. State each point directly in its final form.  Do not describe what something *is not*, or contrast it
   against alternatives that were considered but not chosen, unless the contrast is genuinely needed for the
   reader to understand the final state.  For example, write "`X` is a list of positions" rather than
   "`X` is a list of positions, not a boolean".

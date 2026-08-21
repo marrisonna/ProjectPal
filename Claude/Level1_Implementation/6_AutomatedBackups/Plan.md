@@ -4,6 +4,6 @@
 
 **Objective:** Move from the manual `docker compose exec db pg_dump ...` habit noted in `../1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8 to a scheduled/automated backup, once the Demonstrator is holding data anyone cares about losing.
 
-**Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts.
+**Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts, numbered `O1.6-1`, `O1.6-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.

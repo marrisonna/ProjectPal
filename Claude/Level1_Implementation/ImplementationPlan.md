@@ -29,6 +29,6 @@ Subfolders are prefixed with the phase number so they sort in order (see `Claude
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
 
-- **Client technology** — browser-based web app vs. an installable cross-platform client (`Scope.md` §2, `Requirements/Goals.md` §4.1). Affects both the GUI / Web Client phase and the Deployment/packaging choice, so it's tracked here rather than in one phase's folder alone.
-- **Auth model for the Demonstrator** — a single shared login vs. individually named users (`Scope.md` §2). Affects both the Authentication phase and the REST API phase's design.
-- **Deployment/packaging mechanism** — how a customer site actually stands this up (Docker container, simple installer, or VM image). Not yet started as its own phase; may need to become one.
+- **O1-1: Client technology** — browser-based web app vs. an installable cross-platform client (`Scope.md` §2, `Requirements/Goals.md` §4.1). Affects both the GUI / Web Client phase and the Deployment/packaging choice, so it's tracked here rather than in one phase's folder alone.
+- **O1-2: Auth model for the Demonstrator** — a single shared login vs. individually named users (`Scope.md` §2). Affects both the Authentication phase and the REST API phase's design.
+- **O1-3: Deployment/packaging mechanism** — how a customer site actually stands this up (Docker container, simple installer, or VM image). Not yet started as its own phase; may need to become one.

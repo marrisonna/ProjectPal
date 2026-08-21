@@ -8,6 +8,7 @@
    - 2.2 [Scope.md](#scope-doc)
    - 2.3 [Phase Subfolders](#phase-subfolders)
 3. [Open Questions: Level-Wide vs. Phase-Specific](#open-questions-placement)
+   - 3.1 [Numbering Scheme](#open-questions-numbering)
 4. [Placeholder Levels and Deferral](#placeholder-levels)
 
 <a id="purpose"></a>
@@ -41,6 +42,22 @@ Phase subfolders are named `N_PhaseName` (e.g. `1_DatabaseSetup`, `2_RestApi`), 
 ## 3. Open Questions: Level-Wide vs. Phase-Specific
 
 An open question belongs in a Level's `ImplementationPlan.md` if it affects how more than one phase of that Level is approached, or the Level's scope/direction as a whole. A question that only affects one phase's design belongs among that phase's own documents instead.
+
+<a id="open-questions-numbering"></a>
+### 3.1 Numbering Scheme
+
+Per `document-guidelines.md` rule 3, every open question is given a stable ID so it can be referenced from elsewhere without restating it, in the form `O<Level>[.<Phase>]-<N>`:
+
+- `O` marks the ID as an open-question reference.
+- `<Level>` is the Level number the question belongs to.
+- `.<Phase>`, if present, is the phase number (from that Level's `ImplementationPlan.md` phase table) the question is specific to. It's omitted for a Level-wide question.
+- `-<N>` is the question's sequential number within its scope (its Level, or its Level+Phase), starting at 1.
+
+Examples:
+- `O1-2` — Level 1's 2nd Level-wide open question (recorded in `Level1_Implementation/ImplementationPlan.md`).
+- `O1.2-3` — Level 1, Phase 2's 3rd open question (recorded among Phase 2's own documents, e.g. `Level1_Implementation/2_RestApi/Plan.md`).
+
+A sub-phase (§2.3) keeps its parent phase's number for this purpose — a question specific to sub-phase `2a` is still numbered `O1.2-<N>`, since the `.<Phase>` component identifies the phase, not the sub-phase.
 
 <a id="placeholder-levels"></a>
 ## 4. Placeholder Levels and Deferral

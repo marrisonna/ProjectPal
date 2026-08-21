@@ -19,4 +19,4 @@ None defined yet.
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
 
-None recorded yet.
+None recorded yet. When added, they'll be numbered `O2-1`, `O2-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
