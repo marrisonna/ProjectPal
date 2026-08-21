@@ -39,11 +39,14 @@ try {
 
     Write-Host "Waiting for PostgreSQL to become healthy..." -ForegroundColor Cyan
     $healthy = $false
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     for ($i = 1; $i -le 30; $i++) {
         $status = docker inspect --format='{{.State.Health.Status}}' projectpal-db 2>$null
         if ($status -eq "healthy") { $healthy = $true; break }
         Start-Sleep -Seconds 2
     }
+    $ErrorActionPreference = $prevEAP
     if (-not $healthy) { throw "PostgreSQL did not become healthy within 60 seconds." }
 
     Write-Host "Applying schema migrations..." -ForegroundColor Cyan

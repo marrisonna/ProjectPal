@@ -331,7 +331,7 @@ BEGIN
         SELECT v_post_kind, v_post_id
         UNION
         SELECT
-            CASE WHEN d.post_task_id IS NOT NULL THEN 'T' ELSE 'P' END,
+            CASE WHEN d.post_task_id IS NOT NULL THEN 'T' ELSE 'P' END::char(1),
             COALESCE(d.post_task_id, d.post_project_id)
         FROM projectpal.dependency d
         JOIN reachable r
