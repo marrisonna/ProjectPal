@@ -21,7 +21,7 @@ One organisation only, deployed *inside* that organisation's own infrastructure.
 - **Feature scope** — a workable subset of the ~20 windows/dialogs from `V1.2` (task/project management, Gantt/plan view, find, merge, attachments, admin) sufficient to make a trial meaningful — informed by `Requirements/UseCases.md`.
 - **Database choice** — settled: PostgreSQL, locally hosted (see the Database Setup phase).
 - **Deployment/packaging** — something a customer site can stand up without a dedicated ops team (Docker container, simple installer, or VM image).
-- **Auth** — at minimum, decide whether a single shared login is sufficient, or individually named users matter even now.
+- **Auth** — settled (`D1-2`): individually named users, password-based, plus an admin-only impersonation capability for testing what another Person can see and do. See the Authentication phase.
 
 <a id="foundational-decisions"></a>
 ## 3. Foundational Decisions Carried Into Level 1
