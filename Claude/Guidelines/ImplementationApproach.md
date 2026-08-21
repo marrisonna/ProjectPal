@@ -65,7 +65,7 @@ Within a given scope, `<N>` is drawn from a single counter shared by that scope'
 <a id="recording-a-decision"></a>
 ### 3.2 Recording a Decision
 
-When an open question is answered, remove its entry from "Open Questions" and add a corresponding entry to "Decisions", using the same number with the `D` prefix (§3.1). A decision entry is always three lines, in this order and format:
+When an open question is answered, remove its entry from "Open Questions" and add a corresponding entry to "Decisions", using the same number with the `D` prefix (§3.1). Decisions are listed in order of their reference number (i.e. the order the original questions were raised in), not the order they were decided in or their decision date — so answering a later question before an earlier one still leaves the earlier one's eventual decision listed first. A decision entry is always three lines, in this order and format:
 
 1. `**D<ID>** (decided <YYYY-MM-DD>)` — the ID and the date the decision was made.
 2. `**Question:** <question text>` — the original question, restated (not just a link back, since the "Open Questions" entry it came from no longer exists once it moves).
