@@ -29,3 +29,4 @@ Per `Requirements/Goals.md` §4.2, likely decisions/work for this Level:
 ## 3. Deferred From Level 1
 
 - **Installable cross-platform client, alongside the web app.** Level 1 builds a browser-based web app only (`D1-1` in `Claude/Level1_Implementation/ImplementationPlan.md`). A native/installable cross-platform client (in the way a tool like Slack offers both a browser app and a desktop app) wasn't ruled out, just deferred — not yet committed to this Level specifically, but worth considering here as customer needs become clearer.
+- **Team-specific configurable weights for the Urgency algorithm.** Level 1 computes Urgency client-side using the fixed algorithm in `Requirements/KeyConcepts.md` §12 (`D1.2-2` in `Claude/Level1_Implementation/2_RestApi/Plan.md`). Letting each Team configure its own weights is a likely later refinement, not committed to this Level specifically yet.

@@ -182,3 +182,16 @@ We will work together on fleshing out all of the above as we proceed with the im
 Create a new document in 'Guidelines' called 'ImplementationApproach.md' that documents the approach described above.
 
 Then create and populate all of the directories and documents, as far as can be resonably done at this moment in time. 
+
+
+This seems to be telling me that we should not use PostgREST at all.  Does this solve some of issues?
+
+===========================
+
+For each phase's Plan.md document, when the phase is complete, add a section at the end of the document called 'Implementation outcome summary' and include a summary of what was implemented, testing results, any
+issues that arose and anything that needs further consideration, either for this phase or for later ones.
+Add the above to the Guidelines.
+
+
+Go ahead with implementing and testing 2_RestApi.
+

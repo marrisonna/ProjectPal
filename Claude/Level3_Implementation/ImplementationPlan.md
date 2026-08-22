@@ -20,7 +20,7 @@ None defined yet.
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
 
-None recorded yet. When added, they'll be numbered `O3-1`, `O3-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
+None recorded yet. When added, they'll be numbered `Q3-1`, `Q3-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
 
 <a id="decisions"></a>
 ## 4. Decisions (Level-Wide)
