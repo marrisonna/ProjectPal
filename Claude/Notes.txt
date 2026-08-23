@@ -188,10 +188,87 @@ This seems to be telling me that we should not use PostgREST at all.  Does this 
 
 ===========================
 
-For each phase's Plan.md document, when the phase is complete, add a section at the end of the document called 'Implementation outcome summary' and include a summary of what was implemented, testing results, any
+4. Minor. The Search endpoint (§2.1, §4.2) covers Task/Project/Component/Remark, but UseCases.md's Search / Find use case explicitly frames "metadata/field search" (as distinct from full-text content search) as the Level 1 baseline for Attachments too — that's silently missing.
+
+5. Minor / worth stating explicitly. KeyConcepts.md §12's Urgency algorithm needs the whole ancestor chain of Projects (root-first, arbitrary depth) to compute "effective priority," not just a Task's immediate Project. D1.2-2 and 5_GuiClient/Plan.md both just say "Task/Project fields the API already exposes," which reads as if one Task fetch + one Project fetch is enough. It isn't — the GUI needs the whole Project tree (or at least a way to walk parent links), which is fine at Level 1's scale but isn't currently said anywhere.
+
+6. Upstream doc-hygiene, not a flaw in this doc. Level1_Implementation/Scope.md §3 ("core tables carry an OrganisationId... now") directly contradicts DomainModel.md's Tenancy Scope Note ("there is no OrganisationId on these tables because the database itself is the organisation boundary") and the actual schema (no organisation_id column anywhere). The stale wording traces back to Goals.md §4.1, written before §3.2's database-per-tenant decision was settled in the same document. The good news: the real schema and this API plan both correctly follow the later, more specific decision — but Scope.md/Goals.md never got reconciled, so a future reader could be misled.
+
+7. Upstream doc-hygiene. UseCases.md's Open Question #2 ("does the Demonstrator need multi-user concurrent editing") looks already answered by DomainModel.md §4/§5 item 3 ("Level 1 assumes a single user at a time... Decision"). 2_RestApi/Plan.md correctly relies on the settled answer, but UseCases.md still lists it as open.
+
+8. Minor gap in the tracking scheme. "Feature scope" (which use cases are essential for Level 1) is a real, load-bearing open question — both Goals.md §4.1 and UseCases.md's own Open Question #1 raise it, and 2_RestApi/Plan.md §2.1 explicitly depends on it ("if that gets resolved differently, this list should be revisited") — but it's never been given a Q1-N in Level1_Implementation/ImplementationPlan.md, unlike client tech/auth/deployment. There's currently no tracked place for it to actually get resolved.
+
+9. Minor, likely fine but silent. Person deletion (part of UseCases.md's Manage People use case) isn't mentioned as in-scope or explicitly deferred in §2.1/§2.2. Probably correct to omit for Level 1 — DomainModel.md frames soft-disable (is_active) as the primary mechanism — but it's currently just absent rather than a stated decision.
+
+10. Minor. Gating all PersonRole writes to is_organisation_admin (§2.1) means a Team's own SuperUser can't manage their own Team's membership — a reasonable Level 1 simplification, but currently stated as if it's the only possible model rather than a deliberate simplification worth a one-line callout.
+
+
+─────┬──────────────────────────────────────────────────────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  #  │                                           Finding                                            │                                               Status                                                │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1   │ Error-mapping / attachment-hash gap                                                          │ Resolved — one service, one request path                                                            │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2   │ Missing RLS for Team/Person/PersonRole                                                       │ Resolved — no RLS at all now, ordinary app code                                                     │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 3   │ Phase 4 needing path-based routing                                                           │ Resolved — back to pure TLS termination                                                             │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 4   │ Search omits Attachment metadata                                                             │ Still outstanding                                                                                   │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 5   │ Urgency needs the full Project ancestor chain, not just one Task's Project                   │ Still outstanding                                                                                   │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 6   │ Scope.md/Goals.md still say "OrganisationId on core tables," contradicting the               │ Still outstanding (upstream, not this doc)                                                          │
+│     │ database-per-tenant decision                                                                 │                                                                                                     │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 7   │ UseCases.md Open Question #2 looks already answered by DomainModel.md                        │ Still outstanding (upstream)                                                                        │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 8   │ "Feature scope" has no tracked Q1-N, despite this plan depending on it                       │ Still outstanding                                                                                   │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 9   │ Person deletion not stated as in/out of scope                                                │ Still outstanding (§4.4 now mentions the FK-restrict behavior in passing, but the scope question    │
+│     │                                                                                              │ itself is untouched)                                                                                │
+├─────┼──────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 10  │ PersonRole write gated entirely to org-admin, not flagged as a deliberate simplification     │ Still outstanding                                                                                   │
+└─────┴──────────────────────────────────────────────────────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Here are responses to 4-10
+
+4. Include seaching attachments 'meta data'.  The 'meta data' in this case just means the other text fields from 'attachment' that can be searched, i.e., 'name', ' url', ' mail_from'
+
+5. Make the requirement for the whole ancestor chain of Projects to be explicit.  The calculation of Urgency is a key concept and needs to be in Level 1.
+
+6. OrganisationId should not be mentioned as field on the tables in the database, please correct this.
+
+7. Some clarity on this for Level 1.  I do want to have multiple users in Level 1.  However, demonstrations of Level 1 will avoid multiple users editing the same data.  So, multiple users will be able to access and modify data but for Level 1, Conflicts are not a concern as they will be avoided.  For Level 2, Conflict resolution will be required.  Please update the docs to make this clearer.
+
+8. Required for Level 1. 
+   Manage Projects/Tasks, Assign resources, Set dependencies, Search, Remarks.
+   Gantt/plan view is a Level 1 requirement, since this is key selling point.
+   Attachments are required but not for emails.  So URLs and regular files can be attached.
+   Admin/support tooling is required.
+   Concurrent editing by users of the data is required for Level 1, but not concurrent editing of the same rows of data.  I.e., concurrent editing that causes conflicts can be ignored for level 1.
+   
+9. People are never deleted.  Make this clear in the documentation.  When people leave, they will be marked as 'is_active' = false.
+
+10. Let's talk about Super User.  Describe the role of Super User, how it is defined/identified and how it is different to is_organisation_admin?
+
+
+
+==================
+
+I'm going to ask you to do three things, I think they can be done simultaneously by three agents, but you can decide for yourself.
+
+1. In UseCases.md, the section 'Use Cases Not Carried Forward' should be Section 11.
+Move the current 11->12, 12->13, 13->4
+
+2. By the way what do RLS and TLS stand for?  Create a new document called 'Glossary.md' in the 'Claude' directory.  List these in Glossary.md
+Glossary.md should appear as a heading for each item, followed by text that describes it.  The headings should be in alphabetical order.
+Feel free to add additional items at this time, and at any point later.
+
+3. For each phase's Plan.md document, when the phase is complete, add a section at the end of the document called 'Implementation outcome summary' and include a summary of what was implemented, testing results, any
 issues that arose and anything that needs further consideration, either for this phase or for later ones.
 Add the above to the Guidelines.
 
+Please recheck the plan.md for 2_RestApi for internal consistency and then across the whole document stack in the scope of Level 1.
+Let me know if there are uncertainties or questions that need to be addressed before the implementation and testing of 2_RestApi.
 
 Go ahead with implementing and testing 2_RestApi.
 

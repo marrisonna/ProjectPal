@@ -10,6 +10,7 @@
 6. [Example Data](#example-data)
 7. [Setup, Install, and Test](#setup-install-test)
 8. [Out of Scope for This Pass](#out-of-scope)
+9. [Implementation Outcome Summary](#implementation-outcome-summary)
 
 <a id="what-this-covers"></a>
 ## 1. What This Covers
@@ -95,3 +96,17 @@ Deliberately not built yet, per the user's request to focus on "a database" and 
 - **HTTPS / reverse proxy** — only relevant once there's an API in front of the database to secure.
 - **Automated backups** — worth a manual `docker compose exec db pg_dump ...` habit even at this stage, but a scheduled/automated backup wasn't part of this request.
 - **Urgency calculation** — deliberately not implemented as a database view/function; `KeyConcepts.md` treats it as a presentation-layer calculation, so it belongs in the future API layer, not the schema.
+
+<a id="implementation-outcome-summary"></a>
+## 9. Implementation Outcome Summary
+
+**What was implemented:** everything listed as "Done" in §4 — the full Level 1 schema (`database/migrations/001_initial_schema.sql`, every entity from `DomainModel.md` §2, enumerated types matching `DomainModel.md`/`KeyConcepts.md`), the three database-enforced business rules from §5 (dependency-cycle prevention, append-only Remarks, Attachment deduplication), the example dataset (`database/seed/001_example_data.sql`), the `docker-compose.yml`/`.env.example` local-hosting setup, the `setup.ps1`/`verify.ps1`/`reset.ps1` scripts, and the `V2/README.md` how-to. This matches what §1–§6 originally planned; nothing in that scope was dropped or substituted.
+
+**Testing:** `verify.ps1` runs `database/verify/smoke_test.sql` — a read-only check that reports row counts for every table plus a few readable summary reports — and is intended to be re-run after every `setup.ps1`. As §7 notes, this session couldn't run Docker/`psql` itself to execute that end-to-end, so the SQL and scripts were reviewed but not exercised here; the phase's "Done" status (and the presence of a real, git-ignored `.env` in `V2/`) indicates the user carried out that setup and verification locally, but a first-hand account of that run's specific output isn't captured in this document — worth adding here if anything notable came up.
+
+**Issues that arose:** `V2/README.md` §6 ("Trying Out the Business Rules") refers to re-running an insert "from the `schema-draft.sql`" when the actual file is `database/seed/001_example_data.sql` — a leftover/incorrect filename reference worth fixing next time that section is touched. No issues arose with the schema or scripts themselves as far as this document's record shows.
+
+**Further consideration:**
+- The derived-scheduling read-time computation (Task/Project start/end dates from `start_relative_days_to_project`, effort, and dependencies — §5's third bullet) has no implementation yet; it's application logic for the REST API / GUI phases, not something this phase was scoped to build.
+- Attachment content-hash computation (§5's dedup rule) is explicitly an API-layer responsibility not yet built — the database constraint is ready, but nothing computes the hash yet.
+- The versioned, repeatable multi-tenant migration tooling `Requirements/Goals.md` §3.2 calls out (applying migrations across many tenant databases, not just this one local one) is out of scope here by design, and remains a Level 2/3 concern.

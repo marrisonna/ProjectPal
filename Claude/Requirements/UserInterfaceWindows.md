@@ -1,5 +1,7 @@
 # ProjectPal — User Interface Windows
 
+*Open questions in this document use the prefix `Q-Win-`; decisions use `D-Win-`.*
+
 ## Contents
 
 1. [Purpose and Scope](#purpose-and-scope)
@@ -25,7 +27,8 @@
    - 3.18 [Merge Dialogs (Task / Project / Component)](#merge-dialogs)
    - 3.19 [GridFilterSelect](#grid-filter-select)
 4. [Cross-Cutting UI Patterns](#cross-cutting-ui-patterns)
-5. [Notes for the New Implementation](#notes-for-the-new-implementation)
+5. [Open Questions](#open-questions)
+6. [Decisions](#decisions)
 
 <a id="purpose-and-scope"></a>
 ## 1. Purpose and Scope
@@ -317,11 +320,16 @@ Patterns that recur across many windows above, described once here rather than r
 - **A background timer drives both refresh and conflict detection.** `MainWindow`'s 10-second timer both refreshes displayed data and is what surfaces the merge dialogs in §3.18 — the two concerns (auto-refresh, conflict handling) are implemented as one mechanism in the old app, which won't hold once `V2`'s later levels target real-time multi-user editing (`DomainModel.md`'s Future Extensions).
 - **The reusable grid filter popup** (`GridFilterSelect`, §3.19) is a shared, generic building block rather than a per-window feature — worth keeping as one reusable filter component in `V2` rather than something to design fresh per screen.
 
-<a id="notes-for-the-new-implementation"></a>
-## 5. Notes for the New Implementation
+<a id="open-questions"></a>
+## 5. Open Questions
 
 This document is intentionally descriptive, not prescriptive — actual `V2` UI decisions belong in `Goals.md` (Level 1's "client technology" and "feature scope" framing questions) and `UseCases.md` (which already flags several of these interactions — drag-and-drop reparenting, drag-and-drop dependency lists — as UX choices to redesign rather than port). A few things surfaced during this sweep worth feeding into that design work:
 
-1. **Which windows map to "essential" for the Demonstrator** (`Goals.md` Level 1 feature-scope question) — the core browsing/editing loop is `TaskWindow`/`ProjectWindow`/`ComponentWindow` → their respective detail windows, plus Find. Plan Display, the admin/config windows, and the merge dialogs are all separable.
-2. **The old app's "Private Items" config setting and grid column** (`ConfigWindow`, `TaskWindow`'s hidden Private column) reference the visibility flag `DomainModel.md` has already decided not to carry forward — these UI elements have no `V2` equivalent to map onto.
-3. **Multiple simultaneous windows per item type is a deliberate old-app affordance** (§4's singleton-per-object pattern still allows many *different* items open at once) — worth deciding early whether `V2`'s client technology (per `Goals.md`) supports an equivalent multi-window/multi-tab workflow, since several interactions above (dragging a Task from one open window onto a Project in another) depend on it.
+- **Q-Win-1: Which windows map to "essential" for the Demonstrator** (`Goals.md` Level 1 feature-scope question) — the core browsing/editing loop is `TaskWindow`/`ProjectWindow`/`ComponentWindow` → their respective detail windows, plus Find. Plan Display, the admin/config windows, and the merge dialogs are all separable.
+- **Q-Win-2: The old app's "Private Items" config setting and grid column** (`ConfigWindow`, `TaskWindow`'s hidden Private column) reference the visibility flag `DomainModel.md` has already decided not to carry forward — these UI elements have no `V2` equivalent to map onto.
+- **Q-Win-3: Multiple simultaneous windows per item type is a deliberate old-app affordance** (§4's singleton-per-object pattern still allows many *different* items open at once) — worth deciding early whether `V2`'s client technology (per `Goals.md`) supports an equivalent multi-window/multi-tab workflow, since several interactions above (dragging a Task from one open window onto a Project in another) depend on it.
+
+<a id="decisions"></a>
+## 6. Decisions
+
+None yet — when an open question above is answered, its entry moves here as `D-Win-<N>`, in the three-line format described in `Claude/Guidelines/ImplementationApproach.md` §3.2.

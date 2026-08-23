@@ -41,28 +41,27 @@ Build the secured web API that fronts the Level 1 database (`Requirements/Goals.
 <a id="in-scope"></a>
 ### 2.1 Endpoints In Scope
 
-Derived from `Requirements/UseCases.md`'s candidate "essential set" for a meaningful Demonstrator trial (Manage Projects/Tasks, Assign Resources, Set Dependencies, Search, Remarks), plus what's needed to make `D1-2`'s auth model actually work:
+Settled by `D1-4` (`../ImplementationPlan.md`), plus what's needed to make `D1-2`'s auth model actually work:
 
-- **Team, Person, PersonRole** — read for everyone (needed for assignment pickers and role checks); create/update gated to `is_organisation_admin` (someone has to be able to create Person records at all).
+- **Team, Person, PersonRole** — read for everyone (needed for assignment pickers and role checks). Writes split at the Person/PersonRole boundary (`Requirements/DomainModel.md` Decisions item `D-DM-4`): creating/updating a **Person** is `is_organisation_admin`-only (someone has to be able to onboard People at all), with no delete route, ever — People are never hard-deleted; `PATCH` to set `is_active = false` is how someone leaving is represented. Writing a **PersonRole** row is allowed for `is_organisation_admin` *or* the target Team's own `TeamLeadUser` (V2's renamed `SuperUser` — see `Requirements/UseCases.md` §12) — a Team's TeamLeadUser can add an existing Person to their Team, remove one, or change a member's role within that Team, but can't touch the Person record itself. **Team** row writes (creating a new Team) stay `is_organisation_admin`-only, same as Person, pending any decision otherwise.
 - **Project, Component** — full CRUD, including the self-referencing parent tree for both.
 - **Task** — full CRUD.
 - **Task ↔ Person resource assignment** (`task_resource`) — assign/unassign.
 - **Dependency** — create/delete. The cycle-rejection rule is already enforced by `1_DatabaseSetup`'s `check_dependency_no_cycle` trigger; this phase's job is surfacing that cleanly (§4.4), not re-implementing it.
-- **Attachment** — upload/list/download, for `File` and `Link` kinds. The dedup rule is already enforced by `1_DatabaseSetup`'s `ux_attachment_dedup` index; again, this phase surfaces it, not re-implements it.
+- **Attachment** — upload/list/download, for `File` and `Link` kinds only (`D1-4`). The dedup rule is already enforced by `1_DatabaseSetup`'s `ux_attachment_dedup` index; again, this phase surfaces it, not re-implements it.
 - **Remark** — create and list only. The database rejects `UPDATE`/`DELETE` outright (`prevent_remark_mutation`), so there's no edit/delete endpoint to build.
-- **Search** — across Task/Project/Component/Remark, per `Requirements/UseCases.md`'s Search / Find use case.
+- **Search** — across Task/Project/Component/Remark, plus Attachment *metadata* (`name`, `url`, `mail_from` — not attachment content/full-text, which stays a later enhancement per `Requirements/UseCases.md`'s Search / Find use case), per `D1-4`.
 - **Auth** — login (Phase 3 builds the real implementation; this phase only needs to agree the seam — see §4.3) and admin-only impersonation (`D1-2`, `Q1.3-1`, `Q1.3-2`).
+- **Admin/support tooling** — required per `D1-4`, `is_organisation_admin`-gated (`Requirements/UseCases.md`'s Administer the System use case — not a per-Team `TeamLeadUser` concern), beyond impersonation above. Exactly which capabilities (e.g. bulk data export, a data-integrity check) is still open — see `Q1.2-4`.
 
 <a id="deferred"></a>
 ### 2.2 Deferred Out of Level 1
 
-- **Merge/Conflict resolution endpoints** — Level 1 assumes a single user at a time, no conflict handling (`Requirements/DomainModel.md` Cross-Cutting Concerns; `Requirements/KeyConcepts.md` Merge/Conflict entry). Nothing to build here.
-- **Captured-email attachments** (`Mail` kind) — the schema supports it, but the capture *mechanism* (inbound email processing) is its own integration piece, not part of this phase. Manual upload of `File`/`Link` attachments covers Level 1.
-- **Broader admin/support tooling** beyond impersonation (the old app's storage-backend switching, forced re-sync, etc.) — per `Requirements/UseCases.md`'s Administer the System use case, these are tied to the old app's specific architecture and aren't being carried forward.
+- **Merge/Conflict resolution endpoints** — Level 1 has multiple concurrent users but not two of them editing the same record at once; real usage avoids that, so no conflict handling is built (`D1-4`, `Requirements/DomainModel.md` Cross-Cutting Concerns). Nothing to build here.
+- **Captured-email attachments** (`Mail` kind) — the schema supports it, but the capture *mechanism* (inbound email processing) is its own integration piece, not part of this phase (`D1-4`). Manual upload of `File`/`Link` attachments covers Level 1.
+- **Old-architecture-specific admin operations** — storage-backend switching, forced re-sync, etc. — per `Requirements/UseCases.md`'s Administer the System use case, these are tied to the old app's particular architecture and aren't being carried forward, unlike admin/support tooling generally (see §2.1).
 
-`Requirements/UseCases.md`'s View the Plan (Gantt) use case is deliberately **not** in scope for this API at all, deferred or otherwise — the database needs nothing special for it, and it's handled entirely in the GUI layer by composing the Task/Project/Dependency reads this phase already provides. See `../5_GuiClient/Plan.md`.
-
-This assumes the "essential set" framing from `Requirements/UseCases.md`'s own open question about which use cases matter for the Demonstrator; if that gets resolved differently, this list should be revisited.
+`Requirements/UseCases.md`'s View the Plan (Gantt) use case is required (`D1-4`) but deliberately **not** in scope for this API at all — the database needs nothing special for it, and it's handled entirely in the GUI layer by composing the Task/Project/Dependency reads this phase already provides. See `../5_GuiClient/Plan.md`.
 
 <a id="architecture"></a>
 ## 3. Architecture
@@ -115,7 +114,7 @@ Also served by the same service — there's no longer a resource-vs-custom disti
 |---|---|
 | `POST /auth/login` | Verify credentials, issue a JWT (`person_id`, Team/role memberships, `is_organisation_admin`) — `D1-2`. |
 | `POST /auth/impersonate/{personId}` | Admin-only: issue a JWT for the target Person carrying an `impersonated_by` claim — `D1-2`, `Q1.3-1`. |
-| `GET /search?q=...` | Cross-table search over Task/Project/Component/Remark — `Requirements/UseCases.md` Search / Find. |
+| `GET /search?q=...` | Cross-table search over Task/Project/Component/Remark, plus Attachment `name`/`url`/`mail_from` — `D1-4`, `Requirements/UseCases.md` Search / Find. |
 
 <a id="auth-seam"></a>
 ### 4.3 Authentication Seam
@@ -125,7 +124,7 @@ Every endpoint expects a `Bearer` JWT and authorizes off its claims (`D1-2`) —
 <a id="error-conventions"></a>
 ### 4.4 Error Conventions
 
-The database already enforces three business rules as triggers/constraints (`1_DatabaseSetup`): dependency-cycle rejection, remark immutability, attachment deduplication. Raw Postgres errors are not an acceptable API response — each must be translated to a clean, consistent HTTP error (a stable error code/message shape, not a leaked exception string), so the GUI can show a sensible message rather than a stack trace. With every write going through this one service (`D1.2-3`), `errors.py` (§5.1) is unambiguously the one place this happens, for these three cases and for ordinary constraint violations alike (e.g. attempting to delete a Person who still owns or is assigned to something, which the schema's plain foreign-key `RESTRICT` behaviour already blocks).
+The database already enforces three business rules as triggers/constraints (`1_DatabaseSetup`): dependency-cycle rejection, remark immutability, attachment deduplication. Raw Postgres errors are not an acceptable API response — each must be translated to a clean, consistent HTTP error (a stable error code/message shape, not a leaked exception string), so the GUI can show a sensible message rather than a stack trace. With every write going through this one service (`D1.2-3`), `errors.py` (§5.1) is unambiguously the one place this happens, for these three cases and for ordinary constraint violations alike (e.g. a foreign-key violation from referencing a Team or Person that doesn't exist).
 
 <a id="implementation-plan"></a>
 ## 5. Implementation Plan
@@ -157,13 +156,14 @@ V2/
 │   │   │   ├── __init__.py
 │   │   │   ├── auth.py           — `POST /auth/login` (stub issuer this phase, §4.3), `GET /auth/whoami`
 │   │   │   ├── impersonate.py    — `POST /auth/impersonate/{personId}`, admin-gated
-│   │   │   ├── search.py         — `GET /search`
-│   │   │   ├── teams.py          — Team, Person, PersonRole (§2.1's "read for everyone, admin-gated write" rule lives here, in code)
+│   │   │   ├── search.py         — `GET /search`, including Attachment `name`/`url`/`mail_from` (`D1-4`)
+│   │   │   ├── teams.py          — Team, Person, PersonRole (§2.1's write rules live here, in code: Person is `is_organisation_admin`-only with no delete route — `is_active` is the only "removal" — while PersonRole also accepts the target Team's own `TeamLeadUser`)
 │   │   │   ├── projects.py       — Project, Component
 │   │   │   ├── tasks.py          — Task, `task_resource`
 │   │   │   ├── dependencies.py   — Dependency
 │   │   │   ├── attachments.py    — Attachment; computes `content_hash`/`size_bytes` before insert
-│   │   │   └── remarks.py        — Remark (create/list routes only — no update/delete route exists at all, matching the database's own rule)
+│   │   │   ├── remarks.py        — Remark (create/list routes only — no update/delete route exists at all, matching the database's own rule)
+│   │   │   └── admin.py          — admin/support tooling required by `D1-4`; exact capabilities still open, see `Q1.2-4`
 │   │   └── errors.py             — maps Postgres exceptions (the three business rules, plain constraint violations) to clean HTTP responses (§4.4)
 │   └── tests/                    — see §6.2
 └── scripts/
@@ -178,8 +178,9 @@ V2/
 3. Add the authentication seam (`security/deps.py`), with Team/role authorization checked directly in each route as it's built (Project, Task, `task_resource`, `dependency`, `attachment`, `remark`).
 4. Implement Attachment upload (`content_hash`/`size_bytes` computed before insert) and the error-mapping (`errors.py`, §4.4) for the three DB-enforced business rules plus ordinary constraint violations.
 5. Add the Search, Auth, and Impersonation routes (§4.2).
-6. Write and pass the test suite (§6).
-7. Publish an API contract (OpenAPI, auto-generated by FastAPI for every route) so the GUI/Web Client phase has something concrete to build against.
+6. Resolve `Q1.2-4` and add the admin/support routes it settles on (`admin.py`).
+7. Write and pass the test suite (§6).
+8. Publish an API contract (OpenAPI, auto-generated by FastAPI for every route) so the GUI/Web Client phase has something concrete to build against.
 
 No step here for Urgency (`D1.2-2`): it's computed client-side from fields this API already serves, so this phase needs no additional work for it.
 
@@ -201,15 +202,16 @@ V2/rest-api/tests/
 ├── requirements-test.txt     — pytest, requests
 ├── test_auth.py              — no-token rejection; the stub login issues a usable token
 ├── test_authorization.py     — the authorization check in `security/deps.py` actually restricts by Team/role, not just "any valid token"
-├── test_crud_reference_data.py   — Team/Person/PersonRole/Component read, admin-gated create/update
+├── test_crud_reference_data.py   — Team/Person/PersonRole/Component read; Person create/update is admin-only with no delete route at all; a Team's TeamLeadUser can write PersonRole for their own Team but is rejected writing Person or another Team's PersonRole
 ├── test_crud_project.py
 ├── test_crud_task.py
 ├── test_resource_assignment.py
 ├── test_dependency_rules.py  — includes the cycle-rejection case (§6.4)
 ├── test_attachment_rules.py  — includes the dedup-rejection case
 ├── test_remark_rules.py      — includes the immutability case
-├── test_search.py
+├── test_search.py            — includes Attachment `name`/`url`/`mail_from` matches (`D1-4`)
 ├── test_impersonation.py     — admin can; non-admin can't (`Q1.3-1`'s eventual answer plugs in here)
+├── test_admin.py             — whatever `Q1.2-4` settles on
 └── test_journey.py           — the end-to-end scenario (§6.3)
 ```
 
@@ -290,15 +292,16 @@ For Level 1, this phase is done when:
 - The three DB-enforced business rules are surfaced as clean errors (§4.4), verified by tests, not just manually checked once.
 - Every endpoint requires and authorizes off a JWT (§4.3) — even before Phase 3 provides real login, the seam is real and tested via the stub issuer.
 - Impersonation works end-to-end and is restricted to the intended role (once `Q1.3-1` settles which).
+- Admin/support tooling (`D1-4`) is built, once `Q1.2-4` settles exactly which capabilities.
 - The GUI/Web Client phase (Phase 5) can be built entirely against this API, with no direct database access from the client — proving the API-first foundational decision actually holds in practice, not just on paper.
-- An API contract (§5.2 step 7) exists for the GUI phase to build against.
+- An API contract (§5.2 step 8) exists for the GUI phase to build against.
 
 Explicitly **not** required for success: any Urgency computation (`D1.2-2` — this is the GUI's job, see `5_GuiClient/Plan.md`), a dedicated plan-view endpoint (§2.2), or anything on the deferred list.
 
 <a id="open-questions"></a>
 ## 8. Open Questions (Phase-Specific)
 
-None currently open — see §9.
+- **Q1.2-4:** Which specific admin/support capabilities (beyond impersonation) does Level 1 need, now that `D1-4` requires admin/support tooling generally? Candidates per `Requirements/UseCases.md`'s Administer the System use case: bulk data export, a data-integrity check. The old app's storage-backend switching and forced re-sync don't carry forward (§2.2) — they're specific to an architecture this system doesn't have.
 
 <a id="decisions"></a>
 ## 9. Decisions (Phase-Specific)
@@ -309,7 +312,7 @@ None currently open — see §9.
   **Superseded by:** `D1.2-3`.
 - **D1.2-2** (decided 2026-08-22)<br>
   **Question:** Where is Urgency (`Requirements/KeyConcepts.md` §12) computed — client-side in the GUI from raw Task fields, or server-side in this API?<br>
-  **Decision:** client-side in the GUI, computed from Task/Project fields this API's resource endpoints (§4.1) already expose. `Requirements/KeyConcepts.md` §12 already frames Urgency as a presentation-layer calculation; computing it in the GUI is the most literal reading of that — more so than in this API, which is a data/service layer, not presentation — and it keeps this API's job limited to serving the raw stored facts Urgency is derived from, not derived values themselves. It's also naturally suited to a likely later refinement: team-specific configurable weights for the Urgency algorithm (not Level 1 — see `Claude/Level2_Implementation/Scope.md`), which fits more naturally as GUI-side configuration than a server-side per-Team lookup on every read. This phase needs no Task-endpoint wrapping as a result — see `5_GuiClient/Plan.md`, which owns Urgency computation end to end.
+  **Decision:** client-side in the GUI, computed from Task/Project fields this API's resource endpoints (§4.1) already expose. `Requirements/KeyConcepts.md` §12 already frames Urgency as a presentation-layer calculation; computing it in the GUI is the most literal reading of that — more so than in this API, which is a data/service layer, not presentation — and it keeps this API's job limited to serving the raw stored facts Urgency is derived from, not derived values themselves. It's also naturally suited to a likely later refinement: team-specific configurable weights for the Urgency algorithm (not Level 1 — see `Claude/Level2_Implementation/Scope.md`), which fits more naturally as GUI-side configuration than a server-side per-Team lookup on every read. This phase needs no Task-endpoint wrapping as a result — see `5_GuiClient/Plan.md`, which owns Urgency computation end to end, including the requirement to fetch the whole Project ancestor chain (not just one Task's immediate Project) that computing it correctly depends on.
 - **D1.2-3** (decided 2026-08-22)<br>
   **Question:** Revisiting `D1.2-1` — should PostgREST still serve the CRUD surface, now that laying out the concrete shape of this phase (§5–§6) has surfaced what that actually requires?<br>
   **Decision:** no — Option C (§3.3), one hand-written service for everything, no PostgREST. Working through the repository layout and test plan under Option B surfaced two problems severe enough to reopen it: (1) attachment upload needs `content_hash`/`size_bytes` computed before insert, which plain PostgREST CRUD can't do, and which the design never actually assigned to either system; (2) `Team`/`Person`/`PersonRole`'s "read for everyone, admin-gated write" rule doesn't fit PostgREST's Row-Level Security model the way the Team-scoped tables do, and nothing was implementing it either. Both trace to the same root cause: roughly half the "plain CRUD" surface (Dependency, Attachment, Remark, plus the differently-shaped Team/Person/PersonRole rules) already needed hand-written logic, which undercuts PostgREST's core value (skip writing the boring parts) enough that one service for everything is now simpler overall — not just architecturally tidier, genuinely less total work, since it also removes the RLS migration, PostgREST's JWT-claims wiring, and the path-based routing `4_HttpsReverseProxy` would otherwise have needed. `D1.2-1`'s reasoning about the service being a permanent identity/gateway layer (not Level-1-only scaffolding) is unaffected — it now just does more from day one.

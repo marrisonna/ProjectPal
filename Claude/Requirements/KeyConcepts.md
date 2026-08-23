@@ -1,5 +1,7 @@
 # ProjectPal — Key Concepts
 
+*Open questions in this document use the prefix `Q-KC-`; decisions use `D-KC-`.*
+
 ## Contents
 
 1. [Organisation](#organisation)
@@ -22,6 +24,8 @@
 16. [Remark](#remark)
 17. [Demonstrator / MVP / (Level 3) "Everything Else"](#delivery-level-terms)
 18. [Foundational Decision](#foundational-decision)
+19. [Open Questions](#open-questions)
+20. [Decisions](#decisions)
 
 This document defines the concepts that are central to ProjectPal's design. For each one, it covers what the concept is, why it matters enough to call out on its own, and how it fits into the overall solution described in `Goals.md`, `DomainModel.md`, and `UseCases.md`. Where a concept is still an open decision rather than a settled one, that's noted inline — this document should be updated as decisions are made.
 
@@ -59,7 +63,7 @@ A Person is a human known to the system — someone who can log in, someone whos
 
 It's key because nearly every other entity references a Person (an owner, a requestor, an assignee, an author), making it the connective tissue between "who is using the system" and "who is doing the work." Modeling both roles as one entity, rather than splitting them into a separate User and Resource, is what lets the system track effort against a contractor who never logs in, and requests from a stakeholder who's never assigned work, without extra machinery.
 
-It's where identity meets the domain model. How a Person authenticates is an external concern — `Goals.md`'s "identity direction" foundational decision (e.g. federating to an external identity provider) — while how a Person is used for effort, assignment, and ownership is pure domain data. Keeping that seam clean early avoids having to retrofit authentication into deeply embedded ownership and assignment logic later.
+It's where identity meets the domain model. How a Person authenticates is an external concern — `Goals.md`'s "identity direction" foundational decision (e.g. federating to an external identity provider; still open, `Q-KC-1`) — while how a Person is used for effort, assignment, and ownership is pure domain data. Keeping that seam clean early avoids having to retrofit authentication into deeply embedded ownership and assignment logic later.
 
 <a id="resource"></a>
 ## 5. Resource
@@ -124,7 +128,7 @@ Priority (e.g. High → Low, plus Closed/Cancelled as special values) and Status
 
 They're key because they're the two most basic triage signals a user or a report relies on — importance versus lifecycle state — and together they're the primary inputs to Urgency.
 
-They're used throughout reporting and the Urgency calculation below. The exact status vocabulary is open to revisiting for the new system, but the two-field shape (importance vs. lifecycle state) is worth keeping.
+They're used throughout reporting and the Urgency calculation below. The exact status vocabulary is open to revisiting for the new system (`Q-KC-2`), but the two-field shape (importance vs. lifecycle state) is worth keeping.
 
 <a id="urgency"></a>
 ## 12. Urgency
@@ -139,7 +143,7 @@ For an open Task, Urgency is the product of two factors:
 
 It's key because it's the system's synthesized signal for "what should I actually look at next" — Priority and Status alone tell a user what a task is, but not when it deserves attention relative to everything else on their plate; Urgency is what turns those raw fields into a single ranking a person or a manager can scan at a glance.
 
-The two factors are multiplied and scaled to produce the final score (roughly 0–200+), which callers then feed into a colour-mapping function to render as a highlight colour. It fits into the solution as a presentation-layer calculation built entirely from other domain data (Priority, Status, dates, the Project hierarchy) rather than as data of its own — the specific constants involved (the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are tuned, hand-picked values from the old implementation rather than derived from any external rule, worth treating as a starting point to validate against real usage rather than as fixed requirements when the new system reimplements this.
+The two factors are multiplied and scaled to produce the final score (roughly 0–200+), which callers then feed into a colour-mapping function to render as a highlight colour. It fits into the solution as a presentation-layer calculation built entirely from other domain data (Priority, Status, dates, the Project hierarchy) rather than as data of its own — the specific constants involved (the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are tuned, hand-picked values from the old implementation rather than derived from any external rule, worth treating as a starting point to validate against real usage rather than as fixed requirements when the new system reimplements this (`Q-KC-3`).
 
 <a id="current-urgency-algorithm"></a>
 ### 12.1 Current Urgency Algorithm
@@ -281,7 +285,7 @@ A Role or Permission Level classifies what a Person is allowed to do — create,
 
 It's key because not every user should be able to edit or delete everything; a multi-user tool needs a shared, enforceable understanding of who can change what before real customers trust it with real data.
 
-The old model's roles (SuperUser/PowerUser/NormalUser/ReadOnlyUser) were flat and system-wide; `DomainModel.md` settles this into two tiers now that Organisation and Team are real concepts: a per-Team role (`UserType` on PersonRole — create/edit/delete rights scoped to that Team) plus a separate organisation-wide administrator flag (`IsOrganisationAdmin` directly on Person, independent of Team membership). This is one of the concepts most directly tied to the "identity direction" foundational decision in `Goals.md` — the login/session model and the permission model need to be designed together.
+The old model's roles (SuperUser/PowerUser/NormalUser/ReadOnlyUser) were flat and system-wide; `DomainModel.md` settles this into two tiers now that Organisation and Team are real concepts: a per-Team role (`UserType` on PersonRole — create/edit/delete rights scoped to that Team, and renamed for V2 to TeamLeadUser/LeadUser/NormalUser/ReadOnlyUser) plus a separate organisation-wide administrator flag (`IsOrganisationAdmin` directly on Person, independent of Team membership). The boundary between them sits at the Person/PersonRole split: a Team's TeamLeadUser can manage that Team's own membership and roles (add, remove, or re-role an existing Person on their Team) but not the Person record itself — creating, editing, or deleting a Person is `IsOrganisationAdmin`-only, full stop. This is one of the concepts most directly tied to the "identity direction" foundational decision in `Goals.md` — the login/session model and the permission model need to be designed together.
 
 <a id="merge-conflict"></a>
 ## 14. Merge / Conflict
@@ -290,7 +294,7 @@ Merge/Conflict describes what happens when two people edit the same record at th
 
 It's key because any tool used by more than one person concurrently has to have an answer for this — even if the answer is "make it rare and simple to recover from" rather than "build an elaborate resolution UI."
 
-It directly shapes the API's concurrency model and the client UX for editing. `DomainModel.md` settles this by level: the Demonstrator assumes a single user at a time, so no conflict-handling is built at all; later levels need real-time multi-user editing (users see each other's changes live), a materially bigger commitment than the old system's interactive field-by-field merge dialog, which remains a fallback worth keeping in mind for cases live sync doesn't cover.
+It directly shapes the API's concurrency model and the client UX for editing. `DomainModel.md` settles this by level: the Demonstrator has multiple named users accessing and modifying data concurrently, but not editing the same record at the same time — real usage avoids that, so no conflict-handling is built at all; Level 2 can no longer rely on that avoidance and needs a real answer, whether that's real-time multi-user editing (users see each other's changes live, a materially bigger commitment) or the old system's interactive field-by-field merge dialog, or both.
 
 <a id="attachment"></a>
 ## 15. Attachment
@@ -326,4 +330,16 @@ A Foundational Decision is one that's cheap to make correctly now and expensive 
 
 It's key because it's the escape valve in the level-based approach above: without it, "defer everything possible to a later level" would also defer decisions that actually need to be right from the very first line of code, turning a cheap early choice into an expensive later rewrite.
 
-It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can't simply be left until later. Identity direction is still open; derived-vs-stored scheduling and (for Level 1) Team scoping have already been decided this way — settled early, even though the full features built on top of them (real identity federation, full Team management) are scoped to later levels.
+It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can't simply be left until later. Identity direction is still open (`Q-KC-1` below); derived-vs-stored scheduling and (for Level 1) Team scoping have already been decided this way — settled early, even though the full features built on top of them (real identity federation, full Team management) are scoped to later levels.
+
+<a id="open-questions"></a>
+## 19. Open Questions
+
+- **Q-KC-1: Identity direction** — how a Person authenticates (e.g. federating to an external identity provider, per the Person entry above) is a Foundational Decision (§18) flagged throughout this document (Person, Role / Permission Level) as needing a stated direction — still open; see `Goals.md`'s Level 1/2 "identity direction" framing questions.
+- **Q-KC-2: Status vocabulary** — the exact set of Status values (Priority / Status entry above) is open to revisiting for the new system; only the two-field shape (importance vs. lifecycle state) is settled.
+- **Q-KC-3: Urgency algorithm constants** — the specific tuned constants in the current Urgency algorithm (§12: the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are hand-picked values from the old implementation, not derived from any external rule — worth validating against real usage rather than treating as fixed requirements when `V2` reimplements this.
+
+<a id="decisions"></a>
+## 20. Decisions
+
+None yet — when an open question above is answered, its entry moves here as `D-KC-<N>`, in the three-line format described in `Claude/Guidelines/ImplementationApproach.md` §3.2.

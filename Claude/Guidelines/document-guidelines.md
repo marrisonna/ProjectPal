@@ -38,6 +38,27 @@ level of heading numbering in the documents and reflect that in the table of con
    §3.1 defines the ID scheme used for open questions and decisions in the Level/Phase implementation-tracking
    documents.
 
+   Any document that has open questions has an explicit `## Open Questions` section, paired with a `## Decisions`
+   section immediately after it, even while that section is still empty — every document family follows this,
+   not just the Level/Phase family (see `ImplementationApproach.md` §3 for that family's version of it). A
+   question is never left embedded only in surrounding prose: if prose elsewhere in the document needs to discuss
+   it, that prose references the Open Questions/Decisions entry by ID rather than restating or duplicating its
+   text.
+
+   When an open question is answered, move its entry from Open Questions to Decisions, keeping its numeric ID and
+   changing only the ID's prefix letter (`Q` → `D`), formatted as `ImplementationApproach.md` §3.2 describes — the
+   `(decided YYYY-MM-DD)` date is included when known, omitted when it isn't (e.g. for a decision that already
+   existed, undated, before this convention was adopted). When the decision itself was actually made and recorded
+   in a *different* document (e.g. a Requirements-level framing question resolved by a Level's own decision), the
+   entry still moves to this document's Decisions section, but its `**Decision:**` line simply points at the other
+   document's decision ID rather than restating the decision — that other document remains the single canonical
+   source of the decision's content, per rule 2.
+
+   Where a document family doesn't already have its own ID-scheme document (as the Level/Phase family does in
+   `ImplementationApproach.md` §3.1), each document in that family declares its own open-question/decision
+   prefixes near the top, before the table of contents — e.g. "Open questions in this document use the prefix
+   `Q-UC-`; decisions use `D-UC-`." A declared prefix is permanent for the same reason an ID is.
+
 
 Claude should ignore all the text below this line.  This will be used at a later date.
 4. As a document evolves, avoid adding asides that clutter the document with details about how it has evolved.  A 

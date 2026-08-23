@@ -2,7 +2,7 @@
 
 **Status:** Not started
 
-**Objective:** Implement the Urgency algorithm (`Requirements/KeyConcepts.md` §12) as a presentation-layer calculation over stored data, not a database column or view. Likely to be implemented as part of the REST API phase rather than as fully separate work; kept as its own entry for now per `../1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8, to be merged into `../2_RestApi/` if that turns out to be right once REST API work starts.
+**Objective:** Implement the Urgency algorithm (`Requirements/KeyConcepts.md` §12) as a presentation-layer calculation over stored data, not a database column or view. Settled by `D1.2-2` in `../2_RestApi/Plan.md`: this is client-side GUI work, not REST API work (the guess in `../1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8 that it might fold into the REST API phase didn't hold up). This phase is likely to fold into `../5_GuiClient/` instead, which already owns Urgency computation (including the requirement to walk the whole Project ancestor chain, not just one Task's immediate Project) as part of its own objective.
 
 **Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts, numbered `Q1.7-1`, `Q1.7-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
 

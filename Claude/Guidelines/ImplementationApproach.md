@@ -7,6 +7,7 @@
    - 2.1 [ImplementationPlan.md](#implementation-plan)
    - 2.2 [Scope.md](#scope-doc)
    - 2.3 [Phase Subfolders](#phase-subfolders)
+   - 2.4 [Implementation Outcome Summary](#implementation-outcome-summary)
 3. [Open Questions and Decisions](#open-questions-placement)
    - 3.1 [Numbering Scheme](#open-questions-numbering)
    - 3.2 [Recording a Decision](#recording-a-decision)
@@ -38,6 +39,18 @@ What is in and out of scope for that Level, seeded from `Requirements/Goals.md`'
 Each phase of a Level's implementation gets its own subfolder inside that Level's folder. All documentation for that phase — plans, decisions, supporting research, open questions specific to it — lives there. `ImplementationPlan.md` links to it rather than duplicating its content.
 
 Phase subfolders are named `N_PhaseName` (e.g. `1_DatabaseSetup`, `2_RestApi`), where `N` is the phase's position in `ImplementationPlan.md`'s phase table, so they sort in build order when listed. If a phase later needs to split into sub-phases, name those `NaPhaseName`, `NbPhaseName`, etc. (e.g. `2a_RestApiCrud`, `2b_RestApiBusinessRules`), keeping them sorted immediately after phase `N` and before phase `N+1`.
+
+<a id="implementation-outcome-summary"></a>
+### 2.4 Implementation Outcome Summary
+
+When a phase's status (in the Level's `ImplementationPlan.md` phase table) moves to Done, add a final `## Implementation Outcome Summary` section to that phase's own planning document (its `Plan.md`, or an equivalently-named document for a phase that predates that naming, e.g. `1_DatabaseSetup/InitialDatabaseSetupPlan.md`). Cover:
+
+- what was actually implemented, versus what the plan originally described;
+- testing performed, and its results;
+- issues that arose during implementation or testing;
+- anything that needs further consideration — whether revisiting later in this same phase, or for a later phase or Level to pick up.
+
+Add it once, when the phase is marked Done, and update it in place (rather than adding a second one) if more comes to light about that phase's outcome afterward. As with any section, give it a numbered heading, an anchor, and a Contents entry per `document-guidelines.md` rule 1.
 
 <a id="open-questions-placement"></a>
 ## 3. Open Questions and Decisions

@@ -1,5 +1,7 @@
 # ProjectPal — Modernization Goals
 
+*Open questions in this document use the prefix `Q-G-`; decisions use `D-G-`.*
+
 ## Contents
 
 1. [Vision](#vision)
@@ -13,7 +15,9 @@
    - 4.1 [Level 1 — Demonstrator](#level-1-demonstrator)
    - 4.2 [Level 2 — Minimum Viable Product (MVP)](#level-2-mvp)
    - 4.3 [Level 3 — Everything Else](#level-3-everything-else)
-5. [Non-Goals (for now)](#non-goals)
+5. [Open Questions](#open-questions)
+6. [Decisions](#decisions)
+7. [Non-Goals (for now)](#non-goals)
 
 <a id="vision"></a>
 ## 1. Vision
@@ -84,15 +88,15 @@ Rather than one long list of open questions, the work splits into three levels w
 **Scope:** one organisation only, deployed *inside* that organisation's own infrastructure. Security is not the top concern. Infrastructure is deliberately cut down (simple database, minimal moving parts). Purpose: let real users try the concepts and the GUI and give feedback, as cheaply as possible.
 
 **Decisions/work needed now:**
-- **Client technology** — this is the whole point of the demonstrator, since it's what users will actually react to. Framing question: *should users open a browser pointed at a server running inside their own network, or install a client app?* A browser-based app avoids building separate Windows/Mac clients and is trivial to stand up on one internal server.
-- **Feature scope** — the current app has ~20 windows/dialogs. Framing question: *which subset of workflows (task/project management, Gantt/plan view, find, merge, attachments, admin) are essential to make the trial meaningful, and which can be stubbed or left out entirely?*
-- **Database choice** — framing question: *does the demonstrator reuse SQL Server (matches the existing prototype, and likely matches what an enterprise customer already runs), or use something with less deployment friction for a single-site install (e.g. Postgres/SQLite)?*
-- **Deployment/packaging** — framing question: *how does someone at the customer site actually stand this up — a Docker container, a simple installer, a VM image?* Whoever runs the trial needs to do this without a dedicated ops team.
-- **Auth** — framing question: *is a single shared login sufficient, or do individual named users matter even now (e.g. because permission-related workflows are part of what's being trialled)?*
+- **Client technology** — this is the whole point of the demonstrator, since it's what users will actually react to. See Decisions (`D-G-1`).
+- **Feature scope** — the current app has ~20 windows/dialogs. See Decisions (`D-G-2`).
+- **Database choice** — see Open Questions (`Q-G-3`).
+- **Deployment/packaging** — whoever runs the trial needs to do this without a dedicated ops team. See Open Questions (`Q-G-4`).
+- **Auth** — see Decisions (`D-G-5`).
 
 **Foundational decisions to lock in now even though nothing is built yet:**
 - **API-first boundary.** Even with no security requirement yet, keep the client talking to an API rather than the database directly. Level 2 requires this anyway (hosted outside the customer's network), so building it this way from day one avoids a rewrite rather than saving effort now.
-- **Tenant-shaped data model.** Even though there's only one organisation, consider including an `OrganisationId` (and possibly `TeamId`) on core tables now — trivially always the same value at this level, but far cheaper than retrofitting tenant scoping into every table and query once Level 3 needs it for real.
+- **Tenant-shaped data model.** §3.2's database-per-tenant decision means the database itself is the Organisation boundary — no `OrganisationId` column on core tables, now or later (see `DomainModel.md`'s Tenancy Scope Note). `TeamId` *is* included on the tables that need it (e.g. Project) from Level 1 onward, since Team is a real within-database concept regardless of tenancy model.
 - **Identity direction.** Doesn't need building now, but decide the intended long-term approach (e.g. federate to external identity providers) so the demonstrator's login isn't built in a way that's a dead end.
 
 <a id="level-2-mvp"></a>
@@ -101,12 +105,12 @@ Rather than one long list of open questions, the work splits into three levels w
 **Scope:** a small customer base (perhaps 1–2 organisations), infrastructure still kept light, but now hosted *outside* the customer's own network — the first point where real, internet-facing security matters, because data is now leaving the customer's own IT boundary.
 
 **Decisions/work needed now:**
-- **Hosting/cloud choice** — framing question: *where does this actually run, and how minimal can the setup be for 1–2 customers (a single small server / managed database) while still being reasonably safe?*
-- **Real security baseline** — framing question: *what's the minimum acceptable bar now that data is hosted by us — TLS in transit, encryption at rest, real authentication — even if full audit logging and compliance are still deferred to Level 3?*
-- **Database-per-tenant in practice, at small scale** — framing question: *with only 1–2 customers, is manual/scripted provisioning of each tenant database sufficient, deferring the fully automated onboarding pipeline to Level 3?* (Likely yes — this is the point where the Level-3 architecture gets validated for real, without needing to build the automation yet.)
-- **Identity, for real** — framing question: *build minimal custom auth now, or integrate a real external identity provider (e.g. Google sign-in) at this level, given it may be cheaper long-term than building throwaway auth twice?*
-- **Backup/recovery baseline** — framing question: *who is responsible for backing up customer data now that it's hosted by us, and what's the minimum acceptable recovery story, even if a full DR plan is still Level 3?*
-- **Migration from demonstrator data** — framing question: *if a demonstrator customer converts into an MVP customer, does their trial data need to move into the hosted environment — and is a manual one-off export/import acceptable, rather than building a repeatable migration tool?*
+- **Hosting/cloud choice** — see Open Questions (`Q-G-6`).
+- **Real security baseline** — see Open Questions (`Q-G-7`).
+- **Database-per-tenant in practice, at small scale** — see Open Questions (`Q-G-8`).
+- **Identity, for real** — see Open Questions (`Q-G-9`).
+- **Backup/recovery baseline** — see Open Questions (`Q-G-10`).
+- **Migration from demonstrator data** — see Open Questions (`Q-G-11`).
 
 **Foundational decisions to lock in now:**
 - Confirm the database-per-tenant pattern actually works operationally at small scale — this is the cheap, low-risk moment to validate the Level 3 architecture before it needs to handle many tenants.
@@ -125,8 +129,33 @@ Nothing here should be *designed* from scratch at this point — Levels 1 and 2 
 - Cross-tenant tooling for the vendor: usage analytics, aggregate reporting, incident response across customers
 - Revisiting the deferred desktop integrations (Outlook/Word) via a non-COM mechanism (e.g. inbound email processing via the API, server-side document generation), if still required
 
+<a id="open-questions"></a>
+## 5. Open Questions
+
+- **Q-G-3:** Database choice — does the demonstrator reuse SQL Server (matches the existing prototype, and likely matches what an enterprise customer already runs), or use something with less deployment friction for a single-site install (e.g. Postgres/SQLite)? *(Level 1)*
+- **Q-G-4:** Deployment/packaging — how does someone at the customer site actually stand this up — a Docker container, a simple installer, a VM image? Whoever runs the trial needs to do this without a dedicated ops team. *(Level 1)*
+- **Q-G-6:** Hosting/cloud choice — where does this actually run, and how minimal can the setup be for 1–2 customers (a single small server / managed database) while still being reasonably safe? *(Level 2)*
+- **Q-G-7:** Real security baseline — what's the minimum acceptable bar now that data is hosted by us — TLS in transit, encryption at rest, real authentication — even if full audit logging and compliance are still deferred to Level 3? *(Level 2)*
+- **Q-G-8:** Database-per-tenant in practice, at small scale — with only 1–2 customers, is manual/scripted provisioning of each tenant database sufficient, deferring the fully automated onboarding pipeline to Level 3? (Likely yes — this is the point where the Level-3 architecture gets validated for real, without needing to build the automation yet.) *(Level 2)*
+- **Q-G-9:** Identity, for real — build minimal custom auth now, or integrate a real external identity provider (e.g. Google sign-in) at this level, given it may be cheaper long-term than building throwaway auth twice? *(Level 2)*
+- **Q-G-10:** Backup/recovery baseline — who is responsible for backing up customer data now that it's hosted by us, and what's the minimum acceptable recovery story, even if a full DR plan is still Level 3? *(Level 2)*
+- **Q-G-11:** Migration from demonstrator data — if a demonstrator customer converts into an MVP customer, does their trial data need to move into the hosted environment — and is a manual one-off export/import acceptable, rather than building a repeatable migration tool? *(Level 2)*
+
+<a id="decisions"></a>
+## 6. Decisions
+
+- **D-G-1**<br>
+  **Question:** Client technology for the Demonstrator — should users open a browser pointed at a server running inside their own network, or install a client app?<br>
+  **Decision:** see `D1-1` in `Level1_Implementation/ImplementationPlan.md`.
+- **D-G-2**<br>
+  **Question:** Feature scope — which subset of workflows (task/project management, Gantt/plan view, find, merge, attachments, admin) are essential to make the Level 1 trial meaningful, and which can be stubbed or left out entirely?<br>
+  **Decision:** see `D1-4` in `Level1_Implementation/ImplementationPlan.md`.
+- **D-G-5**<br>
+  **Question:** Auth for the Demonstrator — is a single shared login sufficient, or do individual named users matter even now (e.g. because permission-related workflows are part of what's being trialled)?<br>
+  **Decision:** see `D1-2` in `Level1_Implementation/ImplementationPlan.md`.
+
 <a id="non-goals"></a>
-## 5. Non-Goals (for now)
+## 7. Non-Goals (for now)
 
 - Not attempting to port the WinForms/WPF UI code directly to any new client framework.
 - Not preserving direct Office COM automation (Word/Outlook) in its current form — revisit only once the core product exists, and likely via a different mechanism (e.g. inbound email processing via the API, server-side document generation library) rather than desktop COM.

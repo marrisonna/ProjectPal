@@ -1,5 +1,7 @@
 # ProjectPal — Domain Model
 
+*Open questions in this document use the prefix `Q-DM-`; decisions use `D-DM-`.*
+
 ## Contents
 
 1. [Tenancy Scope Note](#tenancy-scope-note)
@@ -17,8 +19,9 @@
    - 2.11 [Remark](#remark)
 3. [Entity Relationships](#entity-relationships)
 4. [Cross-Cutting Concerns](#cross-cutting-concerns)
-5. [Open Questions / Decisions Needed](#open-questions)
-6. [Future Extensions (Beyond Level 1)](#future-extensions)
+5. [Open Questions](#open-questions)
+6. [Decisions](#decisions)
+7. [Future Extensions (Beyond Level 1)](#future-extensions)
 
 This describes the domain model for the **new** implementation (`V2`). It's grounded in the entities and relationships that exist in the old prototype (`V1.2`), since that's proven-out real usage, but it is a design for the new system — not a description of the old one. Where the old model has quirks, legacy artefacts, or decisions that don't fit the new multi-tenant/API-first direction (see `Goals.md`), that's called out explicitly as **a decision needed**, not silently carried forward.
 
@@ -36,7 +39,7 @@ See `KeyConcepts.md`'s Organisation entry for what this is and why it matters, a
 
 <a id="team"></a>
 ### 2.2 Team
-See `KeyConcepts.md`'s Team entry for what this is and why it matters. Not present in the old app — old app has a single implicit "team" (everyone in the database). **Needs design** — see Open Questions.
+See `KeyConcepts.md`'s Team entry for what this is and why it matters. Not present in the old app — old app has a single implicit "team" (everyone in the database). **Needs design** — see Decisions (`D-DM-1`).
 
 This needs more defintion, but a team will need a **TeamId** and a name, possibly other attributes to.
 
@@ -48,7 +51,7 @@ See `KeyConcepts.md`'s Person and Resource entries for what this dual-purpose mo
 
 Key attributes are:
 - `PersonId` - a primary key, unique id for a real person in the real world.  Each person in an organisation has a unique PersonId.
-- `IsActive` — soft-disable, not a hard delete (deleting a Person is blocked while they still own/request/are-assigned-to anything).
+- `IsActive` — a Person is never hard-deleted, full stop, regardless of what they own/request/are-assigned-to. When someone leaves, they're marked `IsActive = false`; the record and its history stay intact.
 - `IsOrganisationAdmin` — an organisation-wide administrator flag. Lives on the Person, not on PersonRole, because organisation administration isn't scoped to any one Team; more than one Person in an Organisation can hold it.
 - Name and logon fields/attributes — to be defined in detail. Needs to become a proper external-identity reference (see `Goals.md` Level 1/2 identity direction).
 
@@ -57,13 +60,13 @@ Sentinel/placeholder resources ("Other", "Unassigned") were useful in the old ap
 <a id="person-role"></a>
 ### 2.4 PersonRole
 
-A Person's membership in, and role within, one specific Team. A Person has one PersonRole per Team they belong to, so multi-Team membership falls out naturally: add another PersonRole row rather than modeling membership separately from role. Role is therefore per-Team, not global to the Person — the same Person can be a SuperUser on one Team and a NormalUser on another.
+A Person's membership in, and role within, one specific Team. A Person has one PersonRole per Team they belong to, so multi-Team membership falls out naturally: add another PersonRole row rather than modeling membership separately from role. Role is therefore per-Team, not global to the Person — the same Person can be a TeamLeadUser on one Team and a NormalUser on another.
 
 Key attributes are:
 - `PersonId` - a reference to the **Person**
 - `TeamId` - a reference to the **Team**
 - `IsResource` — whether this Person can be assigned to work items (independent of whether they can log in).
-- `UserType`/role — SuperUser / PowerUser / NormalUser / ReadOnlyUser in the old app, now scoped per-Team via this table (see `KeyConcepts.md`'s Role / Permission Level entry, and Open Questions/Decisions item 4 for how this combines with the organisation-level admin role on Person).
+- `UserType`/role — TeamLeadUser / LeadUser / NormalUser / ReadOnlyUser for V2 (renamed from the old app's SuperUser / PowerUser / NormalUser / ReadOnlyUser — see `Claude/Requirements/UseCases.md`'s Annex A for the V1.2 behavior these were based on), scoped per-Team via this table (see `KeyConcepts.md`'s Role / Permission Level entry, and Decisions item `D-DM-4` for how this combines with the organisation-level admin role on Person).
 
 The Gantt bar colour assigned to a Person should be a generic per-Person, per-Organisation setting.
 
@@ -71,9 +74,9 @@ The Gantt bar colour assigned to a Person should be a generic per-Person, per-Or
 ### 2.5 Project
 See `KeyConcepts.md`'s Project entry for what this is and why it matters.
 
-Attributes worth carrying forward: name, priority, description, owner, due date. New attribute: `TeamId` — for Level 1 (see `Goals.md`), every Project belongs to exactly one Team (see Open Questions/Decisions and Future Extensions below for how this may broaden later).
+Attributes worth carrying forward: name, priority, description, owner, due date. New attribute: `TeamId` — for Level 1 (see `Goals.md`), every Project belongs to exactly one Team (see Decisions (`D-DM-1`) and Future Extensions below for how this may broaden later).
 
-The old model's **derived scheduling** is its most distinctive and most debatable feature: a Project's start date is constrained by its dependencies, and its *end date is never stored* — it's computed as the max end date across all child tasks and sub-projects, recursively. This makes the schedule always internally consistent but means nothing about timing is a simple stored fact. **Decision:** the new system keeps this derived-computation approach rather than moving to stored dates (see Open Questions/Decisions below).
+The old model's **derived scheduling** is its most distinctive and most debatable feature: a Project's start date is constrained by its dependencies, and its *end date is never stored* — it's computed as the max end date across all child tasks and sub-projects, recursively. This makes the schedule always internally consistent but means nothing about timing is a simple stored fact. **Decision:** the new system keeps this derived-computation approach rather than moving to stored dates (see Decisions (`D-DM-2`) below).
 
 <a id="task"></a>
 ### 2.6 Task
@@ -115,7 +118,7 @@ This section pulls the relationships scattered through the Core Entities above i
 - **Organisation → Team**: one Organisation has many Teams. Since the database itself is the Organisation boundary (see Tenancy Scope Note above), this containment is implicit rather than a foreign key.
 - **Organisation → Person, via `IsOrganisationAdmin`**: not a relationship table — a flag directly on Person, orthogonal to Team membership. Any number of People in an Organisation can hold it.
 - **Team ↔ Person, via PersonRole**: many-to-many. A Person holds one PersonRole per Team they belong to, and each PersonRole carries its own `IsResource` flag and `UserType`/role — so the same Person can be a resource on one Team and not another, or hold a different role on each.
-- **Team → Project**: one-to-many for Level 1 — each Project belongs to exactly one Team (see Open Questions/Decisions and Future Extensions below).
+- **Team → Project**: one-to-many for Level 1 — each Project belongs to exactly one Team (see Decisions (`D-DM-1`) and Future Extensions below).
 - **Project → Project**: self-referencing tree (sub-projects). A Project's owner is a Person.
 - **Project → Task**: one-to-many, and mandatory on the Task side — a Task belongs to exactly one Project (see Task entry above for why the old many-to-many link table was simplified away).
 - **Task → Person**: two distinct single-valued relationships — owner and requestor — plus a separate many-to-many relationship for resourcing (below). A Task's owner and requestor need not be the same Person, and neither need be one of the assigned resources.
@@ -129,23 +132,38 @@ This section pulls the relationships scattered through the Core Entities above i
 ## 4. Cross-Cutting Concerns
 
 - **Encryption at rest** on free-text fields (descriptions, remarks, names) — worth keeping the principle, expressed as a platform-level (database/column) encryption concern rather than application code manually encrypting/decrypting every field.
-- **Concurrency model** — see `KeyConcepts.md`'s Merge/Conflict entry for the old app's approach. **Decision:** Level 1 assumes a single user at a time, so no conflict-handling is built. Later levels need real-time multi-user editing, where users see each other's changes live — see Future Extensions below.
+- **Concurrency model** — see `KeyConcepts.md`'s Merge/Conflict entry for the old app's approach. **Decision:** Level 1 has multiple named users accessing and modifying data concurrently — it does not assume a single user at a time. What Level 1 doesn't need is handling for two users editing the *same* record at the same time: real usage during the Demonstrator will avoid that scenario, so no conflict-detection/resolution mechanism is built. Level 2 needs real conflict handling, once that assumption can no longer be relied on — see Future Extensions below.
 - **Cascade delete** — the old app removes related resource links, dependencies, attachments, and remarks in application code when a Task is deleted. Database-enforced cascades or soft-deletes are worth using instead now that this isn't constrained by the old ORM's shape.
 
 <a id="open-questions"></a>
-## 5. Open Questions / Decisions Needed
+## 5. Open Questions
 
-1. **Team scoping** — **Decision (Level 1):** every Project belongs to exactly one Team (`TeamId` on Project — see Project entry above). A Person's Team membership was already settled via PersonRole (a Person can belong to multiple Teams, with an independently-set role per Team). The one-Team-per-Project rule may be relaxed in later levels — see Future Extensions.
-2. **Derived vs. stored scheduling** — **Decision:** keep the old model's fully-computed schedule (dates derived from effort + dependencies + resourcing, nothing stored as an absolute date except where unavoidable) rather than moving to a simpler stored-date model (see Project and Task entries above). This is a Foundational Decision (see `KeyConcepts.md`) and holds from Level 1 onward — it isn't level-gated the way the items below are.
-3. **Concurrency model** — **Decision:** level-dependent — see Cross-Cutting Concerns above for the Level 1 answer, and Future Extensions for what later levels need.
-4. **Role/permission model shape** — **Decision:** an organisation-level administrator role, modeled as `IsOrganisationAdmin` directly on Person (see Person entry above), independent of Team/PersonRole — any number of People in an Organisation may hold it, since organisation administration isn't scoped to any one Team.
-5. **Non-Person resources** — **Decision:** yes, there's a real need — in this domain a Resource is something *responsible* for getting work done, so an external vendor qualifies as a Resource but a piece of equipment does not (equipment isn't responsible for anything). Deferred out of Level 1 scope — see Future Extensions.
+None currently open — every question originally raised for this document has already been answered; see Decisions below.
+
+<a id="decisions"></a>
+## 6. Decisions
+
+- **D-DM-1**<br>
+  **Question:** Team scoping — how does Team fit into the model, given the old app has no equivalent (see Team entry above)?<br>
+  **Decision (Level 1):** every Project belongs to exactly one Team (`TeamId` on Project — see Project entry above). A Person's Team membership was already settled via PersonRole (a Person can belong to multiple Teams, with an independently-set role per Team). The one-Team-per-Project rule may be relaxed in later levels — see Future Extensions.
+- **D-DM-2**<br>
+  **Question:** Derived vs. stored scheduling — does the new system keep the old model's fully-computed schedule, or move to a simpler stored-date model (see Project and Task entries above)?<br>
+  **Decision:** keep the old model's fully-computed schedule (dates derived from effort + dependencies + resourcing, nothing stored as an absolute date except where unavoidable). This is a Foundational Decision (see `KeyConcepts.md`) and holds from Level 1 onward — it isn't level-gated the way the items below are.
+- **D-DM-3**<br>
+  **Question:** Concurrency model — see `KeyConcepts.md`'s Merge/Conflict entry for the old app's approach; what does each Level need?<br>
+  **Decision:** level-dependent — see Cross-Cutting Concerns above for the Level 1 answer, and Future Extensions for what later levels need.
+- **D-DM-4**<br>
+  **Question:** Role/permission model shape — how do a per-Team role and organisation-wide administration combine?<br>
+  **Decision:** an organisation-level administrator role, modeled as `IsOrganisationAdmin` directly on Person (see Person entry above), independent of Team/PersonRole — any number of People in an Organisation may hold it, since organisation administration isn't scoped to any one Team. The two tiers have a clean boundary at the Person/PersonRole split: a Team's TeamLeadUser (the top of that Team's per-Team role — see PersonRole entry above) can manage their own Team's membership and roles — add an existing Person to the Team, remove one, change a member's role within that Team — but cannot create, edit, or delete a Person record itself. That remains exclusively `IsOrganisationAdmin`'s job. In practice this means a brand-new Person has to be created by an organisation admin before any Team's TeamLeadUser can add them to a Team.
+- **D-DM-5**<br>
+  **Question:** Non-Person resources — is there a real need to extend Resource assignment beyond Person?<br>
+  **Decision:** yes — in this domain a Resource is something *responsible* for getting work done, so an external vendor qualifies as a Resource but a piece of equipment does not (equipment isn't responsible for anything). Deferred out of Level 1 scope — see Future Extensions.
 
 <a id="future-extensions"></a>
-## 6. Future Extensions (Beyond Level 1)
+## 7. Future Extensions (Beyond Level 1)
 
 Per `Goals.md`'s Delivery Levels, Level 1 is deliberately narrow in scope. The items below are changes to the domain model above that are anticipated or plausible once later levels are in scope — not designed in detail yet, but flagged so the Level 1 model doesn't quietly foreclose them.
 
 - **Project may relate to more than one Team.** Level 1 fixes one Team per Project (see Team → Project in Entity Relationships above); cross-team or Team-spanning Projects, or Projects that move between Teams, may be needed once multi-team collaboration is a real scenario.
-- **Real-time multi-user concurrency.** Level 1 assumes a single user at a time. Later levels need users editing the same Organisation's data at the same time to see each other's changes live — a materially bigger architectural commitment (live push/sync between server and clients) than the old app's load-time conflict-detection dialog (see `KeyConcepts.md`'s Merge/Conflict entry for that older, lower-bar model, which may still be worth keeping as a fallback for cases live sync doesn't cover).
+- **Conflict detection/resolution for concurrent edits.** Level 1 already has multiple users accessing and modifying data at the same time; what it doesn't handle is two of them editing the *same* record at once, since real usage during the Demonstrator avoids that. Level 2 can no longer rely on that avoidance and needs a real answer — either users editing the same Organisation's data seeing each other's changes live (a materially bigger architectural commitment: live push/sync between server and clients) or the old app's load-time conflict-detection dialog (see `KeyConcepts.md`'s Merge/Conflict entry for that older, lower-bar model), or both.
 - **Non-Person resources.** Extend Resource assignment (see Core Entities above) beyond Person to include things that are *responsible* for getting work done but aren't a Person in the system — e.g. an external vendor — while explicitly excluding things that aren't responsible for anything, like equipment. Deferred entirely out of Level 1; the Resource assignment relationship stays Person-only until this is designed.
