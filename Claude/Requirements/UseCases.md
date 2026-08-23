@@ -137,15 +137,20 @@ Renamed for V2: `SuperUser` → **TeamLeadUser**, `PowerUser` → **LeadUser** (
 <a id="open-questions"></a>
 ## 13. Open Questions
 
-- **Q-UC-1:** Which of these use cases are actually essential to a meaningful Demonstrator trial (per `Goals.md` Level 1's "feature scope" framing question)? Candidates for the essential set: Manage Projects/Tasks, Assign resources, Set dependencies, Search, Remarks. Candidates for deliberate deferral or cutting: the Gantt/plan view (valuable but heavy to build), email-capture attachments, admin/support tooling, concurrent-edit resolution (with only one org's worth of users during the Demonstrator, conflicts may be rare enough to defer handling gracefully).
-- **Q-UC-2:** Does the Demonstrator need multi-user concurrent editing at all, or can it reasonably assume low contention and defer conflict-handling design to MVP?
-- **Q-UC-3:** For attachments, is "capture an email" a Level 1 requirement, or can Level 1 ship with plain file upload only?
-- **Q-UC-4:** What should each of the four per-Team roles (ReadOnlyUser/NormalUser/LeadUser/TeamLeadUser — renamed from V1.2's NormalUser/PowerUser/SuperUser, see §12) actually permit in V2, per entity (Task, Project, Component, Remark, Attachment)? Annex A.2's matrix records what V1.2 did (under its old names), not what V2 should do — the two tiers are shaped differently now (`DomainModel.md`'s Role/permission model decision already settles the Person/PersonRole management boundary specifically), so V1.2's matrix is a reference point to weigh against, not something to carry forward verbatim (e.g. Project deletion being SuperUser-only even for the owner, or PowerUser's narrow create-only distinction from NormalUser, may or may not still be the right call).
+- **Q-UC-4:** What should each of the four per-Team roles (ReadOnlyUser/NormalUser/LeadUser/TeamLeadUser — renamed from V1.2's NormalUser/PowerUser/SuperUser, see §12) actually permit in V2, per entity (Task, Project, Component, Remark, Attachment)? Annex A.2's matrix records what V1.2 did (under its old names), not what V2 should do — the two tiers are shaped differently now (`DomainModel.md`'s Role/permission model decision already settles the Person/PersonRole management boundary specifically), so V1.2's matrix is a reference point to weigh against, not something to carry forward verbatim (e.g. Project deletion being SuperUser-only even for the owner, or PowerUser's narrow create-only distinction from NormalUser, may or may not still be the right call). This section's own table below already proposes reversing the immutable/append-only Remark design for its Edit column — a concrete instance of this question, not yet resolved either way.
 
 <a id="decisions"></a>
 ## 14. Decisions
 
-None yet — when an open question above is answered, its entry moves here as `D-UC-<N>`, in the three-line format described in `Claude/Guidelines/ImplementationApproach.md` §3.2.
+- **D-UC-1**<br>
+  **Question:** Which of these use cases are actually essential to a meaningful Demonstrator trial (per `Goals.md` Level 1's "feature scope" framing question)?<br>
+  **Decision:** see `D1-4` in `Level1_Implementation/ImplementationPlan.md`.
+- **D-UC-2**<br>
+  **Question:** Does the Demonstrator need multi-user concurrent editing at all, or can it reasonably assume low contention and defer conflict-handling design to MVP?<br>
+  **Decision:** see `D-DM-3` in `Requirements/DomainModel.md`, and `D1-4` in `Level1_Implementation/ImplementationPlan.md` (concurrent access by multiple users is required for Level 1; handling two users editing the *same* record at once is not).
+- **D-UC-3**<br>
+  **Question:** For attachments, is "capture an email" a Level 1 requirement, or can Level 1 ship with plain file upload only?<br>
+  **Decision:** see `D1-4` in `Level1_Implementation/ImplementationPlan.md` (file and hyperlink attachments only; captured emails are not required for Level 1).
 
 <a id="v1-2-permission-model"></a>
 ## Annex A: Permission Model in V1.2 (Research Findings)

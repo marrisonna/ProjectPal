@@ -114,6 +114,7 @@ Also served by the same service — there's no longer a resource-vs-custom disti
 |---|---|
 | `POST /auth/login` | Verify credentials, issue a JWT (`person_id`, Team/role memberships, `is_organisation_admin`) — `D1-2`. |
 | `POST /auth/impersonate/{personId}` | Admin-only: issue a JWT for the target Person carrying an `impersonated_by` claim — `D1-2`, `Q1.3-1`. |
+| `GET /auth/whoami` | Return the calling token's own claims (`person_id`, Team/role memberships, `is_organisation_admin`, `impersonated_by` if present) — lets a client (and, per §6.4, a test) confirm who it's currently authenticated as, including while impersonating. |
 | `GET /search?q=...` | Cross-table search over Task/Project/Component/Remark, plus Attachment `name`/`url`/`mail_from` — `D1-4`, `Requirements/UseCases.md` Search / Find. |
 
 <a id="auth-seam"></a>
