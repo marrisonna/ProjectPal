@@ -107,7 +107,7 @@ The old app's `AdminWindow` bundles several things: impersonate another user for
 <a id="v2-permission-model"></a>
 ## 12. Permission Model in V2 (Requirements)
 
-Primed from Annex A.2's V1.2 findings as a starting point (see Annex A at the end of this document) — not yet a decision. To be worked through and revised; per Open Question `Q-UC-4` below, V1.2's matrix is a reference point to weigh against, not something to carry forward verbatim.
+Primed from Annex A.2's V1.2 findings as a starting point (see Annex A at the end of this document), and now settled (`D-UC-4`, §14) — V1.2's matrix was a reference point to weigh against, not something carried forward verbatim (e.g. Project deletion staying TeamLeadUser-only even for the owner reflects a deliberate re-decision, not an unexamined carry-over).
 
 Renamed for V2: `SuperUser` → **TeamLeadUser**, `PowerUser` → **LeadUser** (Annex A keeps the old names, since it's a historical record of V1.2).
 
@@ -116,7 +116,7 @@ Renamed for V2: `SuperUser` → **TeamLeadUser**, `PowerUser` → **LeadUser** (
 | Task | LeadUser or TeamLeadUser | Owner (any role above ReadOnly), or TeamLeadUser | Owner (any role above ReadOnly), or TeamLeadUser |
 | Component | LeadUser or TeamLeadUser | Owner (any role above ReadOnly), or TeamLeadUser | Owner (any role above ReadOnly), or TeamLeadUser |
 | Project | LeadUser or TeamLeadUser | Owner (any role above ReadOnly), or TeamLeadUser | **TeamLeadUser only — not even the owner** |
-| Remark | Anyone, including ReadOnlyUser | **Owner** — reverses the immutable/append-only design already implemented (`Requirements/DomainModel.md`'s Remark entity; the `prevent_remark_mutation` trigger in `V2/database/migrations/001_initial_schema.sql`), which will need a migration to relax if this sticks. Doesn't reintroduce the old app's actual quirk (reassigning authorship to whoever edits), since only the original owner can edit. | Owner (any role above ReadOnly), or TeamLeadUser |
+| Remark | Anyone, including ReadOnlyUser | **Owner**, including a ReadOnlyUser owner (`D-DM-7`) — reverses the immutable/append-only design originally specified for this entity (`Requirements/DomainModel.md`'s Remark entity). Doesn't reintroduce the old app's actual quirk (reassigning authorship to whoever edits), since only the original owner can ever edit or delete their own Remark. | **Owner**, including a ReadOnlyUser owner, or TeamLeadUser |
 | Attachment | Anyone above ReadOnlyUser | *(no edit path)* | Owner (any role above ReadOnly), or TeamLeadUser |
 | Dependency | Governed by the *owning Task/Project's* Edit permission — Dependency has no permission concept of its own. | | |
 | Person | `IsOrganisationAdmin` only | `IsOrganisationAdmin` only | Never — People are never hard-deleted; `is_active = false` is the only "removal" (§9) |
@@ -137,7 +137,7 @@ Renamed for V2: `SuperUser` → **TeamLeadUser**, `PowerUser` → **LeadUser** (
 <a id="open-questions"></a>
 ## 13. Open Questions
 
-- **Q-UC-4:** What should each of the four per-Team roles (ReadOnlyUser/NormalUser/LeadUser/TeamLeadUser — renamed from V1.2's NormalUser/PowerUser/SuperUser, see §12) actually permit in V2, per entity (Task, Project, Component, Remark, Attachment)? Annex A.2's matrix records what V1.2 did (under its old names), not what V2 should do — the two tiers are shaped differently now (`DomainModel.md`'s Role/permission model decision already settles the Person/PersonRole management boundary specifically), so V1.2's matrix is a reference point to weigh against, not something to carry forward verbatim (e.g. Project deletion being SuperUser-only even for the owner, or PowerUser's narrow create-only distinction from NormalUser, may or may not still be the right call). This section's own table below already proposes reversing the immutable/append-only Remark design for its Edit column — a concrete instance of this question, not yet resolved either way.
+None currently open — every question originally raised for this document has already been answered; see Decisions below.
 
 <a id="decisions"></a>
 ## 14. Decisions
@@ -151,6 +151,9 @@ Renamed for V2: `SuperUser` → **TeamLeadUser**, `PowerUser` → **LeadUser** (
 - **D-UC-3**<br>
   **Question:** For attachments, is "capture an email" a Level 1 requirement, or can Level 1 ship with plain file upload only?<br>
   **Decision:** see `D1-4` in `Level1_Implementation/ImplementationPlan.md` (file and hyperlink attachments only; captured emails are not required for Level 1).
+- **D-UC-4**<br>
+  **Question:** What should each of the four per-Team roles actually permit in V2, per entity — and is that check scoped to a specific Team?<br>
+  **Decision:** yes, Team-scoped — since a Person's role lives on PersonRole per-Team, every role check in §12's table is against the role that Person holds on the *specific Team that owns the resource being acted on*, not any role they hold anywhere else in the Organisation. Project and Component (`D-DM-6`) each carry their own `TeamId` directly; Task's Team is its own Project's Team (Task has no independent `TeamId`). With that scoping rule settled, §12's table (as amended for Remark by `D-DM-7`) is the settled V2 permission matrix.
 
 <a id="v1-2-permission-model"></a>
 ## Annex A: Permission Model in V1.2 (Research Findings)
@@ -172,7 +175,7 @@ Every permission check in the old app funnels through one function: `Utils.Permi
 | Task | PowerUser or SuperUser | Owner (any role above ReadOnly), or SuperUser | Owner (any role above ReadOnly), or SuperUser |
 | Component | PowerUser or SuperUser | Owner (any role above ReadOnly), or SuperUser | Owner (any role above ReadOnly), or SuperUser |
 | Project | PowerUser or SuperUser | Owner (any role above ReadOnly), or SuperUser | **SuperUser only — not even the owner** |
-| Remark | Anyone, including ReadOnlyUser | *(no edit path in the old app — consistent with the immutable, append-only Remark already decided for V2)* | Owner (any role above ReadOnly), or SuperUser |
+| Remark | Anyone, including ReadOnlyUser | *(no edit path in the old app — V2 reverses this, see `D-DM-7`)* | Owner (any role above ReadOnly), or SuperUser |
 | Attachment | Anyone above ReadOnlyUser | *(no edit path)* | Owner (any role above ReadOnly), or SuperUser |
 | Dependency | Governed by the *owning Task/Project's* Edit permission — Dependency has no permission concept of its own. | | |
 | SuperUser | Can do everything, unconditionally, regardless of ownership. | | |

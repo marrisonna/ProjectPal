@@ -24,14 +24,16 @@
    - 6.2 [Test Suite Layout](#test-suite-layout)
    - 6.3 [Test Categories](#test-categories)
    - 6.4 [Example Tests](#example-tests)
+   - 6.5 [Manual Testing](#manual-testing)
 7. [Definition of Success](#definition-of-success)
 8. [Open Questions (Phase-Specific)](#open-questions)
 9. [Decisions (Phase-Specific)](#decisions)
+10. [Implementation Outcome Summary](#implementation-outcome-summary)
 
 <a id="status-and-purpose"></a>
 ## 1. Status and Purpose
 
-**Status:** Not started.
+**Status:** Done.
 
 Build the secured web API that fronts the Level 1 database (`Requirements/Goals.md` §3.1) — every client (the GUI, and later mobile) talks to this API, never to PostgreSQL directly, per the API-first foundational decision (`../Scope.md` §3). This document is the design, implementation plan, test plan, and definition of success for this phase; see `../ImplementationPlan.md` for how it fits into the Level 1 plan as a whole.
 
@@ -41,18 +43,20 @@ Build the secured web API that fronts the Level 1 database (`Requirements/Goals.
 <a id="in-scope"></a>
 ### 2.1 Endpoints In Scope
 
-Settled by `D1-4` (`../ImplementationPlan.md`), plus what's needed to make `D1-2`'s auth model actually work:
+Settled by `D1-4` (`../ImplementationPlan.md`), `D-UC-4`/`D-DM-6`/`D-DM-7` (`Requirements/UseCases.md`, `Requirements/DomainModel.md`), plus what's needed to make `D1-2`'s auth model actually work:
 
-- **Team, Person, PersonRole** — read for everyone (needed for assignment pickers and role checks). Writes split at the Person/PersonRole boundary (`Requirements/DomainModel.md` Decisions item `D-DM-4`): creating/updating a **Person** is `is_organisation_admin`-only (someone has to be able to onboard People at all), with no delete route, ever — People are never hard-deleted; `PATCH` to set `is_active = false` is how someone leaving is represented. Writing a **PersonRole** row is allowed for `is_organisation_admin` *or* the target Team's own `TeamLeadUser` (V2's renamed `SuperUser` — see `Requirements/UseCases.md` §12) — a Team's TeamLeadUser can add an existing Person to their Team, remove one, or change a member's role within that Team, but can't touch the Person record itself. **Team** row writes (creating a new Team) stay `is_organisation_admin`-only, same as Person, pending any decision otherwise.
-- **Project, Component** — full CRUD, including the self-referencing parent tree for both.
-- **Task** — full CRUD.
-- **Task ↔ Person resource assignment** (`task_resource`) — assign/unassign.
+- **Team-scoped authorization, generally** (`D-UC-4`): every per-role check below (LeadUser/TeamLeadUser/Owner) is against the role the caller holds, via PersonRole, *on the specific Team that owns the resource being acted on* — not any role they hold anywhere else in the Organisation. Project and Component (`D-DM-6`) each carry their own `team_id` directly; a Task's Team is its own Project's Team (Task has no independent `team_id`); a Dependency's Team is whichever Task/Project side it touches. `is_organisation_admin` checks (below) are the one exception — they're Team-independent by design (`D-DM-4`).
+- **Team, Person, PersonRole** — read for everyone (needed for assignment pickers and role checks). Writes split at the Person/PersonRole boundary (`Requirements/DomainModel.md` Decisions item `D-DM-4`): creating/updating a **Person** is `is_organisation_admin`-only (someone has to be able to onboard People at all), with no delete route, ever — People are never hard-deleted; `PATCH` to set `is_active = false` is how someone leaving is represented. Writing a **PersonRole** row is allowed for `is_organisation_admin` *or* the target Team's own `TeamLeadUser` (V2's renamed `SuperUser` — see `Requirements/UseCases.md` §12) — a Team's TeamLeadUser can add an existing Person to their Team, remove one, or change a member's role within that Team, but can't touch the Person record itself. **Team** row creation is `is_organisation_admin`-only, and must atomically create the new Team's first `PersonRole` row too, granting some existing Person the `TeamLeadUser` role for it — a Team is never left leaderless, even transiently (`Requirements/UseCases.md` §12's "Team creation must bootstrap a TeamLeadUser"). `POST /team`'s request body therefore includes the initial leader's `person_id` alongside the Team's `name`, and both inserts happen in one transaction — if either fails, both roll back. Renaming a Team (`PATCH /team/{id}`) is `is_organisation_admin`-only, same as creation. There's no `DELETE /team/{id}` route: `Requirements/UseCases.md` §12 leaves Team deletion "not yet decided," so it isn't built until that's settled.
+- **Project** — full CRUD, including the self-referencing parent tree, checked against the caller's role on the Project's own `team_id`. A `PATCH` changing `parent_project_id` to a Project belonging to a different Team is rejected (`D-DM-9`).
+- **Component** — full CRUD, including its self-referencing parent tree. Carries its own `team_id` (`D-DM-6`), governing who may create/edit/delete it (same role check as Project, against the Component's own Team) — this does **not** restrict which Team's Tasks may *reference* a given Component; Component stays a cross-Team classification tag for reporting (`Requirements/KeyConcepts.md`'s Component entry), only its management is Team-scoped. Reparenting is narrower than tagging: a `PATCH` changing `parent_component_id` to a Component belonging to a different Team is rejected, same as Project above (`D-DM-9`).
+- **Task** — full CRUD, checked against the caller's role on the Task's own Project's `team_id`. Moving a Task is narrower than editing it otherwise: a `PATCH` changing `project_id` to a Project belonging to a different Team is rejected for Level 1 (`D-DM-10`) — a Task can only move between Projects on its own Team.
+- **Task ↔ Person resource assignment** (`task_resource`) — assign/unassign, same Team scope as Task; the target Person must additionally hold `is_resource = true` via PersonRole *on the Task's own Team* (`D-DM-8`) — a resource on a different Team isn't assignable, even if they're a resource there.
 - **Dependency** — create/delete. The cycle-rejection rule is already enforced by `1_DatabaseSetup`'s `check_dependency_no_cycle` trigger; this phase's job is surfacing that cleanly (§4.4), not re-implementing it.
 - **Attachment** — upload/list/download, for `File` and `Link` kinds only (`D1-4`). The dedup rule is already enforced by `1_DatabaseSetup`'s `ux_attachment_dedup` index; again, this phase surfaces it, not re-implements it.
-- **Remark** — create and list only. The database rejects `UPDATE`/`DELETE` outright (`prevent_remark_mutation`), so there's no edit/delete endpoint to build.
+- **Remark** — create, list, and now edit/delete by the Remark's own owner (`D-DM-7`, reversing the immutable/append-only design `1_DatabaseSetup` originally built): any Person, including a ReadOnlyUser, may create a Remark and later edit or delete their own; nobody else may edit it, but a `TeamLeadUser` may additionally delete (not edit) a Remark they don't own, per `Requirements/UseCases.md` §12's table. The database only enforces that authorship (`created_by_person_id`) can never be reassigned (`prevent_remark_reassignment`); the owner/TeamLeadUser check itself is this API's job.
 - **Search** — across Task/Project/Component/Remark, plus Attachment *metadata* (`name`, `url`, `mail_from` — not attachment content/full-text, which stays a later enhancement per `Requirements/UseCases.md`'s Search / Find use case), per `D1-4`.
-- **Auth** — login (Phase 3 builds the real implementation; this phase only needs to agree the seam — see §4.3) and admin-only impersonation (`D1-2`, `Q1.3-1`, `Q1.3-2`).
-- **Admin/support tooling** — required per `D1-4`, `is_organisation_admin`-gated (`Requirements/UseCases.md`'s Administer the System use case — not a per-Team `TeamLeadUser` concern), beyond impersonation above. Exactly which capabilities (e.g. bulk data export, a data-integrity check) is still open — see `Q1.2-4`.
+- **Auth** — login only (Phase 3 builds the real implementation; this phase only needs to agree the seam — see §4.3). No impersonation endpoint: `D1.3-1` (`3_Authentication/Plan.md`) found Level 1 doesn't need one, since an admin can verify another Person's view by logging in as them directly with their own credentials.
+- **Admin/support tooling** — required per `D1-4`, `is_organisation_admin`-gated (`Requirements/UseCases.md`'s Administer the System use case — not a per-Team `TeamLeadUser` concern). Exactly which capabilities (e.g. bulk data export, a data-integrity check) is still open — see `Q1.2-4`.
 
 <a id="deferred"></a>
 ### 2.2 Deferred Out of Level 1
@@ -103,7 +107,7 @@ Reopens `D1.2-1` (§9) — see `D1.2-3`: Option C, not Option B. Laying out the 
 <a id="resource-endpoints"></a>
 ### 4.1 Resource Endpoints
 
-The CRUD surface listed in §2.1, one route family per table (e.g. `GET/POST /task`, `GET/PATCH/DELETE /task/{id}`, filtering via query params such as `GET /task?project_id=5`), all served by the one hand-written service (`D1.2-3`) — the same service Level 2/3 will later extend with tenant-routing. Full route signatures are nailed down in the API contract (§5.2 step 7), not repeated here.
+The CRUD surface listed in §2.1, one route family per table (e.g. `GET/POST /task`, `GET/PATCH/DELETE /task/{id}`, filtering via query params such as `GET /task?project_id=5`), all served by the one hand-written service (`D1.2-3`) — the same service Level 2/3 will later extend with tenant-routing. Full route signatures are nailed down in the API contract (§5.2 step 8), not repeated here.
 
 <a id="custom-endpoints"></a>
 ### 4.2 Auth & Search Endpoints
@@ -113,8 +117,7 @@ Also served by the same service — there's no longer a resource-vs-custom disti
 | Endpoint | Purpose |
 |---|---|
 | `POST /auth/login` | Verify credentials, issue a JWT (`person_id`, Team/role memberships, `is_organisation_admin`) — `D1-2`. |
-| `POST /auth/impersonate/{personId}` | Admin-only: issue a JWT for the target Person carrying an `impersonated_by` claim — `D1-2`, `Q1.3-1`. |
-| `GET /auth/whoami` | Return the calling token's own claims (`person_id`, Team/role memberships, `is_organisation_admin`, `impersonated_by` if present) — lets a client (and, per §6.4, a test) confirm who it's currently authenticated as, including while impersonating. |
+| `GET /auth/whoami` | Return the calling token's own claims (`person_id`, Team/role memberships, `is_organisation_admin`) — lets a client (and, per §6.4, a test) confirm who it's currently authenticated as. |
 | `GET /search?q=...` | Cross-table search over Task/Project/Component/Remark, plus Attachment `name`/`url`/`mail_from` — `D1-4`, `Requirements/UseCases.md` Search / Find. |
 
 <a id="auth-seam"></a>
@@ -151,19 +154,19 @@ V2/
 │   │   ├── db.py                 — the service's one shared DB connection/pool, used by every route
 │   │   ├── security/
 │   │   │   ├── __init__.py
-│   │   │   ├── jwt.py            — encode/decode; claim shape (`person_id`, Team/role memberships, `is_organisation_admin`, optional `impersonated_by`) per `D1-2`
+│   │   │   ├── jwt.py            — encode/decode; claim shape (`person_id`, Team/role memberships, `is_organisation_admin`) per `D1-2`
 │   │   │   └── deps.py           — FastAPI dependency that extracts + validates the Bearer token on every route; this **is** the authentication seam (§4.3), and where Team/role checks happen (replaces what RLS would have done under Option B)
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── auth.py           — `POST /auth/login` (stub issuer this phase, §4.3), `GET /auth/whoami`
-│   │   │   ├── impersonate.py    — `POST /auth/impersonate/{personId}`, admin-gated
 │   │   │   ├── search.py         — `GET /search`, including Attachment `name`/`url`/`mail_from` (`D1-4`)
-│   │   │   ├── teams.py          — Team, Person, PersonRole (§2.1's write rules live here, in code: Person is `is_organisation_admin`-only with no delete route — `is_active` is the only "removal" — while PersonRole also accepts the target Team's own `TeamLeadUser`)
-│   │   │   ├── projects.py       — Project, Component
+│   │   │   ├── teams.py          — Team, Person, PersonRole (§2.1's write rules live here, in code: Person is `is_organisation_admin`-only with no delete route — `is_active` is the only "removal" — while PersonRole also accepts the target Team's own `TeamLeadUser`; creating a Team atomically inserts its bootstrap `TeamLeadUser` PersonRole row in the same transaction)
+│   │   │   ├── projects.py       — Project
+│   │   │   ├── components.py     — Component, Team-scoped by its own `team_id` (`D-DM-6`)
 │   │   │   ├── tasks.py          — Task, `task_resource`
 │   │   │   ├── dependencies.py   — Dependency
 │   │   │   ├── attachments.py    — Attachment; computes `content_hash`/`size_bytes` before insert
-│   │   │   ├── remarks.py        — Remark (create/list routes only — no update/delete route exists at all, matching the database's own rule)
+│   │   │   ├── remarks.py        — Remark create/list/edit/delete; edit restricted to the Remark's own owner, delete to the owner or a TeamLeadUser on that Remark's Team (`D-DM-7`)
 │   │   │   └── admin.py          — admin/support tooling required by `D1-4`; exact capabilities still open, see `Q1.2-4`
 │   │   └── errors.py             — maps Postgres exceptions (the three business rules, plain constraint violations) to clean HTTP responses (§4.4)
 │   └── tests/                    — see §6.2
@@ -175,10 +178,10 @@ V2/
 ### 5.2 Build Order
 
 1. Stand up the hand-written service (`D1.2-3`) against the existing `1_DatabaseSetup` schema/data — no schema or migration changes needed for this phase.
-2. Expose read-only routes for reference/lookup data first (Team, Person, Component) — lowest risk, no auth-sensitive writes yet.
-3. Add the authentication seam (`security/deps.py`), with Team/role authorization checked directly in each route as it's built (Project, Task, `task_resource`, `dependency`, `attachment`, `remark`).
+2. Expose read-only routes for reference/lookup data first (Team, Person, PersonRole, Component) — lowest risk, no auth-sensitive writes yet.
+3. Add the authentication seam (`security/deps.py`), with Team-scoped role authorization (§2.1) checked directly in each route as it's built: Person/PersonRole/Team writes first (including Team-creation's atomic TeamLeadUser bootstrap), then Project, Component, Task, `task_resource`, `dependency`, and Remark (including its owner-only edit and owner-or-TeamLeadUser delete).
 4. Implement Attachment upload (`content_hash`/`size_bytes` computed before insert) and the error-mapping (`errors.py`, §4.4) for the three DB-enforced business rules plus ordinary constraint violations.
-5. Add the Search, Auth, and Impersonation routes (§4.2).
+5. Add the Search and Auth routes (§4.2).
 6. Resolve `Q1.2-4` and add the admin/support routes it settles on (`admin.py`).
 7. Write and pass the test suite (§6).
 8. Publish an API contract (OpenAPI, auto-generated by FastAPI for every route) so the GUI/Web Client phase has something concrete to build against.
@@ -202,16 +205,16 @@ V2/rest-api/tests/
 ├── helpers.py                — the `auth()` header-builder used across test files
 ├── requirements-test.txt     — pytest, requests
 ├── test_auth.py              — no-token rejection; the stub login issues a usable token
-├── test_authorization.py     — the authorization check in `security/deps.py` actually restricts by Team/role, not just "any valid token"
-├── test_crud_reference_data.py   — Team/Person/PersonRole/Component read; Person create/update is admin-only with no delete route at all; a Team's TeamLeadUser can write PersonRole for their own Team but is rejected writing Person or another Team's PersonRole
-├── test_crud_project.py
-├── test_crud_task.py
-├── test_resource_assignment.py
+├── test_authorization.py     — the authorization check in `security/deps.py` actually restricts by Team/role (`D-UC-4`) — a role held on one Team never grants access to another Team's resources, not just "any valid token"
+├── test_crud_reference_data.py   — Team/Person/PersonRole/Component read; Person create/update is admin-only with no delete route at all; a Team's TeamLeadUser can write PersonRole for their own Team but is rejected writing Person or another Team's PersonRole; creating a Team atomically creates its bootstrap TeamLeadUser PersonRole row, and is rejected without one
+├── test_crud_project.py      — includes rejecting a reparent onto a different Team's Project (`D-DM-9`)
+├── test_crud_component.py    — includes Team-scoped create/edit/delete (`D-DM-6`), that a Task in a different Team can still reference the Component, and rejecting a reparent onto a different Team's Component (`D-DM-9`)
+├── test_crud_task.py         — includes rejecting a `project_id` change that would move the Task onto a different Team's Project (`D-DM-10`, Level 1 only)
+├── test_resource_assignment.py   — assigning a Person who isn't a resource on the Task's own Team is rejected, even if they're a resource elsewhere (`D-DM-8`)
 ├── test_dependency_rules.py  — includes the cycle-rejection case (§6.4)
 ├── test_attachment_rules.py  — includes the dedup-rejection case
-├── test_remark_rules.py      — includes the immutability case
+├── test_remark_rules.py      — owner (including a ReadOnlyUser owner) can edit/delete their own Remark; a non-owner, non-TeamLeadUser cannot; a TeamLeadUser can delete but not edit a Remark they don't own; authorship (`created_by_person_id`) can never be changed by anyone, including the owner (`D-DM-7`)
 ├── test_search.py            — includes Attachment `name`/`url`/`mail_from` matches (`D1-4`)
-├── test_impersonation.py     — admin can; non-admin can't (`Q1.3-1`'s eventual answer plugs in here)
 ├── test_admin.py             — whatever `Q1.2-4` settles on
 └── test_journey.py           — the end-to-end scenario (§6.3)
 ```
@@ -222,9 +225,11 @@ V2/rest-api/tests/
 ### 6.3 Test Categories
 
 - **CRUD happy paths** — one create/read/update/delete cycle per in-scope resource (§2.1).
-- **Authorization** — a request with no token, an expired token, and a token for a Person without the right Team role are all rejected; a request with a valid token and the right role succeeds.
+- **Authorization, Team-scoped** (`D-UC-4`) — a request with no token, an expired token, or a token for a Person without the right role *on that resource's own Team* are all rejected; a valid token with the right role on that specific Team succeeds, and the same role held only on a *different* Team is still rejected.
 - **Business-rule surfacing** (§4.4) — each of the three DB-enforced rules produces a clean 4xx, not a raw Postgres error.
-- **Impersonation** — an org-admin can mint a token for another Person and act as them; a non-admin attempting to impersonate is rejected (`Q1.3-1` will settle exactly who "admin" means here).
+- **Team creation bootstrap** — creating a Team without an initial TeamLeadUser `person_id` is rejected; creating one with it produces both the Team and its PersonRole row atomically.
+- **Team-boundary integrity** — resource assignment requires the Person to be a resource on the Task's own Team, not merely a resource somewhere (`D-DM-8`); reparenting a Project or Component onto a different Team's parent is rejected (`D-DM-9`); moving a Task onto a different Team's Project is rejected for Level 1 (`D-DM-10`).
+- **Remark ownership** (`D-DM-7`) — the owner can edit/delete their own Remark (even a ReadOnlyUser owner); a non-owner without TeamLeadUser standing on that Team cannot edit or delete it; a TeamLeadUser can delete but not edit a Remark they don't own; nobody, including the owner, can change a Remark's `created_by_person_id`.
 - **End-to-end journey** — one test walking through a realistic sequence (create Project → create Task → assign a resource → add a Dependency → add a Remark) to prove the pieces work together, not just in isolation.
 
 <a id="example-tests"></a>
@@ -246,13 +251,31 @@ def test_dependency_cycle_is_rejected(api, alice_token):
     assert "psycopg" not in resp.text.lower()
 
 
-def test_remark_cannot_be_edited(api, alice_token, existing_remark_id):
+def test_remark_owner_can_edit_their_own(api, alice_token, alice_owned_remark_id):
     resp = api.patch(
-        f"/remark/{existing_remark_id}",
-        json={"remark_text": "edited"},
+        f"/remark/{alice_owned_remark_id}",
+        json={"remark_text": "edited by its own owner"},
         headers=auth(alice_token),
     )
-    assert resp.status_code in (403, 405)
+    assert resp.status_code == 200
+
+
+def test_remark_non_owner_cannot_edit(api, bob_token, alice_owned_remark_id):
+    resp = api.patch(
+        f"/remark/{alice_owned_remark_id}",
+        json={"remark_text": "edited by someone else"},
+        headers=auth(bob_token),
+    )
+    assert resp.status_code == 403
+
+
+def test_remark_authorship_cannot_be_reassigned(api, alice_token, alice_owned_remark_id, bob_person_id):
+    resp = api.patch(
+        f"/remark/{alice_owned_remark_id}",
+        json={"created_by_person_id": bob_person_id},
+        headers=auth(alice_token),
+    )
+    assert resp.status_code in (400, 403)
 
 
 def test_duplicate_attachment_is_rejected(api, alice_token, task_id, sample_file):
@@ -268,21 +291,70 @@ def test_request_without_token_is_rejected(api):
     assert resp.status_code == 401
 
 
-def test_non_admin_cannot_impersonate(api, bob_token, alice_person_id):
-    # bob_token belongs to a Person without is_organisation_admin.
-    resp = api.post(f"/auth/impersonate/{alice_person_id}", headers=auth(bob_token))
+def test_team_scoped_authorization_rejects_wrong_team_role(api, bob_token, other_team_project_id):
+    # bob_token belongs to a LeadUser on Team 1; other_team_project_id belongs
+    # to Team 2, where bob holds no role at all.
+    resp = api.post(
+        "/task",
+        json={"project_id": other_team_project_id, "description": "Should be rejected"},
+        headers=auth(bob_token),
+    )
     assert resp.status_code == 403
 
 
-def test_admin_can_impersonate_and_act_as_target(api, admin_token, alice_person_id):
-    resp = api.post(f"/auth/impersonate/{alice_person_id}", headers=auth(admin_token))
-    assert resp.status_code == 200
-    impersonated_token = resp.json()["token"]
+def test_team_creation_bootstraps_team_lead_user(api, admin_token, alice_person_id):
+    resp = api.post(
+        "/team",
+        json={"name": "New Team", "initial_team_lead_person_id": alice_person_id},
+        headers=auth(admin_token),
+    )
+    assert resp.status_code == 201
+    new_team_id = resp.json()["team_id"]
 
-    whoami = api.get("/auth/whoami", headers=auth(impersonated_token))
-    assert whoami.json()["person_id"] == alice_person_id
-    assert whoami.json()["impersonated_by"] is not None
+    roles = api.get(f"/person-role?team_id={new_team_id}", headers=auth(admin_token)).json()
+    assert any(r["person_id"] == alice_person_id and r["role"] == "TeamLeadUser" for r in roles)
 ```
+
+<a id="manual-testing"></a>
+### 6.5 Manual Testing
+
+The interactive Swagger UI at `http://127.0.0.1:8000/docs` (generated from `openapi.json`, §5.2 step 8) is the quickest way to exercise the API by hand, alongside the automated suite above.
+
+**1. Make sure the stack is running.** The Swagger UI is served *by* the REST API itself, so both it and the database it depends on need to be up first. From `V2/`:
+```powershell
+docker compose up -d
+```
+This starts (and, the first time, builds) both the `db` and `rest-api` containers — `rest-api` won't start until `db` reports healthy (`docker-compose.yml`'s `depends_on` condition). Check `docker ps --filter name=projectpal` for `projectpal-db` (healthy) and `projectpal-rest-api` (up); the first request to `http://127.0.0.1:8000/docs` loading in a browser confirms it's actually ready. Nothing here loads or resets data — it's the same database and example dataset every other section of this document assumes. `.\scripts\test-api.ps1` (§6.2) does this same startup step automatically before running the automated suite, so it's also a one-command way to get the stack up if you'd rather not run `docker compose` directly.
+
+**2. Get a token.** Find `POST /auth/login` under the **auth** section, click it → **Try it out**, and enter a body like:
+```json
+{"external_login": "alice.chen@example.com"}
+```
+Click **Execute**. Login is a stub for now (§4.3 — Phase 3 builds real password checking), so any seeded Person's `external_login` logs you in as them, no password needed. Copy the `token` string from the response (without the quotes).
+
+**3. Authorize.** Click the green **Authorize** button (padlock icon, top-right of the page). Paste just the token value into the field — Swagger already knows it's a Bearer token (the OpenAPI spec declares `HTTPBearer`) and prepends `Bearer ` itself, so don't type that part. Click **Authorize**, then **Close**. Every endpoint's "Try it out" now sends that token automatically.
+
+**4. Try endpoints.** Expand any route (e.g. `GET /team`, `GET /task`), click **Try it out** → **Execute**, and see the real response. The padlock icon on each route confirms it requires the token you just authorized with.
+
+**5. Test different roles by logging in as different seeded People** — re-run step 2 with a different `external_login` and re-authorize with the new token:
+
+| Person | `external_login` | Role |
+|---|---|---|
+| Alice Chen | `alice.chen@example.com` | org admin, TeamLeadUser (Team 1) |
+| Ben Okafor | `ben.okafor@example.com` | LeadUser (Team 1), no role on Team 2 |
+| Priya Sharma | `priya.sharma@example.com` | NormalUser (Team 1) |
+| Tom Baxter | `tom.baxter@example.com` | TeamLeadUser (Team 2), NormalUser (Team 1) |
+| Sam Patel | `sam.patel@example.com` | ReadOnlyUser (Team 2) |
+| Nadia Fischer | `nadia.fischer@example.com` | org admin, NormalUser (both Teams) |
+
+A few things worth trying to see the authorization rules in action:
+- `POST /project` as Sam (ReadOnlyUser) → 403, since creating needs LeadUser+.
+- `POST /task` with a Team-2 `project_id` while authorized as Ben → 403 (he has no role on Team 2, `D-UC-4`).
+- `POST /team` as Ben → 403 (org-admin only); as Alice/Nadia → 201, and it requires an `initial_team_lead_person_id` in the body (`D1.2-4`'s bootstrap rule).
+- `PATCH /remark/{id}` on someone else's remark → 403; on your own → 200, even as Sam (ReadOnlyUser owners can edit their own, `D-DM-7`).
+- `POST /attachment` for `kind: "File"` needs multipart form fields (`name`, `task_id`, `kind`, `file`) — Swagger renders these as a form with a file picker automatically.
+
+Tokens expire 8 hours after login (`security/jwt.py`'s `JWT_TTL_SECONDS`) — re-run step 2 if a previously-working request starts returning 401.
 
 <a id="definition-of-success"></a>
 ## 7. Definition of Success
@@ -290,19 +362,22 @@ def test_admin_can_impersonate_and_act_as_target(api, admin_token, alice_person_
 For Level 1, this phase is done when:
 
 - Every endpoint in §2.1 exists, is covered by the test categories in §6.3, and the test suite passes.
+- Every Team/role authorization check is genuinely Team-scoped (`D-UC-4`) — a role held on one Team never grants access to another Team's resources.
+- Team creation always atomically bootstraps its TeamLeadUser PersonRole — there's no way to create a leaderless Team through this API.
+- Team-boundary integrity holds end to end (`D-DM-8`/`D-DM-9`/`D-DM-10`): resource assignment, reparenting, and Task moves all stay within a single Team, verified by tests.
+- Remark ownership rules (`D-DM-7`) hold: an owner (including a ReadOnlyUser) can edit/delete their own Remark; nobody else can edit it; a TeamLeadUser can delete but not edit one they don't own; authorship can never be reassigned.
 - The three DB-enforced business rules are surfaced as clean errors (§4.4), verified by tests, not just manually checked once.
 - Every endpoint requires and authorizes off a JWT (§4.3) — even before Phase 3 provides real login, the seam is real and tested via the stub issuer.
-- Impersonation works end-to-end and is restricted to the intended role (once `Q1.3-1` settles which).
 - Admin/support tooling (`D1-4`) is built, once `Q1.2-4` settles exactly which capabilities.
 - The GUI/Web Client phase (Phase 5) can be built entirely against this API, with no direct database access from the client — proving the API-first foundational decision actually holds in practice, not just on paper.
 - An API contract (§5.2 step 8) exists for the GUI phase to build against.
 
-Explicitly **not** required for success: any Urgency computation (`D1.2-2` — this is the GUI's job, see `5_GuiClient/Plan.md`), a dedicated plan-view endpoint (§2.2), or anything on the deferred list.
+Explicitly **not** required for success: any Urgency computation (`D1.2-2` — this is the GUI's job, see `5_GuiClient/Plan.md`), a dedicated plan-view endpoint (§2.2), an impersonation mechanism (`D1.3-1` — not needed for Level 1), or anything on the deferred list.
 
 <a id="open-questions"></a>
 ## 8. Open Questions (Phase-Specific)
 
-- **Q1.2-4:** Which specific admin/support capabilities (beyond impersonation) does Level 1 need, now that `D1-4` requires admin/support tooling generally? Candidates per `Requirements/UseCases.md`'s Administer the System use case: bulk data export, a data-integrity check. The old app's storage-backend switching and forced re-sync don't carry forward (§2.2) — they're specific to an architecture this system doesn't have.
+None currently open — see Decisions below.
 
 <a id="decisions"></a>
 ## 9. Decisions (Phase-Specific)
@@ -317,5 +392,30 @@ Explicitly **not** required for success: any Urgency computation (`D1.2-2` — t
 - **D1.2-3** (decided 2026-08-22)<br>
   **Question:** Revisiting `D1.2-1` — should PostgREST still serve the CRUD surface, now that laying out the concrete shape of this phase (§5–§6) has surfaced what that actually requires?<br>
   **Decision:** no — Option C (§3.3), one hand-written service for everything, no PostgREST. Working through the repository layout and test plan under Option B surfaced two problems severe enough to reopen it: (1) attachment upload needs `content_hash`/`size_bytes` computed before insert, which plain PostgREST CRUD can't do, and which the design never actually assigned to either system; (2) `Team`/`Person`/`PersonRole`'s "read for everyone, admin-gated write" rule doesn't fit PostgREST's Row-Level Security model the way the Team-scoped tables do, and nothing was implementing it either. Both trace to the same root cause: roughly half the "plain CRUD" surface (Dependency, Attachment, Remark, plus the differently-shaped Team/Person/PersonRole rules) already needed hand-written logic, which undercuts PostgREST's core value (skip writing the boring parts) enough that one service for everything is now simpler overall — not just architecturally tidier, genuinely less total work, since it also removes the RLS migration, PostgREST's JWT-claims wiring, and the path-based routing `4_HttpsReverseProxy` would otherwise have needed. `D1.2-1`'s reasoning about the service being a permanent identity/gateway layer (not Level-1-only scaffolding) is unaffected — it now just does more from day one.
+- **D1.2-4** (decided 2026-08-23)<br>
+  **Question:** Which specific admin/support capabilities does Level 1 need, now that `D1-4` requires admin/support tooling generally?<br>
+  **Decision:** the two candidates `Q1.2-4` already named — bulk data export (`GET /admin/export`, a full JSON dump of every table except `attachment`, whose `data` column holds raw file bytes) and a data-integrity check (`GET /admin/integrity-check`: Teams with no `TeamLeadUser`, and `task_resource` assignments where the Person is no longer a resource on that Task's Team). Both `is_organisation_admin`-gated. The old app's storage-backend switching and forced re-sync don't carry forward (§2.2) — they're specific to an architecture this system doesn't have.
+- **D1.2-5** (decided 2026-08-23)<br>
+  **Question:** `Requirements/DomainModel.md`'s Dependency entity says a Dependency is "governed by the owning Task/Project's Edit permission," but doesn't say what that means when its two sides have different owners or belong to different Teams — whose Edit permission?<br>
+  **Decision:** both — creating or deleting a Dependency requires the caller to hold Edit rights (Owner-above-ReadOnly or TeamLeadUser, per `Requirements/UseCases.md` §12) on *both* the predecessor and the successor side, whichever of Task/Project each is. You shouldn't be able to link (or unlink) an item you can't otherwise edit, on either end. No restriction on the two sides belonging to different Teams — only Task moves (`D-DM-10`) and reparenting (`D-DM-9`) are Team-boundary-restricted, not Dependencies, since a cross-Team dependency (e.g. "this billing task depends on infra work owned by a different Team") is a legitimate scheduling relationship, not a structural move.
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.
+
+<a id="implementation-outcome-summary"></a>
+## 10. Implementation Outcome Summary
+
+**What was implemented:** the full §2.1 endpoint surface as one hand-written FastAPI service (`V2/rest-api/`, `D1.2-3`) — Team/Person/PersonRole (including the atomic TeamLeadUser bootstrap on Team creation), full CRUD on Project/Component/Task (Team-scoped per `D-UC-4`, with the reparenting and Task-move restrictions from `D-DM-9`/`D-DM-10`), Task↔Person resource assignment (`D-DM-8`), Dependency create/delete (`D1.2-5`), Attachment upload/list/download for File/Link kinds with `content_hash`/`size_bytes` computed here, Remark create/list/edit/delete with owner/TeamLeadUser rules (`D-DM-7`), cross-table Search, the stub auth seam (`POST /auth/login`, `GET /auth/whoami`), and admin export/integrity-check (`D1.2-4`). `errors.py` maps all three DB-enforced business rules plus ordinary constraint violations to clean HTTP responses. `docker-compose.yml`/`.env.example` were extended with the `rest-api` service and `JWT_SECRET`; `scripts/test-api.ps1` was added alongside `setup.ps1`/`verify.ps1`; the OpenAPI contract was generated and saved to `V2/rest-api/openapi.json`. This matches §2.1's scope exactly — nothing was dropped or descoped from what was planned.
+
+**Testing:** unlike `1_DatabaseSetup` (built without Docker available), this phase had a working Docker/Python environment throughout, so it was actually built and tested end to end, not just reviewed. All 44 tests across every category in §6.3 pass, run via `.\scripts\test-api.ps1` against the real running stack (HTTP-level, per §6.1 — no mocks). The suite is re-runnable against the same persistent dev database without a reset (unique names/content generated per run), matching how `test-api.ps1` is meant to be used day to day.
+
+**Issues that arose:**
+- The `1_DatabaseSetup` seed data had never given Team 2 a `TeamLeadUser` — it predates the bootstrap requirement this phase's design formalized. Fixed by promoting Tom Baxter to `TeamLeadUser` on Team 2 in `database/seed/001_example_data.sql`, which also makes `/admin/integrity-check` return clean on the seed data.
+- Two test-writing mistakes were caught by actually running the suite rather than reasoning about it: a "Team-lead-only" test used Alice, who is also `is_organisation_admin` and so passed for the wrong reason; a "happy path" resource-assignment test picked a Person already assigned to that Task in the seed data, so it hit the dedup path instead of the happy path. Both were test bugs, not application bugs — fixed by picking better fixtures.
+- No application-level bugs surfaced during testing beyond the two test-authoring mistakes above.
+
+**Further consideration:**
+- `password_hash` (named in `D1-2`) and a `UNIQUE` constraint on `person.external_login` still don't exist in the schema — `3_Authentication` will need a schema change before it can replace the stub login with real password verification.
+- Nothing in the automated suite exercises the Remark-authorship-reassignment DB trigger directly, since the API never exposes a field that could attempt it (arguably a stronger guarantee than a test would give — but it means that trigger is currently only manually smoke-tested, not covered by pytest).
+- List endpoints have no pagination and only the query-param filters each route defines — fine at Level 1's data volumes, likely needs revisiting once Level 2/3 have real data volumes.
+- This API currently runs over plain HTTP (`4_HttpsReverseProxy` hasn't been built yet) — expected and acceptable per Level 1's "security is not the top concern" framing, but worth remembering before this is ever reachable from outside this machine.
+- `D1.2-4`'s admin capabilities and `D1.2-5`'s Dependency authorization rule were both decided during this implementation pass rather than pre-agreed — worth a light second look once the GUI phase starts actually exercising them with real usage patterns.

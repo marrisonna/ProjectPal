@@ -20,5 +20,21 @@ services:
       timeout: 5s
       retries: 10
 
+  rest-api:
+    build: ./rest-api
+    container_name: projectpal-rest-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-projectpal}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-projectpal}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting}
+    ports:
+      # Bound to localhost only, same principle as the db service above — the
+      # eventual reverse proxy (Claude/Level1_Implementation/4_HttpsReverseProxy)
+      # is what actually faces anything beyond this machine.
+      - "127.0.0.1:8000:8000"
+
 volumes:
   projectpal-db-data:

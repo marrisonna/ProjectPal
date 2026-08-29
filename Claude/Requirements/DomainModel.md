@@ -74,7 +74,7 @@ The Gantt bar colour assigned to a Person should be a generic per-Person, per-Or
 ### 2.5 Project
 See `KeyConcepts.md`'s Project entry for what this is and why it matters.
 
-Attributes worth carrying forward: name, priority, description, owner, due date. New attribute: `TeamId` — for Level 1 (see `Goals.md`), every Project belongs to exactly one Team (see Decisions (`D-DM-1`) and Future Extensions below for how this may broaden later).
+Attributes worth carrying forward: name, priority, description, owner, due date. New attribute: `TeamId` — for Level 1 (see `Goals.md`), every Project belongs to exactly one Team (see Decisions (`D-DM-1`) and Future Extensions below for how this may broaden later). Reparenting is confined to that Team: a Project's `parent_project_id` may only point to another Project belonging to the same Team (`D-DM-9`).
 
 The old model's **derived scheduling** is its most distinctive and most debatable feature: a Project's start date is constrained by its dependencies, and its *end date is never stored* — it's computed as the max end date across all child tasks and sub-projects, recursively. This makes the schedule always internally consistent but means nothing about timing is a simple stored fact. **Decision:** the new system keeps this derived-computation approach rather than moving to stored dates (see Decisions (`D-DM-2`) below).
 
@@ -90,13 +90,17 @@ The old model stores a Task's start as a **relative business-day offset from its
 
 A Task has exactly one Project. The old schema's earlier many-to-many Task↔Project link table was simplified away in favour of this direct relationship, which is a useful precedent: prefer the simpler relationship unless a real need for many-to-many resurfaces.
 
+**Decision (Level 1, `D-DM-10`):** a Task may only be moved to a different Project belonging to the *same* Team as its current Project — moving a Task across Teams is deferred to Level 2 (see Future Extensions below).
+
 <a id="component"></a>
 ### 2.7 Component
-See `KeyConcepts.md`'s Component entry for what this is and why it matters. Structurally: same self-referencing tree shape as Project, but independent of it — plays no role in scheduling or dependencies.
+See `KeyConcepts.md`'s Component entry for what this is and why it matters. Structurally: same self-referencing tree shape as Project, but independent of it — plays no role in scheduling or dependencies. New attribute: `TeamId` (`D-DM-6`) — for Level 1, every Component belongs to exactly one Team, mirroring Project's Team-scoping (see Project entry above), needed so Team-scoped CRUD authorization (`Requirements/UseCases.md`'s `D-UC-4`) has a Team to check for Component the same way it already does for Project. This governs who may create/edit/delete the Component, not which Team's Tasks may *reference* it — a Task belonging to any Team can still tag a Component belonging to a different Team, since Component remains a cross-Team classification tag for reporting (`KeyConcepts.md`'s Component entry). Reparenting, unlike tagging, is confined to that Team: a Component's `parent_component_id` may only point to another Component belonging to the same Team (`D-DM-9`).
 
 <a id="resource-assignment"></a>
 ### 2.8 Resource assignment (Task ↔ Person)
 See `KeyConcepts.md`'s Resource entry for why this matters. Structurally: a many-to-many relationship between Task and Person, scoped to actual Person resources. This is the Level 1 scope specifically — see Future Extensions below for broadening "resource" beyond Person.
+
+**Decision (`D-DM-8`):** Team-scoped — a Person is assignable to a Task only if they hold `is_resource = true` on the *same Team* as the Task's own Project (via that Person's PersonRole for that Team), not merely `is_resource = true` on some other Team. This matches PersonRole's per-Team shape and keeps resource assignment consistent with every other Team-scoped authorization check (`Requirements/UseCases.md`'s `D-UC-4`).
 
 <a id="dependency"></a>
 ### 2.9 Dependency (Task/Project ordering)
@@ -108,7 +112,7 @@ See `KeyConcepts.md`'s Attachment entry for what this is and why it matters. Str
 
 <a id="remark"></a>
 ### 2.11 Remark
-See `KeyConcepts.md`'s Remark entry for why this matters. Structurally: same "exactly one owner" shape as Attachment; each Remark is immutable once created, forming an append-only comment thread with a preserved author and timestamp per entry — correcting the old model's quirk of reassigning authorship to whoever last edited a remark.
+See `KeyConcepts.md`'s Remark entry for why this matters. Structurally: same "exactly one owner" shape as Attachment. **Decision (`D-DM-7`):** a Remark's own owner (the Person who created it, including a ReadOnlyUser — who can create Remarks in the first place) may edit or delete their own Remark; nobody else may, except a Team's TeamLeadUser, who may additionally delete (but not edit) a Remark they don't own (`Requirements/UseCases.md` §12). This reverses an earlier immutable/append-only design for this entity; what that original design actually protected against — and what's preserved here — is authorship never being reassigned: only a Remark's original owner can ever change or remove it, correcting the old model's quirk of reassigning authorship to whoever last edited a remark.
 
 <a id="entity-relationships"></a>
 ## 3. Entity Relationships
@@ -119,6 +123,7 @@ This section pulls the relationships scattered through the Core Entities above i
 - **Organisation → Person, via `IsOrganisationAdmin`**: not a relationship table — a flag directly on Person, orthogonal to Team membership. Any number of People in an Organisation can hold it.
 - **Team ↔ Person, via PersonRole**: many-to-many. A Person holds one PersonRole per Team they belong to, and each PersonRole carries its own `IsResource` flag and `UserType`/role — so the same Person can be a resource on one Team and not another, or hold a different role on each.
 - **Team → Project**: one-to-many for Level 1 — each Project belongs to exactly one Team (see Decisions (`D-DM-1`) and Future Extensions below).
+- **Team → Component**: one-to-many for Level 1 — each Component belongs to exactly one Team (see Decisions (`D-DM-6`)), independent of the Team → Project relationship above. This governs management of the Component, not which Team's Tasks may reference it — a Task can still tag a Component belonging to a different Team than its own Project's.
 - **Project → Project**: self-referencing tree (sub-projects). A Project's owner is a Person.
 - **Project → Task**: one-to-many, and mandatory on the Task side — a Task belongs to exactly one Project (see Task entry above for why the old many-to-many link table was simplified away).
 - **Task → Person**: two distinct single-valued relationships — owner and requestor — plus a separate many-to-many relationship for resourcing (below). A Task's owner and requestor need not be the same Person, and neither need be one of the assigned resources.
@@ -158,6 +163,21 @@ None currently open — every question originally raised for this document has a
 - **D-DM-5**<br>
   **Question:** Non-Person resources — is there a real need to extend Resource assignment beyond Person?<br>
   **Decision:** yes — in this domain a Resource is something *responsible* for getting work done, so an external vendor qualifies as a Resource but a piece of equipment does not (equipment isn't responsible for anything). Deferred out of Level 1 scope — see Future Extensions.
+- **D-DM-6**<br>
+  **Question:** Should Component carry a `TeamId` like Project does, or stay Team-agnostic?<br>
+  **Decision:** yes — every Component belongs to exactly one Team, mirroring Project's Level 1 Team-scoping (`D-DM-1`). This settles who may create/edit/delete a Component (checked against the caller's role on that Component's own Team, per `Requirements/UseCases.md`'s `D-UC-4`); it does not restrict which Team's Tasks may reference the Component, which stays a cross-Team classification tag as before.
+- **D-DM-7**<br>
+  **Question:** Should Remark stay immutable/append-only as originally specified, or let its owner edit/delete it?<br>
+  **Decision:** the owner of a Remark (including a ReadOnlyUser owner) may edit or delete their own Remark; a Team's TeamLeadUser may additionally delete (but not edit) a Remark they don't own; nobody else may do either. Authorship is still never reassigned — only the original owner can ever change or remove their own Remark — which is the actual thing the original immutable/append-only design was protecting against. Requires the database's blanket update/delete rejection to be replaced with a narrower rule rejecting only a change to `created_by_person_id`; the owner/TeamLeadUser check itself is enforced by the API, not the database.
+- **D-DM-8**<br>
+  **Question:** Must a Person be a resource (`is_resource = true`) on the specific Team that owns a Task to be assignable to it, or can a resource on any Team be assigned to any Task?<br>
+  **Decision:** must be a resource on that Task's own Team — assigning a Person to a Task whose Project belongs to Team T requires that Person to hold a PersonRole on Team T with `is_resource = true`.
+- **D-DM-9**<br>
+  **Question:** Can a Project's or Component's parent belong to a different Team than the child, or must reparenting stay within one Team?<br>
+  **Decision:** must stay within the same Team — changing a Project's `parent_project_id`, or a Component's `parent_component_id`, to a node belonging to a different Team is rejected. Keeps each tree cleanly within one Team's management, rather than a TeamLeadUser's tree silently including nodes from a Team they have no standing in.
+- **D-DM-10**<br>
+  **Question:** Can a Task's Project (and therefore its Team) be changed to a Project in a different Team?<br>
+  **Decision (Level 1):** no — a Task may only be reassigned to a Project belonging to the *same* Team as its current Project. Moving a Task across Teams is deferred to Level 2, where it needs a real answer (e.g. requiring write access on both the source and destination Team) — see Future Extensions.
 
 <a id="future-extensions"></a>
 ## 7. Future Extensions (Beyond Level 1)
@@ -165,5 +185,7 @@ None currently open — every question originally raised for this document has a
 Per `Goals.md`'s Delivery Levels, Level 1 is deliberately narrow in scope. The items below are changes to the domain model above that are anticipated or plausible once later levels are in scope — not designed in detail yet, but flagged so the Level 1 model doesn't quietly foreclose them.
 
 - **Project may relate to more than one Team.** Level 1 fixes one Team per Project (see Team → Project in Entity Relationships above); cross-team or Team-spanning Projects, or Projects that move between Teams, may be needed once multi-team collaboration is a real scenario.
+- **Component may relate to more than one Team.** Level 1 fixes one Team per Component (`D-DM-6`), same rationale as Project's entry above.
+- **Moving a Task across Teams.** Level 1 restricts a Task's Project changes to Projects on the same Team (`D-DM-10`); letting a Task move to a different Team's Project needs a real authorization answer once cross-team collaboration is a real scenario (e.g. requiring write access on both the source and destination Team), not the blanket rejection Level 1 uses.
 - **Conflict detection/resolution for concurrent edits.** Level 1 already has multiple users accessing and modifying data at the same time; what it doesn't handle is two of them editing the *same* record at once, since real usage during the Demonstrator avoids that. Level 2 can no longer rely on that avoidance and needs a real answer — either users editing the same Organisation's data seeing each other's changes live (a materially bigger architectural commitment: live push/sync between server and clients) or the old app's load-time conflict-detection dialog (see `KeyConcepts.md`'s Merge/Conflict entry for that older, lower-bar model), or both.
 - **Non-Person resources.** Extend Resource assignment (see Core Entities above) beyond Person to include things that are *responsible* for getting work done but aren't a Person in the system — e.g. an external vendor — while explicitly excluding things that aren't responsible for anything, like equipment. Deferred entirely out of Level 1; the Resource assignment relationship stays Person-only until this is designed.

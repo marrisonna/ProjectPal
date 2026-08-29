@@ -63,13 +63,14 @@ Full DDL is in [`database/migrations/001_initial_schema.sql`](../../../V2/databa
 - Enumerated types for Priority, Task Status, Task Type, Effort Type, Team Role, and Attachment Kind, matching the value sets confirmed against both `DomainModel.md`/`KeyConcepts.md` and the old `ProjectPalDB_1` data (§6).
 - Three business rules from `DomainModel.md` are enforced at the database layer, not left to be re-implemented later in application code:
   - **Dependency cycle prevention** (`DomainModel.md`'s Dependency entity) — a trigger walks the existing dependency graph before allowing a new edge, and rejects it if it would close a loop.
-  - **Remarks are append-only** (`DomainModel.md`'s Remark entity's fix for the old model's reassigned-authorship quirk) — a trigger rejects any `UPDATE` or `DELETE` on the `remark` table outright.
+  - **A Remark's authorship can never be reassigned** (`DomainModel.md`'s Remark entity, `D-DM-7`) — a trigger rejects any attempt to change `created_by_person_id`. Editing the remark text, or deleting it, is otherwise allowed at the database layer; restricting that to the Remark's own owner (or a TeamLeadUser, for delete) is the REST API's job, not the database's.
   - **Attachment deduplication** (`DomainModel.md`'s Attachment entity) — a `content_hash` column plus a unique index reject re-attaching identical file/email content to the same owner. Computing the hash (SHA-256 of the uploaded bytes) is an API-layer responsibility once that exists; the constraint is ready for it.
 - A few structural decisions made while turning the domain model into an actual schema (not mandated by `DomainModel.md`, but consistent with it — worth reviewing):
   - `Component.Owner` and `Task`/`Project`'s various "Owner"/"Requestor" fields are proper foreign keys to `person`, not the old schema's free-text username strings — a natural consequence of `Person` now being a first-class table.
   - Column names use `snake_case`, idiomatic for PostgreSQL, rather than the old schema's `PascalCase`.
   - `Task.EndDate` is not a column at all, matching `DomainModel.md`'s decision to keep derived scheduling — only `start_relative_days_to_project` is stored (a business-day offset from the owning Project's `start_date`), and actual start/end dates are computed at read time by application logic that doesn't exist yet (§8).
   - Urgency (`KeyConcepts.md` §12) is **not** a column or a view here — it's explicitly a presentation-layer calculation over other stored data, recomputed on demand, so there's nothing to store.
+  - `Component` carries a `team_id` (`DomainModel.md` `D-DM-6`, added while designing the REST API phase's authorization model), mirroring `Project`. This governs who may create/edit/delete the Component, not which Team's Tasks may reference it — Component stays usable across Teams as a classification tag.
 
 <a id="example-data"></a>
 ## 6. Example Data

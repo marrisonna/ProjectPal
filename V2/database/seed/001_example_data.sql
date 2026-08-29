@@ -32,28 +32,34 @@ INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_
 SELECT setval('person_person_id_seq', 7);
 
 -- PersonRole: Team membership + per-Team role/resource flag.
--- Tom belongs to both Teams with a different role in each; Nadia is an
--- organisation admin on Person but an ordinary (non-resource) member of both Teams.
+-- Tom belongs to both Teams with a different role in each (TeamLeadUser of
+-- Team 2, an ordinary member of Team 1); Nadia is an organisation admin on
+-- Person but an ordinary (non-resource) member of both Teams. Every Team has
+-- exactly one TeamLeadUser, per the bootstrap invariant the REST API enforces
+-- for any Team created after this seed data (Requirements/UseCases.md §12).
 INSERT INTO person_role (person_id, team_id, is_resource, role) VALUES
-    (1, 1, true,  'SuperUser'),
-    (2, 1, true,  'PowerUser'),
+    (1, 1, true,  'TeamLeadUser'),
+    (2, 1, true,  'LeadUser'),
     (3, 1, true,  'NormalUser'),
     (4, 1, false, 'NormalUser'),
     (7, 1, false, 'NormalUser'),
-    (4, 2, true,  'PowerUser'),
+    (4, 2, true,  'TeamLeadUser'),
     (5, 2, true,  'NormalUser'),
     (6, 2, false, 'ReadOnlyUser'),
     (7, 2, false, 'NormalUser');
 
 -- ---------------------------------------------------------------------------
--- Components (classification tree, independent of Project)
+-- Components (classification tree, independent of Project; each belongs to
+-- exactly one Team for management purposes — D-DM-6 — though a Task in any
+-- Team can still tag any Component). All four owners here happen to be Team 1
+-- members, so all four are Team 1's for this fictional dataset.
 -- ---------------------------------------------------------------------------
 
-INSERT INTO component (component_id, parent_component_id, name, owner_person_id) VALUES
-    (1, NULL, 'Billing',    1),
-    (2, 1,    'Invoicing',  2),
-    (3, 1,    'Payments',   2),
-    (4, NULL, 'Reporting',  3);
+INSERT INTO component (component_id, parent_component_id, team_id, name, owner_person_id) VALUES
+    (1, NULL, 1, 'Billing',    1),
+    (2, 1,    1, 'Invoicing',  2),
+    (3, 1,    1, 'Payments',   2),
+    (4, NULL, 1, 'Reporting',  3);
 SELECT setval('component_component_id_seq', 4);
 
 -- ---------------------------------------------------------------------------
@@ -168,7 +174,8 @@ FROM (SELECT convert_to(
     'A few thoughts on the new layout...', 'UTF8') AS d) x;
 
 -- ---------------------------------------------------------------------------
--- Remarks — immutable/append-only, so each insert here is final.
+-- Remarks — the owner (or a TeamLeadUser, for delete) may edit/delete these
+-- later via the API; only authorship (created_by_person_id) can never change.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO remark (task_id, project_id, component_id, remark_text, created_by_person_id, created_time) VALUES

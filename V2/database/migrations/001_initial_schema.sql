@@ -30,9 +30,10 @@ CREATE TYPE effort_type AS ENUM
     ('ManDays', 'Duration');
 
 -- Per-Team role — see DomainModel.md's PersonRole entity and
--- KeyConcepts.md's Role / Permission Level entry.
+-- KeyConcepts.md's Role / Permission Level entry. V2 names (renamed from
+-- V1.2's ReadOnlyUser/NormalUser/PowerUser/SuperUser — see UseCases.md Annex A).
 CREATE TYPE team_role AS ENUM
-    ('ReadOnlyUser', 'NormalUser', 'PowerUser', 'SuperUser');
+    ('ReadOnlyUser', 'NormalUser', 'LeadUser', 'TeamLeadUser');
 
 -- An Attachment's content kind — see DomainModel.md's Attachment entity
 -- (file / captured email / hyperlink).
@@ -87,6 +88,11 @@ CREATE INDEX ix_person_role_team ON person_role(team_id);
 CREATE TABLE component (
     component_id        serial PRIMARY KEY,
     parent_component_id integer REFERENCES component(component_id),
+    -- Level 1: every Component belongs to exactly one Team, mirroring Project
+    -- (DomainModel.md Decisions D-DM-6). Governs who may create/edit/delete
+    -- this Component, not which Team's Tasks may reference it — a Task in
+    -- any Team can still tag a Component belonging to a different Team.
+    team_id              integer NOT NULL REFERENCES team(team_id),
     name                 text NOT NULL,
     owner_person_id       integer REFERENCES person(person_id),
     modified_by            integer REFERENCES person(person_id),
@@ -95,6 +101,7 @@ CREATE TABLE component (
 );
 
 CREATE INDEX ix_component_parent ON component(parent_component_id);
+CREATE INDEX ix_component_team ON component(team_id);
 
 -- ---------------------------------------------------------------------------
 -- Project (self-referencing tree; end date is derived, never stored —
@@ -278,30 +285,27 @@ CREATE TRIGGER trg_attachment_modified_time BEFORE UPDATE ON attachment
     FOR EACH ROW EXECUTE FUNCTION set_modified_time();
 
 -- ---------------------------------------------------------------------------
--- Behaviour: Remark rows are append-only (DomainModel.md decision) — reject
--- any attempt to UPDATE or DELETE one at the database layer.
+-- Behaviour: a Remark's authorship can never be reassigned (DomainModel.md
+-- Decisions D-DM-7). The Remark's own owner may edit or delete their own
+-- Remark (even a ReadOnlyUser owner) or a TeamLeadUser may delete one they
+-- don't own; nobody may reassign who created it. Checking that the caller
+-- actually *is* the owner (or a TeamLeadUser, for delete) is this API's job
+-- (D1.2-3's authorization-lives-in-the-API-layer design) — the database has
+-- no notion of "the calling Person" to check that against. All the database
+-- enforces is the narrower, caller-independent data-integrity rule below.
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION prevent_remark_mutation() RETURNS trigger AS $$
-DECLARE
-    v_remark_id integer;
+CREATE OR REPLACE FUNCTION prevent_remark_reassignment() RETURNS trigger AS $$
 BEGIN
-    -- NEW is unassigned (not merely NULL) during a DELETE trigger in PL/pgSQL,
-    -- so it can't be referenced directly without TG_OP branching first.
-    IF TG_OP = 'DELETE' THEN
-        v_remark_id := OLD.remark_id;
-    ELSE
-        v_remark_id := NEW.remark_id;
+    IF NEW.created_by_person_id <> OLD.created_by_person_id THEN
+        RAISE EXCEPTION 'A Remark''s authorship cannot be reassigned (remark_id = %)', OLD.remark_id;
     END IF;
-    RAISE EXCEPTION 'Remarks are append-only and cannot be updated or deleted (remark_id = %)',
-        v_remark_id;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_remark_no_update BEFORE UPDATE ON remark
-    FOR EACH ROW EXECUTE FUNCTION prevent_remark_mutation();
-CREATE TRIGGER trg_remark_no_delete BEFORE DELETE ON remark
-    FOR EACH ROW EXECUTE FUNCTION prevent_remark_mutation();
+CREATE TRIGGER trg_remark_no_reassignment BEFORE UPDATE ON remark
+    FOR EACH ROW EXECUTE FUNCTION prevent_remark_reassignment();
 
 -- ---------------------------------------------------------------------------
 -- Behaviour: reject a Dependency that would introduce a cycle (DomainModel.md's

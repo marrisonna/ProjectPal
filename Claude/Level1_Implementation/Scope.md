@@ -18,11 +18,11 @@ One organisation only, deployed *inside* that organisation's own infrastructure.
 ## 2. In Scope
 
 - **Client technology** — settled (`D1-1`): a browser-based web app. See the GUI / Web Client phase.
-- **Feature scope** — settled (`D1-4`): Manage Projects/Tasks, Assign resources, Set dependencies, Search, and Remarks are required; the Gantt/plan view is required (a key selling point, not a nice-to-have); Attachments are required for files and hyperlinks, not captured emails; admin/support tooling is required, beyond the impersonation capability already built into Auth. Multiple users may access and modify data concurrently — see the Concurrency bullet below.
+- **Feature scope** — settled (`D1-4`): Manage Projects/Tasks, Assign resources, Set dependencies, Search, and Remarks are required; the Gantt/plan view is required (a key selling point, not a nice-to-have); Attachments are required for files and hyperlinks, not captured emails; admin/support tooling is required. Multiple users may access and modify data concurrently — see the Concurrency bullet below.
 - **Concurrency** — settled, see `Requirements/DomainModel.md`'s Cross-Cutting Concerns: Level 1 supports multiple named users concurrently, but not two of them editing the same record at the same time — real usage during the Demonstrator avoids that, so no conflict-handling is built.
 - **Database choice** — settled: PostgreSQL, locally hosted (see the Database Setup phase).
 - **Deployment/packaging** — something a customer site can stand up without a dedicated ops team (Docker container, simple installer, or VM image).
-- **Auth** — settled (`D1-2`): individually named users, password-based, plus an admin-only impersonation capability for testing what another Person can see and do. See the Authentication phase.
+- **Auth** — settled (`D1-2`): individually named users, password-based. See the Authentication phase. (`D1-2` originally also raised a dedicated admin-impersonation capability for testing what another Person can see and do; the Authentication phase's `D1.3-1` found Level 1 doesn't need one, since an admin can just log in as that Person directly.)
 
 <a id="foundational-decisions"></a>
 ## 3. Foundational Decisions Carried Into Level 1

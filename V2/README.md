@@ -1,4 +1,4 @@
-# ProjectPal V2 — Level 1 Local Database
+# ProjectPal V2 — Level 1 Local Stack
 
 ## Contents
 
@@ -10,13 +10,14 @@
 6. [Trying Out the Business Rules](#trying-out-the-business-rules)
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
+9. [REST API](#rest-api)
 
-See [`InitialDatabaseSetupPlan.md`](../Claude/Level1_Implementation/1_DatabaseSetup/InitialDatabaseSetupPlan.md) for the full plan (downloads, configuration, schema design rationale, what's out of scope). This document is just the how-to.
+See [`InitialDatabaseSetupPlan.md`](../Claude/Level1_Implementation/1_DatabaseSetup/InitialDatabaseSetupPlan.md) and [`2_RestApi/Plan.md`](../Claude/Level1_Implementation/2_RestApi/Plan.md) for the full plans (design rationale, decisions, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database, running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md`, with a small example dataset loaded. Nothing else (API, GUI, auth) is set up yet — see `InitialDatabaseSetupPlan.md` §8.
+A PostgreSQL database plus a REST API fronting it (§9), both running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md` with a small example dataset loaded. No GUI or real authentication yet — the API's login is a stub (§9) until `3_Authentication` is built.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup
@@ -27,12 +28,12 @@ A PostgreSQL database, running in Docker on this PC, implementing the Level 1 sc
    ```powershell
    Copy-Item .env.example .env
    ```
-   Edit `.env` and change `POSTGRES_PASSWORD` to a real password (any local password is fine — this database isn't exposed beyond your own machine).
+   Edit `.env` and change `POSTGRES_PASSWORD` and `JWT_SECRET` to real values (any local values are fine — nothing here is exposed beyond your own machine yet).
 4. **Run setup**:
    ```powershell
    .\scripts\setup.ps1
    ```
-   This starts the container, waits for PostgreSQL to be ready, applies the schema (`database/migrations/001_initial_schema.sql`), and loads the example data (`database/seed/001_example_data.sql`). It'll take a minute or two the first time while Docker downloads the `postgres:16` image.
+   This starts the `db` container, waits for PostgreSQL to be ready, applies the schema (`database/migrations/001_initial_schema.sql`), and loads the example data (`database/seed/001_example_data.sql`). It'll take a minute or two the first time while Docker downloads the `postgres:16` image. Run `docker compose up -d --build` afterwards (or `.\scripts\test-api.ps1`, §9) to also build and start the REST API.
 5. **Verify**:
    ```powershell
    .\scripts\verify.ps1
@@ -77,7 +78,7 @@ All the tables live in the `projectpal` schema (not the default `public` schema)
 Three rules from `DomainModel.md` are enforced by the database itself (`InitialDatabaseSetupPlan.md` §5). Worth trying by hand once, e.g. via `docker compose exec db psql -U projectpal -d projectpal` (adjust the username if you changed it):
 
 - **Dependency cycles are rejected**: task 1 already depends-on task 2 in the example data (`INSERT INTO dependency (pre_task_id, post_task_id) VALUES (1, 2);`). Try the reverse — `INSERT INTO dependency (pre_task_id, post_task_id) VALUES (2, 1);` — and it should fail with `This dependency would create a cycle`.
-- **Remarks can't be edited or deleted**: `UPDATE remark SET remark_text = 'edited' WHERE remark_id = 1;` should fail with `Remarks are append-only and cannot be updated or deleted`.
+- **A Remark's authorship can't be reassigned**: `UPDATE remark SET created_by_person_id = 3 WHERE remark_id = 1;` should fail with `A Remark's authorship cannot be reassigned`. Editing `remark_text` itself, or deleting a Remark, is allowed at the database level — e.g. `UPDATE remark SET remark_text = 'edited' WHERE remark_id = 1;` succeeds. It's the API's job (not built yet) to check the caller is actually that Remark's own owner (or a TeamLeadUser, for delete) before allowing it.
 - **Duplicate attachments are rejected**: re-running the `schema-draft.sql` `INSERT` from `database/seed/001_example_data.sql` a second time (same task, same content) should fail on the unique index, since the content hash would match the copy that's already there.
 
 <a id="resetting"></a>
@@ -89,3 +90,16 @@ Three rules from `DomainModel.md` are enforced by the database itself (`InitialD
 ## 8. Adding a New Migration
 
 As `DomainModel.md` evolves, add a new file `database/migrations/002_<description>.sql` (never edit `001_initial_schema.sql` once it's been applied anywhere) containing just the incremental change — new table, new column, new constraint. `.\scripts\setup.ps1` applies every migration file in `database/migrations/` in filename order, so numbering them sequentially keeps the history honest. This is the same pattern `DataBaseHostingOptions.md` recommends for the eventual hosted version, so nothing about this habit needs to change later.
+
+**Until this stack is deployed anywhere outside this development environment**, per `Claude/Guidelines/ImplementationApproach.md` §5, there's no live data to preserve — it's simpler to edit `001_initial_schema.sql` directly and rebuild (`.\scripts\reset.ps1` then `.\scripts\setup.ps1`) than to add a new migration file for a change that was never actually deployed. Switch to real incremental migrations once that's no longer true.
+
+<a id="rest-api"></a>
+## 9. REST API
+
+The hand-written FastAPI service in `rest-api/` (`Claude/Level1_Implementation/2_RestApi/Plan.md`) — every route requires a Bearer JWT and authorizes off its claims, Team-scoped per `D-UC-4`. `docker compose up -d --build` builds and starts it alongside the database; it listens on `http://127.0.0.1:8000` (also bound to localhost only). Interactive API docs are at `http://127.0.0.1:8000/docs` once it's running.
+
+**Logging in is a stub for now** (Phase 3, `3_Authentication`, builds real password verification): `POST /auth/login` with `{"external_login": "<a seeded Person's external_login>"}` (e.g. `alice.chen@example.com`) returns a JWT with no password check at all. Use it as `Authorization: Bearer <token>` on every other request.
+
+**Running the test suite**: `.\scripts\test-api.ps1` builds and starts the stack, waits for the API to respond, and runs `rest-api/tests` (creating a Python virtualenv at `rest-api/.venv-test` the first time). The tests run against the same persistent dev database everything else uses, not a throwaway one — they're written to be safely re-runnable (unique names/content per run) rather than assuming a clean slate.
+
+See `Claude/Level1_Implementation/2_RestApi/Plan.md` §2.1 for the full endpoint list, and `rest-api/openapi.json` (or `/docs`) for the generated API contract.

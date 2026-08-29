@@ -1,1 +1,4 @@
 .env
+rest-api/.venv-test/
+rest-api/**/__pycache__/
+rest-api/.pytest_cache/

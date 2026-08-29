@@ -45,7 +45,7 @@ A Team is a grouping of People within an Organisation, used to scope day-to-day 
 
 It's key because real customers aren't flat: an Organisation adopting ProjectPal will typically have multiple groups (departments, product teams) that want their own view of "our work" without needing to be treated as separate paying customers. Without Team as a first-class concept, an Organisation with several such groups has no way to scope a task list or report to just one of them.
 
-It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Level 3 in `Goals.md`, but its basic shape needed deciding well before then, because Project, Task, and Person all need to know which Team they belong to — see `DomainModel.md`'s Team-scoping decision (a Person can belong to several Teams with an independent role in each; a Project belongs to exactly one Team for Level 1). This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
+It sits directly below Organisation in the hierarchy. Full team functionality (per-team permissions, self-service team management) is scoped to Level 3 in `Goals.md`, but its basic shape needed deciding well before then, because Project, Component, and Person all need to know which Team they belong to (a Task's Team is derived from its own Project, not stored independently) — see `DomainModel.md`'s Team-scoping decisions (`D-DM-1` for Project, `D-DM-6` for Component; a Person can belong to several Teams with an independent role in each via PersonRole). This is a good example of a decision that's foundational even though the feature built on top of it is deferred.
 
 <a id="tenant"></a>
 ## 3. Tenant
@@ -99,7 +99,7 @@ A Component is a second, independent classification tree, orthogonal to Project,
 
 It's key because Project and Component answer two different questions that both matter for reporting: Project answers "what initiative is this for," Component answers "what does this affect." A customer doing product or engineering work needs both axes — e.g. "how much effort went into the billing subsystem this quarter" is a question Project alone can't answer if billing work is spread across several projects.
 
-It's a purely a tagging/reporting concern in the solution — it doesn't participate in scheduling or dependencies at all, which keeps it cheap to build and safe to extend later without touching the scheduling engine.
+It's a purely a tagging/reporting concern in the solution — it doesn't participate in scheduling or dependencies at all, which keeps it cheap to build and safe to extend later without touching the scheduling engine. It also belongs to exactly one Team for management purposes (`DomainModel.md`'s `D-DM-6`), without narrowing which Team's Tasks may tag it — that stays cross-Team, preserving the cross-project/cross-team reporting this entry describes.
 
 <a id="dependency"></a>
 ## 9. Dependency

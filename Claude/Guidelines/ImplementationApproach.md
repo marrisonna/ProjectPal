@@ -12,6 +12,7 @@
    - 3.1 [Numbering Scheme](#open-questions-numbering)
    - 3.2 [Recording a Decision](#recording-a-decision)
 4. [Placeholder Levels and Deferral](#placeholder-levels)
+5. [Database Schema Changes Before Deployment](#db-schema-changes-before-deployment)
 
 <a id="purpose"></a>
 ## 1. Purpose
@@ -98,3 +99,10 @@ A decision can later be reopened — new information changes the answer. When th
 ## 4. Placeholder Levels and Deferral
 
 Level 2 and Level 3 exist from the outset as placeholder folders (`Level2_Implementation`, `Level3_Implementation`), each with its own `ImplementationPlan.md` and `Scope.md`, even before any of their phases are underway. When something is deliberately deferred out of Level 1 (or, later, out of Level 2), it gets recorded in the later Level's `Scope.md` or `ImplementationPlan.md` as it arises, rather than being lost as a passing note in the Level it was deferred *from*.
+
+<a id="db-schema-changes-before-deployment"></a>
+## 5. Database Schema Changes Before Deployment
+
+Until something is deployed beyond the boundaries of this development environment (or the user says otherwise), the database has no live data worth preserving across a schema change. When a schema change is needed during this period, edit the existing migration file(s) directly (e.g. `1_DatabaseSetup`'s `database/migrations/001_initial_schema.sql`) and rebuild from scratch (`.\scripts\reset.ps1` then `.\scripts\setup.ps1`), rather than layering a new incremental migration file on top of one that was never actually deployed anywhere. This keeps the schema's history simple during development, when there's exactly one thing running at a time — a fresh database rebuilt from whatever the current file(s) say — rather than several migration files whose combined effect has to be traced through.
+
+This is specific to the development period, not a general exception to migrations — once anything is deployed outside this development environment, this stops applying, and schema changes from that point on need real incremental migrations (numbered, additive, applied to already-live data), per whichever Level's/phase's documentation covers deployment.
