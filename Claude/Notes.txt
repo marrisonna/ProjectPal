@@ -267,8 +267,23 @@ Feel free to add additional items at this time, and at any point later.
 issues that arose and anything that needs further consideration, either for this phase or for later ones.
 Add the above to the Guidelines.
 
-Please recheck the plan.md for 2_RestApi for internal consistency and then across the whole document stack in the scope of Level 1.
+Please recheck the plan.md of 2_RestApi for internal consistency and then across the whole document stack in the scope of Level 1.
 Let me know if there are uncertainties or questions that need to be addressed before the implementation and testing of 2_RestApi.
+
+==============
+
+1. Since each 'person' has a 'person_role' which identifies the team, checks must be scoped according to the team.  Each 'project' belongs to a team, and each tasks belongs to a project.  Components do not currently have a 'team_id' they probably should do.  I do definitely want owners of a Remark to be able to edit and delete their own remarks, even read-only users.
+
+2. These need to be migrated to the new terminology.
+
+3. The requirement is correct, the API design needs to be modified to capture this.
+
+4. Q1.3-1 I think is moot.  I need to be able to impersonate any user.  Since each user has their own login username/password, all I need to do is user their username and password.  That is sufficient for Level 1
+Q1.3-2 No.  In Level 1 no audit trails of any kind are required.
+
+============
+
+Keep in mind, going forwards, that we don't need any database migration until something is deployed beyond the boundaries of this development environment.  Until then (or if I say different), if DB changes are needed, we can scrub the database and re-create it from scratch with any changes required.  Make a note of this in the ImplementationApproach.md
 
 Go ahead with implementing and testing 2_RestApi.
 
