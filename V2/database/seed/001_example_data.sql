@@ -21,14 +21,27 @@ SELECT setval('team_team_id_seq', 2);
 -- People
 -- ---------------------------------------------------------------------------
 
-INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, colour) VALUES
-    (1, 'Alice Chen',    true, true,  'alice.chen@example.com',    '#4C72B0'),
-    (2, 'Ben Okafor',    true, false, 'ben.okafor@example.com',    '#DD8452'),
-    (3, 'Priya Sharma',  true, false, 'priya.sharma@example.com',  '#55A868'),
-    (4, 'Tom Baxter',    true, false, 'tom.baxter@example.com',    '#C44E52'),
-    (5, 'Grace Liu',     true, false, 'grace.liu@example.com',     '#8172B2'),
-    (6, 'Sam Patel',     true, false, 'sam.patel@example.com',     NULL),
-    (7, 'Nadia Fischer', true, true,  'nadia.fischer@example.com', NULL);
+-- Every seeded Person gets a password, primed as if an admin had already set
+-- one (3_Authentication/Plan.md D1.3-4). These are fictional Level 1
+-- demonstrator accounts on a local-only database, not real credentials, so
+-- the plaintext each hash corresponds to is disclosed here for developer
+-- convenience (D1.3-8) — regenerate with:
+--   python -c "from argon2 import PasswordHasher; print(PasswordHasher().hash('<password>'))"
+--   alice.chen@example.com   -> alice-pass1
+--   ben.okafor@example.com   -> ben-pass1
+--   priya.sharma@example.com -> priya-pass1
+--   tom.baxter@example.com   -> tom-pass1
+--   grace.liu@example.com    -> grace-pass1
+--   sam.patel@example.com    -> sam-pass1
+--   nadia.fischer@example.com -> nadia-pass1
+INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, password_hash, colour) VALUES
+    (1, 'Alice Chen',    true, true,  'alice.chen@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$0O5rQdfv3RCoDwtKV1nfjQ$7w7ozK6gJOqKpZ2n0rWIbn3NNfh92P8/01rKLl/uwK0', '#4C72B0'),
+    (2, 'Ben Okafor',    true, false, 'ben.okafor@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$FJGnjluuO0fXrmoQRZVy1w$8dRyZfr2NgXJGGPU5/02WpxROcmfZg1UuAC7xOfPEj8', '#DD8452'),
+    (3, 'Priya Sharma',  true, false, 'priya.sharma@example.com',  '$argon2id$v=19$m=65536,t=3,p=4$hXq1ad/jWceucoj3z1S4kw$nFmGHWCrf5lYZfwtIb0QdvGWVEVbOjpwYgA7fIyTQXA', '#55A868'),
+    (4, 'Tom Baxter',    true, false, 'tom.baxter@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$flxkFZZ8TglUurQGSDtoRA$X4s2G+EMTBsfRTfM0oTAP6OXj5gjCOLGwW/vLkl3OUQ', '#C44E52'),
+    (5, 'Grace Liu',     true, false, 'grace.liu@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$NTFt89RCMOn+C9e6iSepRg$Yok6sknL5t7u438TEfhF3SRubOlzAfhm4tWBRG78h00', '#8172B2'),
+    (6, 'Sam Patel',     true, false, 'sam.patel@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$4DcFfvPchaM+C2yCRVq+jg$XjrZz17FYpmjLA8ooHJJLTarMr9mCgY+b6BfGQ0Cogs', NULL),
+    (7, 'Nadia Fischer', true, true,  'nadia.fischer@example.com', '$argon2id$v=19$m=65536,t=3,p=4$WdSa5nXa0rfisSET0ENBSQ$6WMwXkDJajexjS2rZWBGqCliKJetCWbfvVUpn3t2BQU', NULL);
 SELECT setval('person_person_id_seq', 7);
 
 -- PersonRole: Team membership + per-Team role/resource flag.

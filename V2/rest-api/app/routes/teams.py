@@ -9,10 +9,11 @@ a Team is never left leaderless (Requirements/UseCases.md §12).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.db import get_conn, many, one
 from app.security.deps import CurrentPerson, get_current_person, require_org_admin
+from app.security.passwords import hash_password
 
 router = APIRouter(tags=["teams"])
 
@@ -141,6 +142,32 @@ def update_person(
         if person is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Person")
         return person
+
+
+class SetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)
+
+
+@router.post("/person/{person_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+def set_person_password(
+    person_id: int, body: SetPasswordRequest, caller: CurrentPerson = Depends(get_current_person)
+):
+    """Admin-set only for Level 1 (3_Authentication/Plan.md D1.3-4) — a
+    separate endpoint from PATCH /person/{id} rather than a field on it, so
+    the general-purpose Person update route has no path to touching
+    credentials at all. Self-service (a Person setting their own password)
+    is deferred — see Claude/Level2_Implementation/Scope.md.
+    """
+    require_org_admin(caller)
+    with get_conn() as conn:
+        updated = one(
+            conn.execute(
+                "UPDATE person SET password_hash = %s WHERE person_id = %s RETURNING person_id",
+                (hash_password(body.new_password), person_id),
+            )
+        )
+        if updated is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Person")
 
 
 # --- PersonRole ---------------------------------------------------------

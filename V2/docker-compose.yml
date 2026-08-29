@@ -30,6 +30,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-projectpal}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-projectpal}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting}
+      # Optional — defaults to 8 hours (28800s) in app/config.py if unset here too;
+      # the default is repeated here so it's always a real number, never empty
+      # (3_Authentication/Plan.md D1.3-6).
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-28800}
     ports:
       # Bound to localhost only, same principle as the db service above — the
       # eventual reverse proxy (Claude/Level1_Implementation/4_HttpsReverseProxy)

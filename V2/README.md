@@ -17,7 +17,7 @@ See [`InitialDatabaseSetupPlan.md`](../Claude/Level1_Implementation/1_DatabaseSe
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database plus a REST API fronting it (§9), both running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md` with a small example dataset loaded. No GUI or real authentication yet — the API's login is a stub (§9) until `3_Authentication` is built.
+A PostgreSQL database plus a REST API fronting it (§9), both running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md` with a small example dataset loaded. Login uses real password verification (`Claude/Level1_Implementation/3_Authentication/Plan.md`) — see §9 for seeded test credentials. No GUI yet.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup
@@ -98,7 +98,19 @@ As `DomainModel.md` evolves, add a new file `database/migrations/002_<descriptio
 
 The hand-written FastAPI service in `rest-api/` (`Claude/Level1_Implementation/2_RestApi/Plan.md`) — every route requires a Bearer JWT and authorizes off its claims, Team-scoped per `D-UC-4`. `docker compose up -d --build` builds and starts it alongside the database; it listens on `http://127.0.0.1:8000` (also bound to localhost only). Interactive API docs are at `http://127.0.0.1:8000/docs` once it's running.
 
-**Logging in is a stub for now** (Phase 3, `3_Authentication`, builds real password verification): `POST /auth/login` with `{"external_login": "<a seeded Person's external_login>"}` (e.g. `alice.chen@example.com`) returns a JWT with no password check at all. Use it as `Authorization: Bearer <token>` on every other request.
+**Logging in** requires a real password (`3_Authentication/Plan.md`): `POST /auth/login` with `{"external_login": "...", "password": "..."}` returns a JWT on success. Use it as `Authorization: Bearer <token>` on every other request; it expires after `JWT_TTL_SECONDS` (default 8 hours, configurable in `.env`). Every seeded Person has a working password, primed as if an admin had already set one — see `3_Authentication/Plan.md` §4 for the full list, or `rest-api/tests/conftest.py`'s `PASSWORDS` dict:
+
+| `external_login` | Password |
+|---|---|
+| `alice.chen@example.com` | `alice-pass1` |
+| `ben.okafor@example.com` | `ben-pass1` |
+| `priya.sharma@example.com` | `priya-pass1` |
+| `tom.baxter@example.com` | `tom-pass1` |
+| `grace.liu@example.com` | `grace-pass1` |
+| `sam.patel@example.com` | `sam-pass1` |
+| `nadia.fischer@example.com` | `nadia-pass1` |
+
+An admin (`is_organisation_admin`) can set or reset any Person's password via `POST /person/{person_id}/password` — self-service (changing your own) is deferred, see `3_Authentication/Plan.md` §2.2.
 
 **Running the test suite**: `.\scripts\test-api.ps1` builds and starts the stack, waits for the API to respond, and runs `rest-api/tests` (creating a Python virtualenv at `rest-api/.venv-test` the first time). The tests run against the same persistent dev database everything else uses, not a throwaway one — they're written to be safely re-runnable (unique names/content per run) rather than assuming a clean slate.
 

@@ -59,11 +59,17 @@ CREATE TABLE person (
     name                  text NOT NULL,
     is_active             boolean NOT NULL DEFAULT true,
     -- Organisation-wide administrator flag — lives on Person, not PersonRole,
-    -- because it isn't scoped to any one Team (DomainModel.md Open Questions/Decisions #4).
+    -- because it isn't scoped to any one Team (DomainModel.md Decisions D-DM-4).
     is_organisation_admin boolean NOT NULL DEFAULT false,
     -- Placeholder for a real external identity reference (Goals.md's identity
-    -- direction). Level 1 can put a simple username/email here for now.
-    external_login        text,
+    -- direction). Level 1 can put a simple username/email here for now. UNIQUE
+    -- since it's the login identifier (3_Authentication/Plan.md D1.3-3) — multiple
+    -- NULLs are still allowed, for People who never log in.
+    external_login        text UNIQUE,
+    -- Argon2id hash (3_Authentication/Plan.md D1.3-3/D1.3-5). NULL means this
+    -- Person has no password yet and can't log in — not an error state, e.g. a
+    -- resource-only Person who never needs to.
+    password_hash         text,
     -- Gantt bar colour, a per-Person per-Organisation setting (DomainModel.md PersonRole entry).
     colour                text,
     modified_by            integer REFERENCES person(person_id),

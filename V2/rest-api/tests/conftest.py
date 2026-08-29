@@ -29,20 +29,35 @@ def api():
     return ApiClient(BASE_URL)
 
 
-def _login(api: ApiClient, external_login: str) -> str:
-    resp = api.post("/auth/login", json={"external_login": external_login})
+# Seeded People and their passwords (V2/database/seed/001_example_data.sql,
+# primed as if an admin had already set them per
+# Claude/Level1_Implementation/3_Authentication/Plan.md D1.3-4 — fictional
+# local-only demo accounts, plaintext committed openly per that plan's D1.3-8):
+#   1 Alice Chen   alice-pass1   - is_organisation_admin, TeamLeadUser on Team 1 (Platform)
+#   2 Ben Okafor   ben-pass1     - LeadUser on Team 1, no role on Team 2
+#   3 Priya Sharma priya-pass1   - NormalUser on Team 1
+#   4 Tom Baxter   tom-pass1     - TeamLeadUser on Team 2 (Customer Projects), NormalUser on Team 1
+#   5 Grace Liu    grace-pass1   - NormalUser on Team 2
+#   6 Sam Patel    sam-pass1     - ReadOnlyUser on Team 2
+#   7 Nadia Fischer nadia-pass1  - is_organisation_admin, NormalUser on both Teams (not a resource)
+PASSWORDS = {
+    "alice.chen@example.com": "alice-pass1",
+    "ben.okafor@example.com": "ben-pass1",
+    "priya.sharma@example.com": "priya-pass1",
+    "tom.baxter@example.com": "tom-pass1",
+    "grace.liu@example.com": "grace-pass1",
+    "sam.patel@example.com": "sam-pass1",
+    "nadia.fischer@example.com": "nadia-pass1",
+}
+
+
+def _login(api: ApiClient, external_login: str, password: str | None = None) -> str:
+    resp = api.post(
+        "/auth/login",
+        json={"external_login": external_login, "password": password or PASSWORDS[external_login]},
+    )
     assert resp.status_code == 200, resp.text
     return resp.json()["token"]
-
-
-# Seeded People (V2/database/seed/001_example_data.sql):
-#   1 Alice Chen   - is_organisation_admin, TeamLeadUser on Team 1 (Platform)
-#   2 Ben Okafor   - LeadUser on Team 1, no role on Team 2
-#   3 Priya Sharma - NormalUser on Team 1
-#   4 Tom Baxter   - TeamLeadUser on Team 2 (Customer Projects), NormalUser on Team 1
-#   5 Grace Liu    - NormalUser on Team 2
-#   6 Sam Patel    - ReadOnlyUser on Team 2
-#   7 Nadia Fischer - is_organisation_admin, NormalUser on both Teams (not a resource)
 
 
 @pytest.fixture(scope="session")

@@ -19,7 +19,7 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 |---|---|---|---|
 | 1 | Database Setup | Done | [`1_DatabaseSetup/`](1_DatabaseSetup/) |
 | 2 | REST API | Done | [`2_RestApi/`](2_RestApi/) |
-| 3 | Authentication | Not started | [`3_Authentication/`](3_Authentication/) |
+| 3 | Authentication | Done | [`3_Authentication/`](3_Authentication/) |
 | 4 | HTTPS / Reverse Proxy | Not started | [`4_HttpsReverseProxy/`](4_HttpsReverseProxy/) |
 | 5 | GUI / Web Client | Not started | [`5_GuiClient/`](5_GuiClient/) |
 | 6 | Automated Backups | Not started | [`6_AutomatedBackups/`](6_AutomatedBackups/) |
