@@ -1,0 +1,10 @@
+{
+  "appName": "ProjectPal",
+  "shortName": "ProjectPal",
+  "primaryColor": "#1e3a5f",
+  "secondaryColor": "#7e14ff",
+  "backgroundColor": "#ffffff",
+  "fontFamily": "Inter, system-ui, sans-serif",
+  "logoPath": "/icon.svg",
+  "faviconPath": "/icon.svg"
+}

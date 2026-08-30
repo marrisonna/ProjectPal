@@ -15,6 +15,7 @@
    - 3.6 [Refresh Strategy](#refresh-strategy)
    - 3.7 [App Shell Presentation (PWA)](#app-shell)
    - 3.8 [Business Logic Placement](#business-logic-placement)
+   - 3.9 [Theming and Branding Configurability](#theming)
 4. [Multi-Window / Multi-Monitor Interaction Model](#multi-window)
 5. [Screen Inventory](#screen-inventory)
 6. [Build Order](#build-order)
@@ -23,6 +24,8 @@
    - 6.3 [Stage 3 — Pilot: Gantt / Plan View](#stage-3)
    - 6.4 [Stage 4 — Remaining Screens](#stage-4)
 7. [Testing](#testing)
+   - 7.1 [Automated Testing](#automated-testing)
+   - 7.2 [Manual Testing](#manual-testing)
 8. [Definition of Success](#definition-of-success)
 9. [Open Questions (Phase-Specific)](#open-questions)
 10. [Decisions (Phase-Specific)](#decisions)
@@ -136,6 +139,21 @@ The **only** logic that legitimately lives client-side, in TypeScript, is the na
 
 Within that carve-out, schedule-derivation math (given Tasks/Dependencies/Resources, compute each Task's effective position on the timeline) is written as plain, dependency-free TypeScript functions, kept separate from the React components that render the Gantt bars — unit-testable on its own, and, usefully, portable to any other JS/TS runtime later (a Tauri shell, a future non-browser client) with no rework, since it has no DOM dependency.
 
+<a id="theming"></a>
+### 3.9 Theming and Branding Configurability
+
+**Decision (`D1.4-12` below): every visual choice — colours, font, logo/icon paths, app name — lives in one file, `gui-client/branding.json`, not scattered through components.**
+
+The visual design (fonts, colours, logos, icons) isn't settled yet and is expected to change once there's something real to react to and give feedback on (`Requirements/Goals.md`'s "let real users try the concepts and the GUI and give feedback" framing applies just as much to how it looks as to what it does). Rather than hunt through every screen's `sx` props when that feedback arrives, every value that would change in a rebrand is pulled from `branding.json`, and everything else reads from it rather than holding its own copy:
+
+- `src/theme/theme.ts` builds the MUI `Theme` (`palette.primary`/`secondary`/`background`, `typography.fontFamily`) from `branding.json`, and every component uses MUI's theme (`ThemeProvider`, `sx` tokens like `primary.main`) rather than a hardcoded colour value.
+- `src/theme/Logo.tsx` is the one place the app name and logo image are rendered, reused by the login screen and the app shell — a rebrand changes `branding.json`, not every screen that happens to show the logo.
+- `vite.config.ts`'s PWA manifest (§3.7) reads the same file for its `name`/`short_name`/`theme_color`/`background_color`/icon, so the installed-app identity matches the in-app one automatically.
+- `index.html`'s favicon, `theme-color` meta tag, and `<title>` are placeholders overwritten from `branding.json` by a small `transformIndexHtml` plugin (`vite.config.ts`'s `brandIndexHtml`) — the one place that couldn't just `import` the JSON directly, since it's static HTML, but still ends up sourced from the same file rather than holding its own hardcoded values.
+- The font (Inter) is self-hosted via `@fontsource/inter` rather than linked from Google Fonts' CDN — no external network dependency at runtime, which matters for a Demonstrator that may run inside a customer's own network (`Scope.md` §1) with no assumption of outbound internet access for the GUI itself.
+
+This is deliberately **build-time** configurability, not a runtime theme editor: changing `branding.json` and rebuilding is the whole workflow. A live, in-app theme-switcher (an admin settings screen, persisted per-Organisation choice, hot-reloaded styling) is real additional engineering — a settings UI, a place to store the choice, a way to apply it without a rebuild — that a single-organisation Level 1 Demonstrator doesn't need; worth reconsidering if multi-tenant branding becomes a genuine Level 2/3 requirement (`Claude/Level2_Implementation/Scope.md`), since at that point different Organisations plausibly *do* need different branding simultaneously from the same running deployment, which this build-time approach can't do.
+
 <a id="multi-window"></a>
 ## 4. Multi-Window / Multi-Monitor Interaction Model
 
@@ -233,10 +251,39 @@ This stage is deliberately left at survey level here — it's built from pattern
 <a id="testing"></a>
 ## 7. Testing
 
-- Component/unit tests for the Urgency calculation (§2.1) against fixed inputs — this is pure, deterministic logic once the ancestor-chain data is fetched, and worth pinning down with tests given it's "a key concept for the product" (§2.1).
-- Manual testing against the running `rest-api` (real seeded People, real Argon2id login) for each screen as it's built, rather than a mocked API layer — consistent with how `2_RestApi`/`3_Authentication` were tested, and avoiding a second, parallel "does the mock match the real API" concern.
-- A specific manual pass for §4's multi-window model: confirm per-item URLs work when pasted directly into a new tab, confirm the "open in new window" affordance opens a chrome-less PWA window, confirm Ctrl-click/middle-click on cross-references opens a new window rather than navigating away, and confirm opening the same item a second time re-focuses the existing window rather than creating a duplicate.
-- No end-to-end/browser-automation suite is being built for Level 1 — deferred to Level 2 (`D1.4-9`); manual testing against the real API is the only coverage for now.
+Manual testing against the running `rest-api` (real seeded People, real Argon2id login) is the primary coverage for this phase, rather than a mocked API layer — consistent with how `2_RestApi`/`3_Authentication` were tested, and avoiding a second, parallel "does the mock match the real API" concern. No end-to-end/browser-automation suite is being built for Level 1 — deferred to Level 2 (`D1.4-9`).
+
+<a id="automated-testing"></a>
+### 7.1 Automated Testing
+
+None yet. Planned once it exists to test: component/unit tests for the Urgency calculation (§2.1) against fixed inputs — pure, deterministic logic once the ancestor-chain data is fetched, worth pinning down given it's "a key concept for the product" — and for the Gantt schedule-derivation math (§3.8, §6.3), kept as plain functions separate from rendering specifically so this is possible. Both land in Stage 3 (§6.3), when that logic first exists.
+
+<a id="manual-testing"></a>
+### 7.2 Manual Testing
+
+**Kept up to date as each Build Order stage (§6) lands** — this section describes what can actually be checked in the app *today*; each stage adds to it rather than replacing it, the same way `3_Authentication/Plan.md` §6.3 built on `2_RestApi/Plan.md` §6.5 instead of repeating it. Currently covers Stage 1 (Foundation, §6.1) only.
+
+**1. Start both halves of the stack.** The GUI dev server isn't part of `docker-compose.yml` (§3.1) — start the API/database and the GUI separately. From `V2/`:
+```powershell
+docker compose up -d
+```
+Then, from `V2/gui-client/`:
+```powershell
+npm run dev
+```
+Open <http://localhost:5173>. The dev server proxies `/api/*` to the REST API on `:8000` (`D1.4-11`) — if the dashboard shows "Could not reach the API," check `docker compose ps` first.
+
+**2. Log in.** Use any seeded Person's credentials (`V2/README.md` §9, or `3_Authentication/Plan.md` §4, for the full table) — e.g. `alice.chen@example.com` / `alice-pass1`. Confirm a successful login redirects from `/login` to `/`, and that a wrong password (or unknown login) shows the "Login failed" message rather than a stack trace or a blank page.
+
+**3. Confirm role-based UI.** Alice and Nadia are `is_organisation_admin` — log in as one of them and confirm the "Admin" chip appears in the app bar; log in as a non-admin (e.g. Ben) and confirm it doesn't.
+
+**4. Confirm the dashboard reflects real data.** The "Teams" count card should match the actual number of Teams in the seeded database — cross-check via `GET /team` in the REST API's Swagger UI (`2_RestApi/Plan.md` §6.5) if in doubt.
+
+**5. Confirm route guarding and logout.** While logged out (or in a private/incognito window), navigating directly to `http://localhost:5173/` should redirect to `/login`, not show the dashboard. After logging in, **Log out** should clear the session and return to `/login`; refreshing afterward should not silently log you back in.
+
+**6. Confirm the PWA installs as a standalone app (`D1.4-5`).** Open `http://localhost:5173` in a real (non-headless) Chrome or Edge window and use the browser's "Install app" prompt (or the install icon in the address bar). Confirm it opens in its own chrome-less window — no address bar, no tabs — with the ProjectPal icon and name (`branding.json`, §3.9).
+
+**Not yet testable:** the multi-window singleton-per-object behaviour (`D1.4-8`/`D1.4-10`) has no UI to exercise yet — `openItemWindow()` (`src/lib/windowNav.ts`) exists as shared infrastructure, but nothing calls it until Stage 2 gives it a real item (a Task) to open. Add that walkthrough here once Stage 2 lands.
 
 <a id="definition-of-success"></a>
 ## 8. Definition of Success
@@ -289,5 +336,8 @@ None currently open — see Decisions below.
 - **D1.4-11** (decided 2026-08-30)<br>
   **Question:** How does the GUI reach the REST API during Stage 1 development, given a direct browser request from the Vite dev server's origin to the API's origin is genuinely cross-origin and fails on CORS, and API-side CORS configuration would be dev-only scaffolding to remember and later remove?<br>
   **Decision:** `gui-client/vite.config.ts`'s dev server proxies `/api/*` to the REST API (prefix stripped), and `VITE_API_BASE_URL` (`.env.example`) is set to the relative `/api` — the browser only ever talks to its own origin, so no CORS configuration is needed on the API at all. This deliberately mirrors `D1.6-4`'s Caddy routing (`/api/*` → rest-api, prefix stripped) exactly, so the same base URL and the same relative-path assumption carry through unchanged from Stage 1 all the way to production — not a dev-only workaround to revisit later.
+- **D1.4-12** (decided 2026-08-30)<br>
+  **Question:** What can be done to make the GUI's visual theme (fonts, colours, logos, icons) configurable, given the design isn't settled yet and is expected to change once there's something real to give feedback on?<br>
+  **Decision:** centralise every visual value in one file, `gui-client/branding.json` — colours, font family, logo/favicon paths, app name — with the MUI theme (`src/theme/theme.ts`), the shared `Logo` component, the PWA manifest (`vite.config.ts`, `D1.4-5`), and `index.html`'s favicon/theme-color/title (via a small `transformIndexHtml` plugin) all reading from it rather than holding their own copies. Deliberately build-time only (edit the file, rebuild) rather than a runtime theme editor — a settings UI and persisted per-Organisation theme choice is real additional engineering a single-organisation Level 1 Demonstrator doesn't need; revisit if multi-tenant branding becomes a genuine Level 2/3 requirement, since a build-time config can't serve two Organisations' branding from one running deployment. Full detail: §3.9.
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.

@@ -5,8 +5,8 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useAuth } from "./AuthContext";
+import { Logo } from "../theme/Logo";
 
 export function LoginPage() {
   const { person, isLoading, login } = useAuth();
@@ -45,9 +45,9 @@ export function LoginPage() {
       }}
     >
       <Paper component="form" onSubmit={handleSubmit} elevation={3} sx={{ p: 4, width: 360 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          ProjectPal
-        </Typography>
+        <Box sx={{ mb: 2 }}>
+          <Logo variant="h5" />
+        </Box>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}

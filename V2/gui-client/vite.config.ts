@@ -1,6 +1,27 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import branding from "./branding.json" with { type: "json" };
+
+// Injects branding.json's values into index.html's <head> at build/dev time,
+// so that file never needs a hardcoded value of its own to keep in sync.
+function brandIndexHtml(): Plugin {
+  return {
+    name: "brand-index-html",
+    transformIndexHtml(html) {
+      return html
+        .replace(/<title>.*<\/title>/, `<title>${branding.appName}</title>`)
+        .replace(
+          /<link rel="icon"[^>]*\/>/,
+          `<link rel="icon" type="image/svg+xml" href="${branding.faviconPath}" />`,
+        )
+        .replace(
+          /<meta name="theme-color"[^>]*\/>/,
+          `<meta name="theme-color" content="${branding.primaryColor}" />`,
+        );
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,21 +40,21 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    brandIndexHtml(),
     // D1.4-5 (Claude/Level1_Implementation/4_GuiClient/Plan.md §3.7): installable,
     // chrome-less "standalone" app window — no separate native shell.
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "ProjectPal",
-        short_name: "ProjectPal",
+        name: branding.appName,
+        short_name: branding.shortName,
         description: "ProjectPal V2 — project, task, and resource planning",
-        theme_color: "#1e3a5f",
-        background_color: "#ffffff",
+        theme_color: branding.primaryColor,
+        background_color: branding.backgroundColor,
         display: "standalone",
         icons: [
           {
-            // Placeholder icon (public/icon.svg) — swap for real branding later.
-            src: "icon.svg",
+            src: branding.logoPath,
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any",

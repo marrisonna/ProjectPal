@@ -6,6 +6,7 @@ import Chip from "@mui/material/Chip";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../auth/AuthContext";
+import { Logo } from "../theme/Logo";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { person, logout } = useAuth();
@@ -14,9 +15,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="static">
         <Toolbar sx={{ gap: 2 }}>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            ProjectPal
-          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Logo />
+          </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />
           )}
