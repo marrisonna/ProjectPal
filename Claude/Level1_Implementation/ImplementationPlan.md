@@ -20,7 +20,7 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 | 1 | Database Setup | Done | [`1_DatabaseSetup/`](1_DatabaseSetup/) |
 | 2 | REST API | Done | [`2_RestApi/`](2_RestApi/) |
 | 3 | Authentication | Done | [`3_Authentication/`](3_Authentication/) |
-| 4 | GUI / Web Client | Not started | [`4_GuiClient/`](4_GuiClient/) |
+| 4 | GUI / Web Client | In progress | [`4_GuiClient/`](4_GuiClient/) |
 | 5 | Urgency Calculation | Not started | [`5_UrgencyCalculation/`](5_UrgencyCalculation/) |
 | 6 | HTTPS / Reverse Proxy | Not started | [`6_HttpsReverseProxy/`](6_HttpsReverseProxy/) |
 | 7 | Production Deployment | Not started | [`7_ProductionDeployment/`](7_ProductionDeployment/) |

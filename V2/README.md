@@ -11,13 +11,14 @@
 7. [Resetting / Rebuilding](#resetting)
 8. [Adding a New Migration](#adding-a-migration)
 9. [REST API](#rest-api)
+10. [GUI / Web Client](#gui-client)
 
 See [`InitialDatabaseSetupPlan.md`](../Claude/Level1_Implementation/1_DatabaseSetup/InitialDatabaseSetupPlan.md) and [`2_RestApi/Plan.md`](../Claude/Level1_Implementation/2_RestApi/Plan.md) for the full plans (design rationale, decisions, what's out of scope). This document is just the how-to.
 
 <a id="what-this-is"></a>
 ## 1. What This Is
 
-A PostgreSQL database plus a REST API fronting it (§9), both running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md` with a small example dataset loaded. Login uses real password verification (`Claude/Level1_Implementation/3_Authentication/Plan.md`) — see §9 for seeded test credentials. No GUI yet.
+A PostgreSQL database plus a REST API fronting it (§9), both running in Docker on this PC, implementing the Level 1 schema from `Claude/Requirements/DomainModel.md` with a small example dataset loaded. Login uses real password verification (`Claude/Level1_Implementation/3_Authentication/Plan.md`) — see §9 for seeded test credentials. A browser-based GUI (§10) is under construction outside Docker, in `gui-client/`.
 
 <a id="first-time-setup"></a>
 ## 2. First-Time Setup
@@ -115,3 +116,21 @@ An admin (`is_organisation_admin`) can set or reset any Person's password via `P
 **Running the test suite**: `.\scripts\test-api.ps1` builds and starts the stack, waits for the API to respond, and runs `rest-api/tests` (creating a Python virtualenv at `rest-api/.venv-test` the first time). The tests run against the same persistent dev database everything else uses, not a throwaway one — they're written to be safely re-runnable (unique names/content per run) rather than assuming a clean slate.
 
 See `Claude/Level1_Implementation/2_RestApi/Plan.md` §2.1 for the full endpoint list, and `rest-api/openapi.json` (or `/docs`) for the generated API contract.
+
+<a id="gui-client"></a>
+## 10. GUI / Web Client
+
+The React/TypeScript/Vite web app in `gui-client/` (`Claude/Level1_Implementation/4_GuiClient/Plan.md`), currently Stage 1 (Foundation) — login, routing, the typed API client, and a placeholder dashboard. Not part of `docker-compose.yml` yet; run it separately:
+
+```powershell
+cd gui-client
+npm install
+Copy-Item .env.example .env.local   # first time only
+npm run dev
+```
+
+Then open <http://localhost:5173> and log in with any seeded Person (§9's table). The dev server proxies `/api/*` to the REST API on `:8000` (`vite.config.ts`), the same relative path Caddy will use in production (`6_HttpsReverseProxy/Plan.md` `D1.6-4`) — so this needs the REST API already running (`docker compose up -d`) but talks to it without any CORS configuration on the API side.
+
+**Regenerating the typed API client** after a REST API contract change: `npm run gen-api` (regenerates `src/api/schema.d.ts` from `../rest-api/openapi.json`).
+
+**Building for production**: `npm run build` — output is a static bundle in `dist/`, including the PWA manifest and service worker (`D1.4-5`), ready for `6_HttpsReverseProxy` to serve as-is once that phase exists.
