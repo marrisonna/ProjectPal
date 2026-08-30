@@ -36,7 +36,7 @@ services:
       JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-28800}
     ports:
       # Bound to localhost only, same principle as the db service above — the
-      # eventual reverse proxy (Claude/Level1_Implementation/4_HttpsReverseProxy)
+      # eventual reverse proxy (Claude/Level1_Implementation/6_HttpsReverseProxy)
       # is what actually faces anything beyond this machine.
       - "127.0.0.1:8000:8000"
 

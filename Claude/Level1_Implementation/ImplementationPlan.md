@@ -20,20 +20,19 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 | 1 | Database Setup | Done | [`1_DatabaseSetup/`](1_DatabaseSetup/) |
 | 2 | REST API | Done | [`2_RestApi/`](2_RestApi/) |
 | 3 | Authentication | Done | [`3_Authentication/`](3_Authentication/) |
-| 4 | HTTPS / Reverse Proxy | Not started | [`4_HttpsReverseProxy/`](4_HttpsReverseProxy/) |
-| 5 | GUI / Web Client | Not started | [`5_GuiClient/`](5_GuiClient/) |
-| 6 | Automated Backups | Not started | [`6_AutomatedBackups/`](6_AutomatedBackups/) |
-| 7 | Urgency Calculation | Not started | [`7_UrgencyCalculation/`](7_UrgencyCalculation/) |
-| 8 | Production Deployment | Not started | [`8_ProductionDeployment/`](8_ProductionDeployment/) |
+| 4 | GUI / Web Client | Not started | [`4_GuiClient/`](4_GuiClient/) |
+| 5 | Urgency Calculation | Not started | [`5_UrgencyCalculation/`](5_UrgencyCalculation/) |
+| 6 | HTTPS / Reverse Proxy | Not started | [`6_HttpsReverseProxy/`](6_HttpsReverseProxy/) |
+| 7 | Production Deployment | Not started | [`7_ProductionDeployment/`](7_ProductionDeployment/) |
 
-Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). This initial breakdown and ordering is provisional — carried over from `1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8's "Out of Scope for This Pass" list — and is likely to be refined (reordered, split, or merged — e.g. Urgency Calculation is now settled as GUI-side work per `D1.2-2`, so Phase 7 may end up folding into the GUI/Web Client phase instead) as work on each phase actually begins. Phase 8 (added later, once the shape of a real Production release became clear) overlaps with Phase 6's original "scheduled backups" framing — `8_ProductionDeployment/Plan.md` builds the actual backup mechanism as part of its deploy safety net; Phase 6 may end up being little more than wiring a schedule onto it, once both are looked at together.
+Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). The original breakdown had HTTPS/Reverse Proxy and GUI/Web Client in the other order (as Phases 4 and 5) and Automated Backups as its own phase (6) alongside Urgency Calculation (7) and Production Deployment (8) — renumbered on 2026-08-30 to reflect the actual intended build order (GUI and its Urgency work first, since there's little point exposing a public URL before there's a product surface behind it, then HTTPS, then a combined Production Deployment phase) and to fold Automated Backups into Production Deployment (`7_ProductionDeployment/Plan.md` §3.6) rather than keeping two overlapping, separately-built backup mechanisms. Phase-specific IDs (`Q1.6-x`/`D1.6-x` for HTTPS, `Q1.7-x`/`D1.7-x` for Production Deployment, etc.) were renumbered along with their phases; every other document referencing them was updated to match.
 
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
 
 - **Q1-3: Deployment/packaging mechanism** — how a customer site actually stands this up. Not yet started as its own phase; may need to become one.
 
-  **Needed by:** not urgent. No other Level 1 phase depends on this being resolved, and the actual packaging work can't complete until Phases 2–5 (REST API, Authentication, HTTPS/Reverse Proxy, GUI/Web Client) exist to be packaged. Latest it can be decided: before the Demonstrator is first handed to a real trial site, i.e. by the time Phase 5 (GUI/Web Client) wraps up. It can be settled earlier as just a direction, without blocking anything.
+  **Needed by:** not urgent. No other Level 1 phase depends on this being resolved, and the actual packaging work can't complete until REST API, Authentication, GUI/Web Client, and HTTPS/Reverse Proxy (Phases 2, 3, 4, 6) all exist to be packaged. Latest it can be decided: before the Demonstrator is first handed to a real trial site, i.e. by the time Phase 6 (HTTPS/Reverse Proxy) wraps up and Phase 7 (Production Deployment) is ready for its first real deploy. It can be settled earlier as just a direction, without blocking anything.
 
   **Options considered:**
   - *Docker Compose bundle* — extend the existing `docker-compose.yml` (already built for Postgres in Phase 1) to add the API, web app, and reverse proxy as more services.

@@ -12,6 +12,7 @@
    - 3.3 [Backup, Verify, Archive](#backup-verify-archive)
    - 3.4 [Deploy Procedure](#deploy-procedure)
    - 3.5 [Rollback Procedure](#rollback-procedure)
+   - 3.6 [Scheduled Backups](#scheduled-backups)
 4. [Implementation Plan](#implementation-plan)
    - 4.1 [Files Touched](#files-touched)
    - 4.2 [Build Order](#build-order)
@@ -29,6 +30,8 @@
 
 Establish a lightweight but genuinely safe production release process for the Level 1 Demonstrator — enough discipline (migration versioning, backup, rollback) to make it hard to break the one running Production instance, without the full staged Dev→QA→Prod promotion pipeline `Claude/Level2_Implementation/Scope.md` anticipates for later. This phase exists to support a specific, deliberately tight feedback loop: take a trial user's feedback, make the change, deploy it, and let them see the impact quickly — the actual point of running a small, friendly Level 1 trial rather than a fully staged rollout.
 
+This phase also absorbs the originally-separate "Automated Backups" phase (§3.6) — one backup mechanism (§3.3) with two triggers, before a deploy and daily on a schedule, rather than two independently-built backup subsystems.
+
 No standing QA environment is built here — Level 1's small, friendly user base doesn't carry the risk profile that justifies one, and a scratch-database dry run (§3.3) gets most of the same safety property (validating a change against real, Prod-shaped data before it touches Prod for real) for a fraction of the standing infrastructure cost.
 
 <a id="scope"></a>
@@ -43,6 +46,7 @@ No standing QA environment is built here — Level 1's small, friendly user base
 - A backup script that dumps, verifies (via a scratch-database restore that doubles as a migration dry run), and archives Prod's database before any deploy touches it (§3.3).
 - A deploy script composing backup → migrate → redeploy → smoke-check (§3.4).
 - A rollback script — restore the pre-upgrade backup and redeploy the previous release (§3.5).
+- A daily scheduled backup, reusing the same mechanism as the pre-deploy backup rather than a second, independent one (§3.6) — this is what the originally-separate "Automated Backups" phase becomes.
 
 <a id="deferred"></a>
 ### 2.2 Deferred Out of Level 1
@@ -80,7 +84,7 @@ Before any deploy touches Prod:
 
 1. `pg_dump` a full backup of Prod's database.
 2. Restore that dump into a throwaway scratch database (created for this purpose, discarded immediately after) and apply the pending migration(s) there. This single step verifies two things at once: the backup actually restores cleanly (an unverified backup isn't a real backup), and the new migration(s) apply cleanly against real, Prod-shaped data — the closest Level 1 gets to a QA environment's "validate the upgrade path against real data" property, without maintaining a standing one.
-3. If the scratch dry run succeeds, archive the original dump to `BACKUP_ARCHIVE_DIR` (`D1.8-1`, §8) — each backup gets its own subfolder named by timestamp and the release tag being deployed (e.g. `<BACKUP_ARCHIVE_DIR>\2026-08-30_143000_prod-v3\`), so every historical backup is kept, never overwritten. Durability comes from that directory already being an actively-synced OneDrive folder — no separate upload step for this phase to build.
+3. If the scratch dry run succeeds, archive the original dump to `BACKUP_ARCHIVE_DIR` (`D1.7-1`, §8) — each backup gets its own subfolder named by timestamp and the release tag being deployed (e.g. `<BACKUP_ARCHIVE_DIR>\2026-08-30_143000_prod-v3\`), so every historical backup is kept, never overwritten. Durability comes from that directory already being an actively-synced OneDrive folder — no separate upload step for this phase to build.
 
 If the dry run fails, the deploy stops here. Nothing has touched real Prod yet.
 
@@ -91,13 +95,20 @@ If the dry run fails, the deploy stops here. Nothing has touched real Prod yet.
 2. Run the backup-and-verify step (§3.3) — mandatory, never skipped, regardless of how small the change feels.
 3. Apply pending migrations to Prod (§3.1).
 4. Rebuild/restart Prod's application containers from the new release tag.
-5. Run a smoke check directly against Prod, mirroring `4_HttpsReverseProxy/Plan.md`'s Tier 2b — the one thing a QA environment could never have validated anyway, since QA doesn't exist here and wouldn't have had the real Cloudflare Tunnel configuration even if it did.
+5. Run a smoke check directly against Prod, mirroring `6_HttpsReverseProxy/Plan.md`'s Tier 2b — the one thing a QA environment could never have validated anyway, since QA doesn't exist here and wouldn't have had the real Cloudflare Tunnel configuration even if it did.
 6. Confirm via `GET /version` (§3.2) that the new release is actually the one live.
 
 <a id="rollback-procedure"></a>
 ### 3.5 Rollback Procedure
 
 A script, not just written steps — deliberately, since a manual procedure is more error-prone precisely when it's needed, under pressure, mid-incident. Stops Prod's containers, restores the pre-upgrade backup taken in §3.3 (the real archived one, not the throwaway scratch copy), redeploys the previous release tag's containers, and re-runs the smoke check. Restores the whole database from backup rather than attempting reverse/"down" migrations — simpler, and avoids needing to write and maintain a down-migration for every up-migration going forward.
+
+<a id="scheduled-backups"></a>
+### 3.6 Scheduled Backups
+
+Absorbs the originally-separate "Automated Backups" phase: reuses `backup-prod.ps1` (§3.3) exactly as built, triggered daily via Windows Task Scheduler in addition to before every deploy, rather than building a second, independent backup mechanism for the two different triggers. On a scheduled run there's no pending migration to dry-run against (nothing's being deployed) — the scratch-restore step just confirms the dump restores cleanly, a narrower check than the pre-deploy case but still real verification, not a skipped one.
+
+**Decision (`D1.7-2`):** daily cadence, kept forever, for Level 1. A retention/cleanup policy for pruning old backups is explicitly deferred to Level 2 (`Claude/Level2_Implementation/Scope.md`) — Level 1's database is small and the OneDrive quota backing `BACKUP_ARCHIVE_DIR` is large, so unpruned daily backups aren't a real problem at this scale. Revisit once either stops being true.
 
 <a id="implementation-plan"></a>
 ## 4. Implementation Plan
@@ -117,6 +128,7 @@ V2/
 │   ├── backup-prod.ps1        (NEW — dump, scratch-restore verify, archive to BACKUP_ARCHIVE_DIR; §3.3)
 │   ├── deploy-prod.ps1        (NEW — orchestrates §3.4)
 │   ├── rollback-prod.ps1      (NEW — §3.5)
+│   ├── register-backup-schedule.ps1   (NEW — registers backup-prod.ps1 as a daily Task Scheduler job, §3.6)
 │   └── setup.ps1              (edited — delegates its migration step to apply-migrations.ps1)
 └── rest-api/
     └── app/
@@ -124,7 +136,7 @@ V2/
             └── version.py     (NEW — GET /version, §3.2, unauthenticated)
 ```
 
-`BACKUP_ARCHIVE_DIR` defaults to `C:\Users\Neil\OneDrive\ProjectPal\Backups` (`D1.8-1`) — kept as an environment variable rather than hardcoded in `backup-prod.ps1`, consistent with every other machine-specific value in this project, even though this one's genuinely tied to this particular machine's OneDrive setup for now.
+`BACKUP_ARCHIVE_DIR` defaults to `C:\Users\Neil\OneDrive\ProjectPal\Backups` (`D1.7-1`) — kept as an environment variable rather than hardcoded in `backup-prod.ps1`, consistent with every other machine-specific value in this project, even though this one's genuinely tied to this particular machine's OneDrive setup for now.
 
 <a id="build-order"></a>
 ### 4.2 Build Order
@@ -132,10 +144,11 @@ V2/
 1. Add the `schema_migrations` table (§3.1).
 2. Extract the migration-runner logic into `apply-migrations.ps1`; update `setup.ps1` to call it (dev's behaviour is unchanged, since an empty database always has everything "pending").
 3. Add `GET /version` and the `VERSION`-file-baking step to the Docker build (§3.2).
-4. Write `backup-prod.ps1` (dump, scratch-restore dry run, archive to `BACKUP_ARCHIVE_DIR`, `D1.8-1`).
+4. Write `backup-prod.ps1` (dump, scratch-restore dry run, archive to `BACKUP_ARCHIVE_DIR`, `D1.7-1`).
 5. Write `deploy-prod.ps1`, composing the steps above (§3.4).
 6. Write `rollback-prod.ps1` (§3.5).
-7. Rehearse the whole flow at least once against a disposable copy of the stack before the first real trial release ever depends on it working.
+7. Write `register-backup-schedule.ps1` and register the daily task (§3.6).
+8. Rehearse the whole flow at least once against a disposable copy of the stack before the first real trial release ever depends on it working.
 
 <a id="testing"></a>
 ## 5. Testing
@@ -152,6 +165,7 @@ Mostly operational scripts rather than application code — proven by actually r
 - **The dry run actually catches bad migrations** — a deliberately broken migration (e.g. a `NOT NULL` column with no default, added against a scratch database seeded with real-shaped rows) is caught in §3.3's scratch step, not discovered against real Prod.
 - **Rollback genuinely restores service** — a simulated bad deploy, then a rollback, ends with Prod back on the previous release and passing its smoke check.
 - **`GET /version` reflects reality** — matches the tag actually running after a deploy, and after a rollback.
+- **The scheduled trigger actually fires** — the registered Task Scheduler entry runs `backup-prod.ps1` at its daily time and `BACKUP_ARCHIVE_DIR` gains a new subfolder as a result, with no deploy involved.
 
 <a id="definition-of-success"></a>
 ## 6. Definition of Success
@@ -170,8 +184,11 @@ None currently open — see Decisions below.
 <a id="decisions"></a>
 ## 8. Decisions (Phase-Specific)
 
-- **D1.8-1** (decided 2026-08-30)<br>
+- **D1.7-1** (decided 2026-08-30)<br>
   **Question:** Where are archived backups actually stored? Needs to be durable and off this one machine.<br>
   **Decision:** `C:\Users\Neil\OneDrive\ProjectPal\Backups`, each backup in its own subfolder (§3.3). Durability comes from this already being an actively-synced OneDrive folder — no separate off-machine upload step for this phase to build. Kept as the `BACKUP_ARCHIVE_DIR` environment variable (§4.1) rather than hardcoded, in case this ever needs to change.
+- **D1.7-2** (decided 2026-08-30)<br>
+  **Question:** Now that the originally-separate "Automated Backups" phase has merged into this one (§3.6), what cadence and retention policy does Level 1 need for scheduled (non-deploy) backups?<br>
+  **Decision:** daily, kept forever. No retention/cleanup policy for Level 1 — explicitly deferred to Level 2 (`Claude/Level2_Implementation/Scope.md`), since Level 1's database is small and the OneDrive quota behind `BACKUP_ARCHIVE_DIR` is large enough that unpruned daily backups aren't a real problem at this scale.
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.

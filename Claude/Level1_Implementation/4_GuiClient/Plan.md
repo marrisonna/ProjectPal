@@ -10,8 +10,8 @@ Urgency (`Requirements/KeyConcepts.md` §12) is also this phase's responsibility
 
 **Urgency needs the whole Project ancestor chain, not just one Task's Project.** `Requirements/KeyConcepts.md` §12's "effective priority" factor is computed root-first over *every* ancestor Project above a Task (the Task's own Project, that Project's parent, and so on), not just the immediate one — a Project tree can be arbitrarily deep via `parent_project_id`. This phase needs to fetch the whole Project tree (or otherwise be able to walk parent links for any Task's ancestry) to compute Urgency correctly — a single Task fetch plus its one immediate Project is not sufficient. Level 1's data volumes (one Organisation, a handful of Teams/Projects) make fetching the whole tree trivial; this stops being free once Level 2/3 have many tenants/Projects, but that's out of scope here. Since the calculation of Urgency is a key concept for the product, this is a Level 1 requirement, not a nice-to-have.
 
-**Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts, numbered `Q1.5-1`, `Q1.5-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
+**Open Questions (Phase-Specific):** none yet — to be filled in once this phase starts, numbered `Q1.4-1`, `Q1.4-2`, ... (see `Claude/Guidelines/ImplementationApproach.md` §3.1).
 
-**Decisions (Phase-Specific):** none yet. When an open question above is answered, its entry moves here as `D1.5-<N>` (same number, `D` prefix), recording the original question, the decision, and the date.
+**Decisions (Phase-Specific):** none yet. When an open question above is answered, its entry moves here as `D1.4-<N>` (same number, `D` prefix), recording the original question, the decision, and the date.
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.
