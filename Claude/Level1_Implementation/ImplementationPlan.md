@@ -24,8 +24,9 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 | 5 | GUI / Web Client | Not started | [`5_GuiClient/`](5_GuiClient/) |
 | 6 | Automated Backups | Not started | [`6_AutomatedBackups/`](6_AutomatedBackups/) |
 | 7 | Urgency Calculation | Not started | [`7_UrgencyCalculation/`](7_UrgencyCalculation/) |
+| 8 | Production Deployment | Not started | [`8_ProductionDeployment/`](8_ProductionDeployment/) |
 
-Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). This initial breakdown and ordering is provisional — carried over from `1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8's "Out of Scope for This Pass" list — and is likely to be refined (reordered, split, or merged — e.g. Urgency Calculation is now settled as GUI-side work per `D1.2-2`, so Phase 7 may end up folding into the GUI/Web Client phase instead) as work on each phase actually begins.
+Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). This initial breakdown and ordering is provisional — carried over from `1_DatabaseSetup/InitialDatabaseSetupPlan.md` §8's "Out of Scope for This Pass" list — and is likely to be refined (reordered, split, or merged — e.g. Urgency Calculation is now settled as GUI-side work per `D1.2-2`, so Phase 7 may end up folding into the GUI/Web Client phase instead) as work on each phase actually begins. Phase 8 (added later, once the shape of a real Production release became clear) overlaps with Phase 6's original "scheduled backups" framing — `8_ProductionDeployment/Plan.md` builds the actual backup mechanism as part of its deploy safety net; Phase 6 may end up being little more than wiring a schedule onto it, once both are looked at together.
 
 <a id="open-questions"></a>
 ## 3. Open Questions (Level-Wide)
