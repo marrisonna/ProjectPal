@@ -287,3 +287,6 @@ Keep in mind, going forwards, that we don't need any database migration until so
 
 Go ahead with implementing and testing 2_RestApi.
 
+
+Will I be able to set up and configure the public/Cloudflare ProjectPal stack on the same machine as I am developing on, in a way that the public/Cloudflare ProjectPal stack is independant from the development environment, e.g., separate DBs, separate servers etc.
+I need to be able to develop without disturbing the publich facing ProjectPal.  Periodically, I will want to make new 'release' or 'updates' to the publically facing stack, but this will be very deliberate and not by accident.
