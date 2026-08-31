@@ -28,8 +28,9 @@ export function addBusinessDays(start: Date, days: number): Date {
   return result;
 }
 
-/** V1.2's Task.Duration getter: ManDays splits Effort across assigned
- * resources and %Allocation; Duration is already a calendar-day count. */
+/** V1.2's Task.Duration getter: its ManDays mode (V2: PersonDays, D1.4-16)
+ * splits Effort across assigned resources and %Allocation; Duration is
+ * already a calendar-day count. */
 export function computeDuration(
   task: Pick<TaskRecord, "effort_in_days" | "effort_type" | "percentage_allocation">,
   assignedResourceCount: number,
@@ -37,8 +38,9 @@ export function computeDuration(
   if (task.effort_in_days == null) return null;
   if (task.effort_type === "Duration") return task.effort_in_days;
 
-  // ManDays (also the fallback when effort_type isn't set, matching V1.2's
-  // GetComboValues_static default of treating unset as ManDays-shaped).
+  // PersonDays (also the fallback when effort_type isn't set, matching
+  // V1.2's GetComboValues_static default of treating unset as ManDays/
+  // PersonDays-shaped).
   let resourceCount = assignedResourceCount;
   let allocation = task.percentage_allocation ?? 1;
   if (resourceCount === 0) {

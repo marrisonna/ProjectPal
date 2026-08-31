@@ -126,4 +126,6 @@ export const TASK_TYPES = [
   "Infrastructure",
 ] as const;
 
-export const EFFORT_TYPES = ["ManDays", "Duration"] as const;
+// "PersonDays" is V2's gender-neutral rename of V1.2's "ManDays"
+// (4_GuiClient/Plan.md D1.4-16).
+export const EFFORT_TYPES = ["PersonDays", "Duration"] as const;

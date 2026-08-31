@@ -26,8 +26,11 @@ CREATE TYPE task_status AS ENUM
 CREATE TYPE task_type AS ENUM
     ('NewDevelopment', 'Enhancement', 'Maintenance', 'Support', 'Infrastructure', 'Other');
 
+-- 'PersonDays' is V2's gender-neutral rename of V1.2's equivalent concept,
+-- historically called "ManDays" (Requirements/KeyConcepts.md §10,
+-- V1.2/Libs/DBProjectPal/DBProjectPal/Enums.cs's EffortTypeValue).
 CREATE TYPE effort_type AS ENUM
-    ('ManDays', 'Duration');
+    ('PersonDays', 'Duration');
 
 -- Per-Team role — see DomainModel.md's PersonRole entity and
 -- KeyConcepts.md's Role / Permission Level entry. V2 names (renamed from

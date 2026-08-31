@@ -303,7 +303,7 @@ export function TaskDetailPage() {
             size="small"
             sx={{ alignSelf: "center" }}
           >
-            <ToggleButton value="ManDays">ManDays</ToggleButton>
+            <ToggleButton value="PersonDays">Person Days</ToggleButton>
             <ToggleButton value="Duration">Duration</ToggleButton>
           </ToggleButtonGroup>
           <TextField

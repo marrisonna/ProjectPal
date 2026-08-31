@@ -114,7 +114,7 @@ It's the mechanism that turns a set of Tasks and Projects into an actual schedul
 ## 10. Effort vs. Duration
 
 Effort and Duration are two different ways to size a piece of work:
-- **Effort (man-days)** — a fixed amount of work that gets divided across however many People are assigned (more people assigned → shorter elapsed time).
+- **Effort (person-days)** — a fixed amount of work that gets divided across however many People are assigned (more people assigned → shorter elapsed time). V1.2 called this "man-days"; V2 uses "person-days" for gender-neutral language (`4_GuiClient/Plan.md` `D1.4-16`).
 - **Duration** — a fixed elapsed time regardless of how many people are assigned (e.g. "this takes two weeks no matter who's on it, or how many").
 
 The distinction is key because, without it, "how long will this take" has no good answer once more than one person might be assigned. Adding a second person to a fixed-effort task should shorten it; adding a second person to a fixed-duration task (e.g. "wait for a vendor to respond") should not.
