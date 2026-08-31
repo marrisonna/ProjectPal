@@ -24,6 +24,7 @@ Tracks the phases of building the Level 1 Demonstrator (`Requirements/Goals.md` 
 | 5 | Urgency Calculation | Not started | [`5_UrgencyCalculation/`](5_UrgencyCalculation/) |
 | 6 | HTTPS / Reverse Proxy | Not started | [`6_HttpsReverseProxy/`](6_HttpsReverseProxy/) |
 | 7 | Production Deployment | Not started | [`7_ProductionDeployment/`](7_ProductionDeployment/) |
+| 8 | Validation and Verification | Not started | [`8_ValidationAndVerification/`](8_ValidationAndVerification/) |
 
 Subfolders are prefixed with the phase number so they sort in order (see `Claude/Guidelines/ImplementationApproach.md` §2.3). The original breakdown had HTTPS/Reverse Proxy and GUI/Web Client in the other order (as Phases 4 and 5) and Automated Backups as its own phase (6) alongside Urgency Calculation (7) and Production Deployment (8) — renumbered on 2026-08-30 to reflect the actual intended build order (GUI and its Urgency work first, since there's little point exposing a public URL before there's a product surface behind it, then HTTPS, then a combined Production Deployment phase) and to fold Automated Backups into Production Deployment (`7_ProductionDeployment/Plan.md` §3.6) rather than keeping two overlapping, separately-built backup mechanisms. Phase-specific IDs (`Q1.6-x`/`D1.6-x` for HTTPS, `Q1.7-x`/`D1.7-x` for Production Deployment, etc.) were renumbered along with their phases; every other document referencing them was updated to match.
 

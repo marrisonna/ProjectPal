@@ -16,6 +16,7 @@
    - 3.7 [App Shell Presentation (PWA)](#app-shell)
    - 3.8 [Business Logic Placement](#business-logic-placement)
    - 3.9 [Theming and Branding Configurability](#theming)
+   - 3.10 [Dropdown / List Ordering](#dropdown-ordering)
 4. [Multi-Window / Multi-Monitor Interaction Model](#multi-window)
 5. [Screen Inventory](#screen-inventory)
 6. [Build Order](#build-order)
@@ -33,7 +34,7 @@
 <a id="status-and-purpose"></a>
 ## 1. Status and Purpose
 
-**Status:** In progress — Stage 1 (Foundation, §6.1) underway: `gui-client/` scaffolded (React/TypeScript/Vite), login/JWT/routing/typed-API-client wired and verified end-to-end against the real REST API, PWA app shell in place. Dashboard is still a placeholder pending Stage 2's Task data.
+**Status:** In progress — Stage 1 (Foundation, §6.1) done. Stage 2 (Pilot: Task List + Task Detail, §6.2) underway: Task List and a full Task Detail (fields, Project/Component selection, Resources, Dependencies via the "Add Dependency" dialog, Attachments, inline Remarks) all built and verified end-to-end against the real REST API. Remaining for Stage 2: the cross-window drag-and-drop spike (`D1.4-10`).
 
 Build a browser-based web app as the client GUI for the Demonstrator, per `D1-1` in `../ImplementationPlan.md`. This is the largest phase in Level 1 by feature surface: it's responsible, end to end, for every screen a user actually touches, plus two pieces of derived logic that live entirely on the client — the Gantt/plan view's layout and the Urgency calculation.
 
@@ -139,6 +140,8 @@ The **only** logic that legitimately lives client-side, in TypeScript, is the na
 
 Within that carve-out, schedule-derivation math (given Tasks/Dependencies/Resources, compute each Task's effective position on the timeline) is written as plain, dependency-free TypeScript functions, kept separate from the React components that render the Gantt bars — unit-testable on its own, and, usefully, portable to any other JS/TS runtime later (a Tauri shell, a future non-browser client) with no rework, since it has no DOM dependency.
 
+**Confirmed concretely, not just anticipated (`D1.4-14` below).** Neither `V1.2` nor `V2` ever stored a Task's Start/End dates — both store only a business-day offset from the owning Project's start date (`8_ValidationAndVerification/Plan.md` §4.1). `V1.2`'s GUI computed `EarliestStartDate`/`StartDate`/`Duration`/`EndDate` for display every time (`V1.2/Libs/DBProjectPal/DBProjectPal/Task.cs`), rather than the database ever holding them — exactly this carve-out, already in production in the app this is replacing. `gui-client/src/lib/schedule.ts` reproduces that computation (Stage 2's bounded version — one level of predecessor-Dependency awareness, not the full recursive graph walk Stage 3's Gantt view needs, which will extend this same module rather than duplicate it). The general principle this confirms: **before assuming a displayed value must come from an API field, check whether the value was ever actually stored anywhere, in either version** — `V1.2`'s own source is as authoritative a check as the database schema is, and is available to read (`Claude/Level1_Implementation/4_GuiClient/Plan.md` `D1.4-13`'s layout-reference principle applies here too, just for computed *values* rather than layout).
+
 <a id="theming"></a>
 ### 3.9 Theming and Branding Configurability
 
@@ -153,6 +156,13 @@ The visual design (fonts, colours, logos, icons) isn't settled yet and is expect
 - The font (Inter) is self-hosted via `@fontsource/inter` rather than linked from Google Fonts' CDN — no external network dependency at runtime, which matters for a Demonstrator that may run inside a customer's own network (`Scope.md` §1) with no assumption of outbound internet access for the GUI itself.
 
 This is deliberately **build-time** configurability, not a runtime theme editor: changing `branding.json` and rebuilding is the whole workflow. A live, in-app theme-switcher (an admin settings screen, persisted per-Organisation choice, hot-reloaded styling) is real additional engineering — a settings UI, a place to store the choice, a way to apply it without a rebuild — that a single-organisation Level 1 Demonstrator doesn't need; worth reconsidering if multi-tenant branding becomes a genuine Level 2/3 requirement (`Claude/Level2_Implementation/Scope.md`), since at that point different Organisations plausibly *do* need different branding simultaneously from the same running deployment, which this build-time approach can't do.
+
+<a id="dropdown-ordering"></a>
+### 3.10 Dropdown / List Ordering
+
+**Decision (`D1.4-15` below): dropdown option order is a deliberate UX choice inherited from V1.2, not incidental — match it, not the database enum's declaration order.**
+
+`V1.2/Apps/ProjectPal/ProjectPal/Tasks/GUITaskColumns.cs`'s `GetComboValues_static` populates every dropdown (Priority, Status, Task Type) in a specific, clearly-chosen order (most-urgent-first for Priority; a specific non-alphabetical order for Status and Task Type) — not the order the values happen to be declared in any schema. `V2`'s enum declaration order in `database/migrations/001_initial_schema.sql` is arbitrary by comparison and was, before this was caught, exactly what `gui-client/src/api/types.ts`'s `PRIORITY_LEVELS`/`TASK_STATUSES`/`TASK_TYPES` constants used. Fixed to match V1.2's order name-for-name for Status and Task Type (identical value sets in both versions); Priority required inference, since V1.2's five active levels (`VHigh`/`High`/`Med`/`Low`/`VLow`) don't name-match V2's five (`High`/`MedHigh`/`Med`/`MedLow`/`Low`) — ordered most-urgent-first by position, with the exact historical correspondence flagged for confirmation (`8_ValidationAndVerification/Plan.md` `Q1.8-4`) rather than asserted as certain. Person-list dropdowns (Owner/Requestor/Resources) already matched — both versions use insertion/`person_id` order — but V1.2 additionally restricts these three to *active* People only (`Person.AllActiveInstances`), which V2's had not; matched now too.
 
 <a id="multi-window"></a>
 ## 4. Multi-Window / Multi-Monitor Interaction Model
@@ -173,6 +183,8 @@ Cross-window *drag-and-drop* (dragging an item from one open window onto another
 
 <a id="screen-inventory"></a>
 ## 5. Screen Inventory
+
+**Layout reference principle (`D1.4-13` below): V1.2's actual screen layouts are a strong hint for each V2 screen, not a constraint.** `V1.2/Apps/ProjectPal/ProjectPal/` has the real WinForms `.Designer.cs` (and a few WPF `.xaml`) files for every window — exact field grouping, order, and emphasis, refined by real usage over time, and worth taking seriously as a tried-and-tested starting point. But V1.2 is WinForms-era technology from some years ago; where a modern web/MUI pattern serves the same goal better, that wins over faithfully reproducing the old arrangement. Building each screen (§6) starts with reading the corresponding `.Designer.cs`/`.xaml` file(s) for how V1.2 actually laid it out, then adapting deliberately — not ignoring it, and not copying it uncritically either. This is the same judgment call already made for specific interactions elsewhere in this plan (`D1.4-4`'s explicit pickers over drag-and-drop, §5's inline Remarks below), generalised here to layout as a whole.
 
 Maps every window in `Requirements/UserInterfaceWindows.md` §3 to its V2 equivalent, and flags where V2 deliberately modernises rather than replicates the old interaction:
 
@@ -261,7 +273,7 @@ None yet. Planned once it exists to test: component/unit tests for the Urgency c
 <a id="manual-testing"></a>
 ### 7.2 Manual Testing
 
-**Kept up to date as each Build Order stage (§6) lands** — this section describes what can actually be checked in the app *today*; each stage adds to it rather than replacing it, the same way `3_Authentication/Plan.md` §6.3 built on `2_RestApi/Plan.md` §6.5 instead of repeating it. Currently covers Stage 1 (Foundation, §6.1) only.
+**Kept up to date as each Build Order stage (§6) lands** — this section describes what can actually be checked in the app *today*; each stage adds to it rather than replacing it, the same way `3_Authentication/Plan.md` §6.3 built on `2_RestApi/Plan.md` §6.5 instead of repeating it. Currently covers Stage 1 (Foundation) and the Task List/Task Detail portion of Stage 2.
 
 **1. Start both halves of the stack.** The GUI dev server isn't part of `docker-compose.yml` (§3.1) — start the API/database and the GUI separately. From `V2/`:
 ```powershell
@@ -283,7 +295,23 @@ Open <http://localhost:5173>. The dev server proxies `/api/*` to the REST API on
 
 **6. Confirm the PWA installs as a standalone app (`D1.4-5`).** Open `http://localhost:5173` in a real (non-headless) Chrome or Edge window and use the browser's "Install app" prompt (or the install icon in the address bar). Confirm it opens in its own chrome-less window — no address bar, no tabs — with the ProjectPal icon and name (`branding.json`, §3.9).
 
-**Not yet testable:** the multi-window singleton-per-object behaviour (`D1.4-8`/`D1.4-10`) has no UI to exercise yet — `openItemWindow()` (`src/lib/windowNav.ts`) exists as shared infrastructure, but nothing calls it until Stage 2 gives it a real item (a Task) to open. Add that walkthrough here once Stage 2 lands.
+**7. Open the Task List.** Click **Tasks** in the app bar (`/tasks`). Confirm the grid shows real seeded Tasks, with Project/Owner names resolved (not raw IDs) — cross-check a row against `GET /task` in the REST API's Swagger UI if in doubt. Double-clicking a row navigates to `/tasks/<id>`.
+
+**8. Confirm Task Detail loads and edits correctly.** Open any seeded Task (e.g. `/tasks/1`). Confirm every field is populated from real data (Description, Project, Component, Priority, Status, Task Type, Owner, Requestor, Effort/ManDays-Duration, Detailed Description). Change a field (e.g. Description) and click **Save** — confirm the change persists after the page reloads, and that the Task List reflects it too.
+
+**9. Confirm Resources, Dependencies, Attachments, and Remarks all round-trip against the real API.** On a Task's detail page:
+   - **Resources** — toggling a Person who *is* a resource on that Task's Team should succeed; toggling one who isn't should show a dismissible error ("Couldn't assign … — they may not be a resource on this Task's Team") rather than failing silently or reverting with no explanation. The checklist deliberately shows every Person, not a pre-filtered eligible set (see §6.2 for why) — this is expected, not a bug to report.
+   - **Dependencies** — **Add Dependency** opens a dialog to search for another Task and pick "Depends upon" or "Is depended upon by"; the new dependency appears in the correct list immediately. The trash icon removes one.
+   - **Attachments** — **Add Link** (name + URL) and **Add File** (a real file picker) both add an entry that appears immediately; clicking a File attachment downloads it, clicking a Link attachment opens it in a new tab.
+   - **Remarks** — adding one appears immediately with the author's real name and timestamp.
+
+**10. Confirm the "open in new window" affordance (`D1.4-8`).** On a Task Detail page, click the small icon next to the "Task #N" heading. Confirm it opens a **second** window at the same URL; clicking it again while that window is still open re-focuses the existing window rather than opening a third one (the named-`window.open` mechanism §4 describes).
+
+**11. Confirm the computed date fields (`D1.4-14`).** On a Task with an assigned Project (with its own `start_date`) and a non-zero start offset, confirm Requested Start Date, Planned Start Date, and End Date all show plausible computed dates (not blank, not "Invalid Date"), and that End Date is later than Planned Start Date by roughly `effort_in_days` ÷ (assigned Resource count) calendar days for a ManDays Task. Changing the Effort or the start offset and re-checking (before Save) should update these immediately — they're computed from the live form, not just the last-saved values.
+
+**12. Confirm dropdown order matches V1.2 (`D1.4-15`).** Open the Priority, Status, and Task Type dropdowns on any Task and confirm the option order is: Priority — High, MedHigh, Med, MedLow, Low, Cancelled, Closed; Status — Closed, Cancelled, InProgress, NotStarted, Ready, Support, Tentative; Task Type — Enhancement, Maintenance, NewDevelopment, Other, Support, Infrastructure. Confirm Owner/Requestor/Resources only list active People (no inactive/deactivated seeded Person appears).
+
+**Not yet testable:** the cross-window drag-and-drop spike (`D1.4-10`) hasn't been built yet — add that walkthrough here once it lands. The Gantt/plan view (Stage 3) and the remaining screens (Stage 4) aren't built yet either.
 
 <a id="definition-of-success"></a>
 ## 8. Definition of Success
@@ -339,5 +367,14 @@ None currently open — see Decisions below.
 - **D1.4-12** (decided 2026-08-30)<br>
   **Question:** What can be done to make the GUI's visual theme (fonts, colours, logos, icons) configurable, given the design isn't settled yet and is expected to change once there's something real to give feedback on?<br>
   **Decision:** centralise every visual value in one file, `gui-client/branding.json` — colours, font family, logo/favicon paths, app name — with the MUI theme (`src/theme/theme.ts`), the shared `Logo` component, the PWA manifest (`vite.config.ts`, `D1.4-5`), and `index.html`'s favicon/theme-color/title (via a small `transformIndexHtml` plugin) all reading from it rather than holding their own copies. Deliberately build-time only (edit the file, rebuild) rather than a runtime theme editor — a settings UI and persisted per-Organisation theme choice is real additional engineering a single-organisation Level 1 Demonstrator doesn't need; revisit if multi-tenant branding becomes a genuine Level 2/3 requirement, since a build-time config can't serve two Organisations' branding from one running deployment. Full detail: §3.9.
+- **D1.4-13** (decided 2026-08-30)<br>
+  **Question:** Should each V2 screen's layout be designed fresh from the use cases alone, or should V1.2's actual screen layouts inform it, given V1.2's UI is out of scope to port directly (`Scope.md` §4) but represents a tried-and-tested arrangement refined by real usage?<br>
+  **Decision:** treat V1.2's real layouts — the WinForms `.Designer.cs` and WPF `.xaml` files under `V1.2/Apps/ProjectPal/ProjectPal/` — as a strong reference for each screen, not a constraint to reproduce exactly. They're worth reading before designing each screen for field grouping/order/emphasis, but V1.2 is WinForms-era technology from some years ago, and a modern web/MUI pattern that serves the same goal better wins over faithfully copying the old arrangement. Full detail: §5.
+- **D1.4-14** (decided 2026-08-30)<br>
+  **Question:** Task Detail shows no Start/End dates at all, even though V1.2's equivalent screen did — should V2 add stored date fields, or compute them client-side the way `D1.4-6`'s Urgency/Gantt-derivation carve-out already anticipates?<br>
+  **Decision:** compute them client-side. Neither V1.2 nor V2 ever stores a Task's dates — both store only a business-day offset from the Project's start date (`8_ValidationAndVerification/Plan.md` §4.1) — and V1.2's own GUI computed `EarliestStartDate`/`StartDate`/`Duration`/`EndDate` for display every time (`V1.2/Libs/DBProjectPal/DBProjectPal/Task.cs`), never persisting them. `gui-client/src/lib/schedule.ts` reproduces this now (bounded to one level of predecessor-Dependency awareness for Stage 2; Stage 3's Gantt view extends the same module for the full recursive graph walk it needs, rather than duplicating it). Confirms `D1.4-6`'s carve-out was correctly scoped, and generalises it: before assuming a value must come from an API field, check whether V1.2 ever actually stored it either. Full detail: §3.8.
+- **D1.4-15** (decided 2026-08-30)<br>
+  **Question:** Do V2's dropdown lists (Priority, Status, Task Type) need to match V1.2's option order, or is the database enum's declaration order sufficient?<br>
+  **Decision:** match V1.2's order — `GUITaskColumns.cs`'s `GetComboValues_static` populates each dropdown in a specific, deliberate order (most-urgent-first for Priority; a particular non-alphabetical order for Status and Task Type), not schema-declaration order, and V2's `types.ts` constants were, before this was caught, using the latter. Fixed to match V1.2 name-for-name for Status and Task Type (identical value sets); Priority's five V1.2 names don't match V2's five 1:1, so it's ordered most-urgent-first by position instead, with the exact historical correspondence flagged for confirmation (`Q1.8-4`) rather than assumed. Owner/Requestor/Resources dropdowns are also now filtered to active People only, matching V1.2's `Person.AllActiveInstances`. Full detail: §3.10.
 
 See `../ImplementationPlan.md` for how this phase fits into the Level 1 plan, and for open questions that span this phase and others.

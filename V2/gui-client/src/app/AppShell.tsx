@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import { Link as RouterLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../theme/Logo";
 
@@ -15,8 +16,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="static">
         <Toolbar sx={{ gap: 2 }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Logo />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 3, flexGrow: 1 }}>
+            <RouterLink to="/" style={{ color: "inherit", textDecoration: "none" }}>
+              <Logo />
+            </RouterLink>
+            <Button color="inherit" component={RouterLink} to="/tasks">
+              Tasks
+            </Button>
           </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />
