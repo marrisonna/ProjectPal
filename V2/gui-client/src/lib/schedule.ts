@@ -28,6 +28,25 @@ export function addBusinessDays(start: Date, days: number): Date {
   return result;
 }
 
+/** Inverse of addBusinessDays: the signed count of business days between two
+ * dates, ignoring time-of-day. Used so a user can edit Requested Start Date
+ * directly (V1.2's actual UX — its date picker back-computes the stored
+ * offset the same way) rather than a raw day-count field (D1.4-19). */
+export function businessDaysBetween(start: Date, end: Date): number {
+  const a = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const b = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  if (a.getTime() === b.getTime()) return 0;
+  const step = b > a ? 1 : -1;
+  const cursor = new Date(a);
+  let count = 0;
+  while (cursor.getTime() !== b.getTime()) {
+    cursor.setDate(cursor.getDate() + step);
+    const dayOfWeek = cursor.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) count += step;
+  }
+  return count;
+}
+
 /** V1.2's Task.Duration getter: its ManDays mode (V2: PersonDays, D1.4-16)
  * splits Effort across assigned resources and %Allocation; Duration is
  * already a calendar-day count. */

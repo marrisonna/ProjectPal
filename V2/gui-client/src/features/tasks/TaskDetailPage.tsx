@@ -10,10 +10,9 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
 import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import {
@@ -31,6 +30,7 @@ import {
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openItemWindow } from "../../lib/windowNav";
 import {
+  businessDaysBetween,
   computeDuration,
   computeEarliestStartDate,
   computeEndDate,
@@ -42,6 +42,22 @@ import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
 
 function formatDate(date: Date | null): string {
   return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "—";
+}
+
+function toDateInputValue(date: Date | null): string {
+  if (!date) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+const RESOURCE_NAME_MAX_CHARS = 10;
+
+function truncateResourceName(name: string): string {
+  return name.length > RESOURCE_NAME_MAX_CHARS
+    ? `${name.slice(0, RESOURCE_NAME_MAX_CHARS)}…`
+    : name;
 }
 
 export function TaskDetailPage() {
@@ -98,6 +114,15 @@ export function TaskDetailPage() {
   // not every Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
   // usage) — matched here (D1.4-15).
   const activePeople = people?.filter((p) => p.is_active) ?? [];
+  // Resources listbox ordering (D1.4-18, §3.11): checked-first, alphabetical
+  // within each group, recomputed on every render off assignedIds so ticking
+  // or unticking a resource re-sorts it immediately.
+  const sortedResourcePeople = [...activePeople].sort((a, b) => {
+    const aAssigned = assignedIds.has(a.person_id);
+    const bAssigned = assignedIds.has(b.person_id);
+    if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
   // Computed display dates (D1.4-14) — see src/lib/schedule.ts for the V1.2
   // logic this reproduces. Uses the live form values so editing Effort/the
@@ -148,12 +173,254 @@ export function TaskDetailPage() {
           onChange={(event) => setField("description", event.target.value)}
         />
 
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mt: 1 }}>
+        {resourceError && (
+          <Alert severity="error" sx={{ mb: 1 }} onClose={() => setResourceError(null)}>
+            {resourceError}
+          </Alert>
+        )}
+        {/* Resources listbox beside rows 1+2 (Priority/... and Effort/...)
+            rather than in its own card — it's a fixed-size control (§3.11,
+            D1.4-19) and would otherwise leave an empty card around it. */}
+        <Box sx={{ display: "flex", gap: 3, alignItems: "stretch", mt: 1 }}>
+          <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column" }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+              Resources
+            </Typography>
+            <Box
+              sx={{
+                width: 160,
+                flex: 1,
+                minHeight: 0,
+                maxHeight: 110,
+                overflowY: "auto",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                p: 0.5,
+              }}
+            >
+              {sortedResourcePeople.map((person) => (
+                <Box
+                  key={person.person_id}
+                  component="label"
+                  sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer" }}
+                >
+                  <Checkbox
+                    size="small"
+                    sx={{ p: 0.5 }}
+                    checked={assignedIds.has(person.person_id)}
+                    onChange={async (event) => {
+                      setResourceError(null);
+                      try {
+                        if (event.target.checked) {
+                          await assignResource.mutateAsync(person.person_id);
+                        } else {
+                          await unassignResource.mutateAsync(person.person_id);
+                        }
+                      } catch {
+                        setResourceError(
+                          `Couldn't assign ${person.name} — they may not be a resource on this Task's Team.`,
+                        );
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" noWrap title={person.name}>
+                    {truncateResourceName(person.name)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Row 1: Priority/Status/Task Type/Requestor/Owner. */}
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 2 }}>
+              <TextField
+                select
+                label="Priority"
+                value={field("priority") ?? ""}
+                onChange={(event) => setField("priority", event.target.value || null)}
+              >
+                <MenuItem value="">(none)</MenuItem>
+                {PRIORITY_LEVELS.map((p) => (
+                  <MenuItem key={p} value={p}>
+                    {p}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Status"
+                value={field("status")}
+                onChange={(event) => setField("status", event.target.value)}
+              >
+                {TASK_STATUSES.map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Task Type"
+                value={field("task_type") ?? ""}
+                onChange={(event) => setField("task_type", event.target.value || null)}
+              >
+                <MenuItem value="">(none)</MenuItem>
+                {TASK_TYPES.map((t) => (
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Requestor"
+                value={field("requestor_person_id") ?? ""}
+                onChange={(event) =>
+                  setField(
+                    "requestor_person_id",
+                    event.target.value === "" ? null : Number(event.target.value),
+                  )
+                }
+              >
+                <MenuItem value="">(none)</MenuItem>
+                {activePeople.map((p) => (
+                  <MenuItem key={p.person_id} value={p.person_id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Owner"
+                value={field("owner_person_id") ?? ""}
+                onChange={(event) =>
+                  setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
+                }
+              >
+                <MenuItem value="">(none)</MenuItem>
+                {activePeople.map((p) => (
+                  <MenuItem key={p.person_id} value={p.person_id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+
+            {/* Row 2: Effort/Effort Type/% Allocation/dates/Duration/Tentative. */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+              <TextField
+                label="Effort"
+                type="number"
+                sx={{ width: 90 }}
+                value={field("effort_in_days") ?? ""}
+                onChange={(event) =>
+                  setField("effort_in_days", event.target.value === "" ? null : Number(event.target.value))
+                }
+              />
+              {/* Two stacked radio buttons, as V1.2 uses, rather than a wider
+                  toggle switch — narrower, and needs no group label since each
+                  option already carries its own visible text (D1.4-19). */}
+              <RadioGroup
+                aria-label="Effort Type"
+                value={field("effort_type") ?? ""}
+                onChange={(event) => setField("effort_type", event.target.value)}
+                sx={{ justifyContent: "flex-end" }}
+              >
+                <FormControlLabel value="PersonDays" control={<Radio size="small" sx={{ p: 0.5 }} />} label="Days" />
+                <FormControlLabel value="Duration" control={<Radio size="small" sx={{ p: 0.5 }} />} label="Duration" />
+              </RadioGroup>
+              <TextField
+                label="% Allocation"
+                type="number"
+                sx={{ width: 140 }}
+                value={field("percentage_allocation") ?? ""}
+                onChange={(event) =>
+                  setField(
+                    "percentage_allocation",
+                    event.target.value === "" ? null : Number(event.target.value),
+                  )
+                }
+              />
+              <TextField
+                label="Requested Start Date"
+                type="date"
+                sx={{ width: 170 }}
+                value={toDateInputValue(earliestStartDate)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                onChange={(event) => {
+                  if (!event.target.value || !teamProject?.start_date) return;
+                  const chosen = new Date(`${event.target.value}T00:00:00`);
+                  const offset = businessDaysBetween(new Date(teamProject.start_date), chosen);
+                  setField("start_relative_days_to_project", offset);
+                }}
+                helperText="Sets the start offset (§4.1, D1.4-19)"
+              />
+              <TextField
+                label="Planned Start Date"
+                sx={{ width: 150 }}
+                value={formatDate(startDate)}
+                slotProps={{ input: { readOnly: true } }}
+                helperText="Accounts for Dependencies"
+              />
+              <TextField
+                label="End Date"
+                sx={{ width: 150 }}
+                value={formatDate(endDate)}
+                slotProps={{ input: { readOnly: true } }}
+                helperText="Planned Start + Duration"
+              />
+              <TextField
+                label="Duration (days)"
+                sx={{ width: 130 }}
+                value={duration != null ? duration.toFixed(1) : "—"}
+                slotProps={{ input: { readOnly: true } }}
+              />
+              <FormControlLabel
+                sx={{ alignSelf: "center" }}
+                control={
+                  <Checkbox
+                    checked={Boolean(field("tentative_resource_assignment"))}
+                    onChange={(event) => setField("tentative_resource_assignment", event.target.checked)}
+                  />
+                }
+                label="Tentative"
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        <TextField
+          label="Detailed Description"
+          fullWidth
+          multiline
+          minRows={4}
+          margin="normal"
+          value={field("detailed_description") ?? ""}
+          onChange={(event) => setField("detailed_description", event.target.value)}
+        />
+
+        <TextField
+          label="External Reference URL"
+          fullWidth
+          margin="normal"
+          value={field("external_reference_url") ?? ""}
+          onChange={(event) => setField("external_reference_url", event.target.value || null)}
+        />
+      </Paper>
+
+      {/* Project/Component: wide edit boxes of their own row, placed after
+          Resources/Description rather than among the short fixed-width
+          fields — their values can run long (V1.2 screenshot, D1.4-19). */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <TextField
             select
             label="Project"
             value={field("project_id")}
             onChange={(event) => setField("project_id", Number(event.target.value))}
+            sx={{ flex: 1 }}
           >
             {projects?.map((p) => (
               <MenuItem key={p.project_id} value={p.project_id}>
@@ -168,6 +435,7 @@ export function TaskDetailPage() {
             onChange={(event) =>
               setField("component_id", event.target.value === "" ? null : Number(event.target.value))
             }
+            sx={{ flex: 1 }}
           >
             <MenuItem value="">(none)</MenuItem>
             {teamComponents.map((c) => (
@@ -176,218 +444,7 @@ export function TaskDetailPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            select
-            label="Priority"
-            value={field("priority") ?? ""}
-            onChange={(event) => setField("priority", event.target.value || null)}
-          >
-            <MenuItem value="">(none)</MenuItem>
-            {PRIORITY_LEVELS.map((p) => (
-              <MenuItem key={p} value={p}>
-                {p}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Status"
-            value={field("status")}
-            onChange={(event) => setField("status", event.target.value)}
-          >
-            {TASK_STATUSES.map((s) => (
-              <MenuItem key={s} value={s}>
-                {s}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Task Type"
-            value={field("task_type") ?? ""}
-            onChange={(event) => setField("task_type", event.target.value || null)}
-          >
-            <MenuItem value="">(none)</MenuItem>
-            {TASK_TYPES.map((t) => (
-              <MenuItem key={t} value={t}>
-                {t}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Owner"
-            value={field("owner_person_id") ?? ""}
-            onChange={(event) =>
-              setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
-            }
-          >
-            <MenuItem value="">(none)</MenuItem>
-            {activePeople.map((p) => (
-              <MenuItem key={p.person_id} value={p.person_id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Requestor"
-            value={field("requestor_person_id") ?? ""}
-            onChange={(event) =>
-              setField(
-                "requestor_person_id",
-                event.target.value === "" ? null : Number(event.target.value),
-              )
-            }
-          >
-            <MenuItem value="">(none)</MenuItem>
-            {activePeople.map((p) => (
-              <MenuItem key={p.person_id} value={p.person_id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Start offset (business days from Project start)"
-            type="number"
-            value={field("start_relative_days_to_project") ?? ""}
-            onChange={(event) =>
-              setField(
-                "start_relative_days_to_project",
-                event.target.value === "" ? null : Number(event.target.value),
-              )
-            }
-          />
         </Box>
-
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mt: 2 }}>
-          <TextField
-            label="Requested Start Date"
-            value={formatDate(earliestStartDate)}
-            slotProps={{ input: { readOnly: true } }}
-            helperText="Computed from the start offset — not stored (§4.1)"
-          />
-          <TextField
-            label="Planned Start Date"
-            value={formatDate(startDate)}
-            slotProps={{ input: { readOnly: true } }}
-            helperText="Also accounts for predecessor Dependencies"
-          />
-          <TextField
-            label="End Date"
-            value={formatDate(endDate)}
-            slotProps={{ input: { readOnly: true } }}
-            helperText="Planned Start + Duration"
-          />
-          <TextField
-            label="Duration (calendar days)"
-            value={duration != null ? duration.toFixed(1) : "—"}
-            slotProps={{ input: { readOnly: true } }}
-            helperText="Effort split across assigned Resources"
-          />
-        </Box>
-
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2, mt: 2 }}>
-          <TextField
-            label="Effort"
-            type="number"
-            value={field("effort_in_days") ?? ""}
-            onChange={(event) =>
-              setField("effort_in_days", event.target.value === "" ? null : Number(event.target.value))
-            }
-          />
-          <ToggleButtonGroup
-            exclusive
-            value={field("effort_type") ?? null}
-            onChange={(_event, value) => setField("effort_type", value)}
-            size="small"
-            sx={{ alignSelf: "center" }}
-          >
-            <ToggleButton value="PersonDays">Person Days</ToggleButton>
-            <ToggleButton value="Duration">Duration</ToggleButton>
-          </ToggleButtonGroup>
-          <TextField
-            label="% Allocation"
-            type="number"
-            value={field("percentage_allocation") ?? ""}
-            onChange={(event) =>
-              setField(
-                "percentage_allocation",
-                event.target.value === "" ? null : Number(event.target.value),
-              )
-            }
-          />
-          <FormControlLabel
-            sx={{ alignSelf: "center" }}
-            control={
-              <Checkbox
-                checked={Boolean(field("tentative_resource_assignment"))}
-                onChange={(event) => setField("tentative_resource_assignment", event.target.checked)}
-              />
-            }
-            label="Tentative"
-          />
-        </Box>
-
-        <TextField
-          label="External Reference URL"
-          fullWidth
-          margin="normal"
-          value={field("external_reference_url") ?? ""}
-          onChange={(event) => setField("external_reference_url", event.target.value || null)}
-        />
-        <TextField
-          label="Detailed Description"
-          fullWidth
-          multiline
-          minRows={4}
-          margin="normal"
-          value={field("detailed_description") ?? ""}
-          onChange={(event) => setField("detailed_description", event.target.value)}
-        />
-      </Paper>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Resources
-        </Typography>
-        {resourceError && (
-          <Alert severity="error" sx={{ mb: 1 }} onClose={() => setResourceError(null)}>
-            {resourceError}
-          </Alert>
-        )}
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-          Shows every active Person — the API rejects assigning someone who isn't a resource on
-          this Task's Team.
-        </Typography>
-        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
-          {activePeople.map((person) => (
-            <FormControlLabel
-              key={person.person_id}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={assignedIds.has(person.person_id)}
-                  onChange={async (event) => {
-                    setResourceError(null);
-                    try {
-                      if (event.target.checked) {
-                        await assignResource.mutateAsync(person.person_id);
-                      } else {
-                        await unassignResource.mutateAsync(person.person_id);
-                      }
-                    } catch {
-                      setResourceError(
-                        `Couldn't assign ${person.name} — they may not be a resource on this Task's Team.`,
-                      );
-                    }
-                  }}
-                />
-              }
-              label={person.name}
-            />
-          ))}
-        </Stack>
       </Paper>
 
       <Paper sx={{ p: 3, mb: 3 }}>
