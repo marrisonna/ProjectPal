@@ -290,3 +290,10 @@ Go ahead with implementing and testing 2_RestApi.
 
 Will I be able to set up and configure the public/Cloudflare ProjectPal stack on the same machine as I am developing on, in a way that the public/Cloudflare ProjectPal stack is independant from the development environment, e.g., separate DBs, separate servers etc.
 I need to be able to develop without disturbing the publich facing ProjectPal.  Periodically, I will want to make new 'release' or 'updates' to the publically facing stack, but this will be very deliberate and not by accident.
+
+
+I've saved a new screen shot from V1.2 called 'TaskDetail_with_Calendar.png'
+In the V1.2 screenshot, notice how the 'Requested Start' and 'End Date' edit boxes have a calendat dropdown icon at the right of the edit box.  When it is clicked, a calendar date select mini-control appears.
+This can be seen in 'TaskDetail_with_Calendar.png'.
+You can look in the code for V1.2 to see what sort of control this is and how it works.
+Can you add the same feature to the new TaskDetail Windows?
