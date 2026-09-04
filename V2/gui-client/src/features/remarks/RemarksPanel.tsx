@@ -6,24 +6,32 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useCreateRemark, useRemarks, usePeople, type RemarkOwner } from "../../api/hooks";
+import { useCreateRemark, useRemarks, usePeople, usePersonRoles, type RemarkOwner } from "../../api/hooks";
+import { personDisplayName } from "../../lib/people";
 
 // Modernised per Plan.md §5: no separate RemarkWindow — an inline comment
 // thread, built once here and reused by Task/Project/Component Detail.
 export function RemarksPanel({
   owner,
   hideHeading = false,
+  teamId,
 }: {
   owner: RemarkOwner;
   hideHeading?: boolean;
+  // The Team this Remark thread's data belongs to (its Task's Project, or a
+  // Project/Component directly) — resolved by the caller, which already
+  // knows it, rather than this shared panel re-deriving it from `owner`.
+  // Used to prefer a commenter's Team nickname over their name (D1.4-21).
+  teamId?: number;
 }) {
   const { data: remarks, isLoading } = useRemarks(owner);
   const { data: people } = usePeople();
+  const { data: personRoles } = usePersonRoles();
   const createRemark = useCreateRemark(owner);
   const [draft, setDraft] = useState("");
 
   function personName(personId: number) {
-    return people?.find((p) => p.person_id === personId)?.name ?? `Person #${personId}`;
+    return personDisplayName(personId, teamId, people, personRoles);
   }
 
   async function handleAdd() {

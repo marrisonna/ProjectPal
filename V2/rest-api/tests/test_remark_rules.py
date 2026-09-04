@@ -21,7 +21,7 @@ def test_remark_non_owner_cannot_edit(api, bob_token, alice_owned_remark_id):
 
 
 def test_remark_readonly_user_can_create_and_edit_their_own(api, readonly_token):
-    # Sam is ReadOnlyUser on Team 2. Task 7 belongs to Project 4 (Team 2).
+    # Sam is ReadOnlyUser on Team 1. Task 7 belongs to Project 4 (Team 1).
     create = api.post(
         "/remark",
         json={"task_id": 7, "remark_text": "a ReadOnlyUser's remark"},
@@ -40,11 +40,14 @@ def test_remark_readonly_user_can_create_and_edit_their_own(api, readonly_token)
 
 
 def test_team_lead_can_delete_but_not_edit_a_remark_they_dont_own(
-    api, alice_token, readonly_token, tom_token
+    api, alice_token, rahul_token, neil_token, other_team_task_id
 ):
-    # Task 7 belongs to Project 4 (Team 2); Tom is Team 2's TeamLeadUser.
+    # other_team_task_id belongs to Team 2, where Neil is TeamLeadUser and
+    # Rahul is an ordinary NormalUser (not its owner).
     create = api.post(
-        "/remark", json={"task_id": 7, "remark_text": "Sam's remark"}, headers=auth(readonly_token)
+        "/remark",
+        json={"task_id": other_team_task_id, "remark_text": "Rahul's remark"},
+        headers=auth(rahul_token),
     )
     remark_id = create.json()["remark_id"]
 
@@ -55,12 +58,12 @@ def test_team_lead_can_delete_but_not_edit_a_remark_they_dont_own(
     )
     assert other_team_edit.status_code == 403
 
-    # Tom (Team 2's actual TeamLeadUser) can't edit a Remark he doesn't own either.
+    # Neil (Team 2's actual TeamLeadUser) can't edit a Remark he doesn't own either.
     lead_edit = api.patch(
-        f"/remark/{remark_id}", json={"remark_text": "hijacked by the lead"}, headers=auth(tom_token)
+        f"/remark/{remark_id}", json={"remark_text": "hijacked by the lead"}, headers=auth(neil_token)
     )
     assert lead_edit.status_code == 403
 
     # But he can delete it.
-    lead_delete = api.delete(f"/remark/{remark_id}", headers=auth(tom_token))
+    lead_delete = api.delete(f"/remark/{remark_id}", headers=auth(neil_token))
     assert lead_delete.status_code == 204

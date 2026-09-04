@@ -297,3 +297,28 @@ In the V1.2 screenshot, notice how the 'Requested Start' and 'End Date' edit box
 This can be seen in 'TaskDetail_with_Calendar.png'.
 You can look in the code for V1.2 to see what sort of control this is and how it works.
 Can you add the same feature to the new TaskDetail Windows?
+
+I need more data in the database to test with.
+Don't make any changes, just tell me what you think of this suggestion.
+Can you script the seed data in the database as follows:-
+Take all of the data that is currently in the data base and make this all team #1 data.
+Look in the SQL Server database ProjectPalDB_1 on this machine and make this all team #2 data - there is a lot of data theMakre.
+Put all of this data in some kind of script so that when you rebuild the databases (when I request changes to the schema) 
+the script can be used to repopulate the PostgreSql database with this test data. 
+
+1. I understand, yes, there are many rows, and the data needs to be transformed.
+2. It if find to change the DBLogin value in the Person table, but I would like to keep that values from the 'Name' column.  I understand the risks, but these are only first names.
+3. Attachments don't actually carry any data.  The 'Size' column is populated with a value, but the 'Data' column is actually null.
+4. Agreed, this would be a one-off translation.  Going forwards, when the schema changes, the 'scripted' test data would need
+to me modified to fit the new schema, there should be no dependency on the SQL Server Database.
+Thoughts?
+
+I'd like to add a column to the 'person_role' table called 'nickname', which is a string.
+This is so that a real person can have a shorter name that they are known by within a team, e.g., 'Alice' rather than 'Alice Chen'.
+The value of 'nickname' may be null.
+When populating names on the GUIs in the context of a team, if the 'nickname' column is populated, it should 
+be used rather than the 'name' from the 'person' table.
+In the test data, populate the nickname for team #1, for Alice, Priya and Nadia to be just theor first names.  Don't populate it for team #2.
+No changes yet, just tell me what you think.
+
+On the V2 TaskDetail Window, what is the purpose of the 'Back' button?

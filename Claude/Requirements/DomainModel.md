@@ -67,6 +67,7 @@ Key attributes are:
 - `TeamId` - a reference to the **Team**
 - `IsResource` — whether this Person can be assigned to work items (independent of whether they can log in).
 - `UserType`/role — TeamLeadUser / LeadUser / NormalUser / ReadOnlyUser for V2 (renamed from the old app's SuperUser / PowerUser / NormalUser / ReadOnlyUser — see `Claude/Requirements/UseCases.md`'s Annex A for the V1.2 behavior these were based on), scoped per-Team via this table (see `KeyConcepts.md`'s Role / Permission Level entry, and Decisions item `D-DM-4` for how this combines with the organisation-level admin role on Person).
+- `Nickname` — a shorter name this Person is known by on this Team (e.g. "Alice" rather than "Alice Chen"), nullable, shown instead of Person's own name wherever a screen displays a name in this Team's context. Has no equivalent in the old app. See Decisions (`D-DM-11`).
 
 The Gantt bar colour assigned to a Person should be a generic per-Person, per-Organisation setting.
 
@@ -178,6 +179,9 @@ None currently open — every question originally raised for this document has a
 - **D-DM-10**<br>
   **Question:** Can a Task's Project (and therefore its Team) be changed to a Project in a different Team?<br>
   **Decision (Level 1):** no — a Task may only be reassigned to a Project belonging to the *same* Team as its current Project. Moving a Task across Teams is deferred to Level 2, where it needs a real answer (e.g. requiring write access on both the source and destination Team) — see Future Extensions.
+- **D-DM-11**<br>
+  **Question:** Should PersonRole gain a `Nickname` attribute, so a Person can be known by a shorter name on a given Team than their recorded `Name` (e.g. "Alice" rather than "Alice Chen")?<br>
+  **Decision:** yes — nullable, on PersonRole (not Person), since it's inherently per-Team: the same Person could have a different nickname on each Team they belong to, or none at all. Wherever a screen's data belongs to a Team, display falls back to the plain `Name` when no nickname is set for that Team, or when the Person shown isn't scoped to any one Team (e.g. Owner/Requestor pickers list active People org-wide — `D1.4-15`). Level 1 is read-only: `Nickname` is only ever set via seed data for now — editing it is a team-lead-facing capability (mirroring the existing `person_role` write-permission rule) that almost certainly belongs on a dedicated Team Management screen once one exists, not scattered across other screens; deferred to Level 2, recorded in `Claude/Level2_Implementation/Scope.md` (`4_GuiClient/Plan.md` `D1.4-21`).
 
 <a id="future-extensions"></a>
 ## 7. Future Extensions (Beyond Level 1)

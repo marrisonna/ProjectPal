@@ -14,14 +14,15 @@ def test_assign_resource_on_own_team_succeeds(api, alice_token, task_id):
 
 
 def test_assign_non_resource_is_rejected(api, alice_token, task_id):
-    # Sam (person 6) is ReadOnlyUser on Team 2, is_resource=false there, and
-    # has no role at all on Team 1 — not assignable to a Team-1 Task either way.
+    # Sam (person 6) is ReadOnlyUser on Team 1 — has a role there, but
+    # is_resource=false, so still not assignable to a Team-1 Task.
     resp = api.post(f"/task/{task_id}/resources", json={"person_id": 6}, headers=auth(alice_token))
     assert resp.status_code == 403
 
 
 def test_assign_resource_from_a_different_team_is_rejected(api, alice_token, task_id):
-    # Grace (person 5) is a resource, but on Team 2 — not on Team 1, which
-    # owns task_id's Project. D-DM-8: must be a resource on *this* Team.
-    resp = api.post(f"/task/{task_id}/resources", json={"person_id": 5}, headers=auth(alice_token))
+    # Rahul (person 10033) is a resource, but on Team 2 — not on Team 1,
+    # which owns task_id's Project, and holds no role there at all.
+    # D-DM-8: must be a resource on *this* Team.
+    resp = api.post(f"/task/{task_id}/resources", json={"person_id": 10033}, headers=auth(alice_token))
     assert resp.status_code == 403

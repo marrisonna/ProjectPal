@@ -29,17 +29,35 @@ def api():
     return ApiClient(BASE_URL)
 
 
-# Seeded People and their passwords (V2/database/seed/001_example_data.sql,
-# primed as if an admin had already set them per
-# Claude/Level1_Implementation/3_Authentication/Plan.md D1.3-4 — fictional
-# local-only demo accounts, plaintext committed openly per that plan's D1.3-8):
-#   1 Alice Chen   alice-pass1   - is_organisation_admin, TeamLeadUser on Team 1 (Platform)
-#   2 Ben Okafor   ben-pass1     - LeadUser on Team 1, no role on Team 2
-#   3 Priya Sharma priya-pass1   - NormalUser on Team 1
-#   4 Tom Baxter   tom-pass1     - TeamLeadUser on Team 2 (Customer Projects), NormalUser on Team 1
-#   5 Grace Liu    grace-pass1   - NormalUser on Team 2
-#   6 Sam Patel    sam-pass1     - ReadOnlyUser on Team 2
-#   7 Nadia Fischer nadia-pass1  - is_organisation_admin, NormalUser on both Teams (not a resource)
+# Seeded People and their passwords, primed as if an admin had already set
+# them per Claude/Level1_Implementation/3_Authentication/Plan.md D1.3-4 —
+# fictional/demo accounts, plaintext committed openly per that plan's D1.3-8.
+#
+# Team 1 ("Platform", V2/database/seed/001_example_data.sql) — all seven of
+# these People hold a role on Team 1 only; Team 1 and Team 2 used to be two
+# small, symmetric example Teams, but were collapsed into this one Team
+# (see that file's own header comment) once Team 2 became the real,
+# bulk-imported V1.2 data below:
+#   1 Alice Chen    alice-pass1   - is_organisation_admin, TeamLeadUser on Team 1
+#   2 Ben Okafor    ben-pass1     - LeadUser on Team 1
+#   3 Priya Sharma  priya-pass1   - NormalUser on Team 1, is_resource
+#   4 Tom Baxter    tom-pass1     - LeadUser on Team 1, is_resource
+#   5 Grace Liu     grace-pass1   - NormalUser on Team 1, is_resource
+#   6 Sam Patel     sam-pass1     - ReadOnlyUser on Team 1
+#   7 Nadia Fischer nadia-pass1   - is_organisation_admin, NormalUser on Team 1 (not a resource)
+#
+# Team 2 ("V1.2 Import", V2/database/seed/002_team2_from_v1.sql) — the real
+# V1.2 data, migrated wholesale; only a handful of its ~50 People can log in
+# (see that file's own header comment for the rest):
+#   10010 Neil  neil-pass1   - is_organisation_admin, TeamLeadUser on Team 2, is_resource
+#   10033 Rahul rahul-pass1  - NormalUser on Team 2, is_resource
+#
+# Neil's is_organisation_admin (real V1.2 data, not a seeding choice) means
+# his token can act on *any* Team via the org-admin path — a test that
+# specifically needs "a TeamLeadUser of some Team other than Team 1, and
+# nothing more" can't use him for that reason (see
+# test_team_lead_cannot_write_person_role_for_other_team's own fresh-team
+# bootstrap instead).
 PASSWORDS = {
     "alice.chen@example.com": "alice-pass1",
     "ben.okafor@example.com": "ben-pass1",
@@ -48,6 +66,8 @@ PASSWORDS = {
     "grace.liu@example.com": "grace-pass1",
     "sam.patel@example.com": "sam-pass1",
     "nadia.fischer@example.com": "nadia-pass1",
+    "neil@example.com": "neil-pass1",
+    "rahul@example.com": "rahul-pass1",
 }
 
 
@@ -84,9 +104,26 @@ def readonly_token(api):
 
 @pytest.fixture(scope="session")
 def tom_token(api):
-    # TeamLeadUser on Team 2 (Customer Projects) — used where a test needs to
-    # act with real Team-2 standing without relying on an admin/Team-1 identity.
+    # LeadUser on Team 1 (not a TeamLeadUser, and not on any other Team) — a
+    # second, non-lead Team-1 identity distinct from Alice/Ben.
     return _login(api, "tom.baxter@example.com")
+
+
+@pytest.fixture(scope="session")
+def neil_token(api):
+    # TeamLeadUser on Team 2 ("V1.2 Import") — used where a test needs
+    # genuine standing on a Team other than Team 1, now that Team 1 and
+    # Team 2 are no longer the two small, symmetric example Teams they used
+    # to be (see PASSWORDS above and 002_team2_from_v1.sql).
+    return _login(api, "neil@example.com")
+
+
+@pytest.fixture(scope="session")
+def rahul_token(api):
+    # An ordinary NormalUser on Team 2, distinct from Neil (its
+    # TeamLeadUser) — used where a test needs "someone on the other Team,
+    # but not its lead".
+    return _login(api, "rahul@example.com")
 
 
 @pytest.fixture(scope="session")
@@ -106,7 +143,12 @@ def task_id():
 
 @pytest.fixture(scope="session")
 def other_team_project_id():
-    return 4  # "Customer Portal Refresh", Team 2 — Team 1 people hold no role here.
+    return 10028  # A real Team 2 ("V1.2 Import") project — Team 1 people hold no role here.
+
+
+@pytest.fixture(scope="session")
+def other_team_task_id():
+    return 10960  # A real Task under other_team_project_id (Team 2).
 
 
 @pytest.fixture()

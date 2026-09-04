@@ -111,6 +111,8 @@ The hand-written FastAPI service in `rest-api/` (`Claude/Level1_Implementation/2
 | `sam.patel@example.com` | `sam-pass1` |
 | `nadia.fischer@example.com` | `nadia-pass1` |
 
+That table is Team 1 ("Platform"). Team 2 ("V1.2 Import", `database/seed/002_team2_from_v1.sql`) is a much larger dataset — 43 People migrated from the real old V1.2 database — but only 10 of them have a login at all; see that file's own header comment for the full `external_login`/password list. `neil@example.com` / `neil-pass1` is Team 2's TeamLeadUser and the only organisation admin among the imported People.
+
 An admin (`is_organisation_admin`) can set or reset any Person's password via `POST /person/{person_id}/password` — self-service (changing your own) is deferred, see `3_Authentication/Plan.md` §2.2.
 
 **Running the test suite**: `.\scripts\test-api.ps1` builds and starts the stack, waits for the API to respond, and runs `rest-api/tests` (creating a Python virtualenv at `rest-api/.venv-test` the first time). The tests run against the same persistent dev database everything else uses, not a throwaway one — they're written to be safely re-runnable (unique names/content per run) rather than assuming a clean slate.

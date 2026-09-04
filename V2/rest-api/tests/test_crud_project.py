@@ -47,8 +47,9 @@ def test_project_delete_requires_team_lead_not_just_owner(api, alice_token, bob_
     api.delete(f"/project/{project_id}", headers=auth(alice_token))  # cleanup
 
 
-def test_reparent_onto_different_team_is_rejected(api, alice_token):
-    # Project 1 (Platform Modernisation) is Team 1; Project 4 (Customer
-    # Portal Refresh) is Team 2.
-    resp = api.patch("/project/1", json={"parent_project_id": 4}, headers=auth(alice_token))
+def test_reparent_onto_different_team_is_rejected(api, alice_token, other_team_project_id):
+    # Project 1 (Platform Modernisation) is Team 1; other_team_project_id is Team 2.
+    resp = api.patch(
+        "/project/1", json={"parent_project_id": other_team_project_id}, headers=auth(alice_token)
+    )
     assert resp.status_code == 403

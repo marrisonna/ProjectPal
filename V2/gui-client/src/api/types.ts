@@ -62,6 +62,10 @@ export interface PersonRoleRecord {
   team_id: number;
   is_resource: boolean;
   role: string;
+  // A shorter name this Person is known by on this Team — shown instead of
+  // person.name wherever the GUI displays a name in this Team's context
+  // (D1.4-21). Read-only in Level 1: only ever set via seed data for now.
+  nickname: string | null;
 }
 
 export interface RemarkRecord {

@@ -197,14 +197,14 @@ def list_person_roles(
         if team_id is not None:
             return many(
                 conn.execute(
-                    "SELECT person_id, team_id, is_resource, role FROM person_role "
+                    "SELECT person_id, team_id, is_resource, role, nickname FROM person_role "
                     "WHERE team_id = %s ORDER BY person_id",
                     (team_id,),
                 )
             )
         return many(
             conn.execute(
-                "SELECT person_id, team_id, is_resource, role FROM person_role "
+                "SELECT person_id, team_id, is_resource, role, nickname FROM person_role "
                 "ORDER BY team_id, person_id"
             )
         )
@@ -220,7 +220,7 @@ def add_person_role(
             conn.execute(
                 "INSERT INTO person_role (person_id, team_id, is_resource, role) "
                 "VALUES (%s, %s, %s, %s) "
-                "RETURNING person_id, team_id, is_resource, role",
+                "RETURNING person_id, team_id, is_resource, role, nickname",
                 (body.person_id, body.team_id, body.is_resource, body.role),
             )
         )
@@ -247,7 +247,7 @@ def update_person_role(
         row = one(
             conn.execute(
                 f"UPDATE person_role SET {set_clause} WHERE person_id = %s AND team_id = %s "
-                "RETURNING person_id, team_id, is_resource, role",
+                "RETURNING person_id, team_id, is_resource, role, nickname",
                 (*fields.values(), person_id, team_id),
             )
         )

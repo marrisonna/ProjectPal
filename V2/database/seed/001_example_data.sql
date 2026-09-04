@@ -12,10 +12,11 @@ BEGIN;
 -- Teams
 -- ---------------------------------------------------------------------------
 
+-- Collapsed from two teams into one (was Platform=1/Customer Projects=2) so
+-- team_id 2 is free for the real V1.2 data imported in 002_team2_from_v1.sql.
 INSERT INTO team (team_id, name) VALUES
-    (1, 'Platform'),
-    (2, 'Customer Projects');
-SELECT setval('team_team_id_seq', 2);
+    (1, 'Platform');
+SELECT setval('team_team_id_seq', 1);
 
 -- ---------------------------------------------------------------------------
 -- People
@@ -45,21 +46,24 @@ INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_
 SELECT setval('person_person_id_seq', 7);
 
 -- PersonRole: Team membership + per-Team role/resource flag.
--- Tom belongs to both Teams with a different role in each (TeamLeadUser of
--- Team 2, an ordinary member of Team 1); Nadia is an organisation admin on
--- Person but an ordinary (non-resource) member of both Teams. Every Team has
--- exactly one TeamLeadUser, per the bootstrap invariant the REST API enforces
--- for any Team created after this seed data (Requirements/UseCases.md §12).
-INSERT INTO person_role (person_id, team_id, is_resource, role) VALUES
-    (1, 1, true,  'TeamLeadUser'),
-    (2, 1, true,  'LeadUser'),
-    (3, 1, true,  'NormalUser'),
-    (4, 1, false, 'NormalUser'),
-    (7, 1, false, 'NormalUser'),
-    (4, 2, true,  'TeamLeadUser'),
-    (5, 2, true,  'NormalUser'),
-    (6, 2, false, 'ReadOnlyUser'),
-    (7, 2, false, 'NormalUser');
+-- Collapsed from two Teams into one: Tom was TeamLeadUser of the old Team 2
+-- and an ordinary member of Team 1 — merged into a single LeadUser row
+-- (Alice already holds Team 1's one TeamLeadUser slot, so Tom can't also
+-- hold it — the bootstrap invariant the REST API enforces, Requirements/UseCases.md
+-- §12, allows exactly one per Team). Nadia's two rows were identical
+-- (ordinary, non-resource) and just dedupe to one.
+-- nickname (D1.4-21): populated for a few of Team 1's People to demonstrate
+-- the "shorter name known within a team" feature; left null for the rest of
+-- Team 1 and for all of Team 2 (002_team2_from_v1.sql) — nickname is
+-- read-only in Level 1, seed data is the only way to set one for now.
+INSERT INTO person_role (person_id, team_id, is_resource, role, nickname) VALUES
+    (1, 1, true,  'TeamLeadUser', 'Alice'),
+    (2, 1, true,  'LeadUser',     NULL),
+    (3, 1, true,  'NormalUser',   'Priya'),
+    (4, 1, true,  'LeadUser',     NULL),
+    (5, 1, true,  'NormalUser',   NULL),
+    (6, 1, false, 'ReadOnlyUser', NULL),
+    (7, 1, false, 'NormalUser',   'Nadia');
 
 -- ---------------------------------------------------------------------------
 -- Components (classification tree, independent of Project; each belongs to
@@ -90,7 +94,7 @@ INSERT INTO project (project_id, parent_project_id, team_id, name, priority, det
     (3, 1,    1, 'API Layer', 'Med',
         'Build the REST API that fronts the new database.',
         3, DATE '2026-02-02', DATE '2026-05-15'),
-    (4, NULL, 2, 'Customer Portal Refresh', 'MedHigh',
+    (4, NULL, 1, 'Customer Portal Refresh', 'MedHigh',
         'Redesign the customer-facing portal and its billing/reporting screens.',
         4, DATE '2026-01-19', DATE '2026-06-12');
 SELECT setval('project_project_id_seq', 4);

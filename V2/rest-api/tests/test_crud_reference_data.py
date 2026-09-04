@@ -6,7 +6,7 @@ from helpers import auth
 def test_list_teams(api, alice_token):
     resp = api.get("/team", headers=auth(alice_token))
     assert resp.status_code == 200
-    assert {t["name"] for t in resp.json()} >= {"Platform", "Customer Projects"}
+    assert {t["name"] for t in resp.json()} >= {"Platform", "V1.2 Import"}
 
 
 def test_list_people(api, alice_token):
@@ -34,13 +34,34 @@ def test_team_lead_can_write_person_role_for_own_team(api, alice_token, bob_pers
     assert resp.status_code == 200
 
 
-def test_team_lead_cannot_write_person_role_for_other_team(api, tom_token, bob_person_id):
-    # Tom is TeamLeadUser on Team 2 only (and not an org admin) — Team 1 is
-    # out of his reach.
+def test_team_lead_cannot_write_person_role_for_other_team(api, admin_token, bob_person_id):
+    # Bootstrap a fresh Team led by Priya so we have a genuine "TeamLeadUser
+    # of some Team other than Team 1" actor to test with — Team 2's own real
+    # TeamLeadUser (Neil) is also an org admin in the imported V1.2 data
+    # (see conftest.py), which would let this request through for the wrong
+    # reason (the org-admin path, not a same-vs-other-Team distinction).
+    # Priya already holds an ordinary NormalUser role on Team 1 too, which
+    # is exactly the point: that alone must not be enough to write Team 1's
+    # person_role once she's a TeamLeadUser elsewhere.
+    new_team = api.post(
+        "/team",
+        json={"name": f"Scratch Team {uuid.uuid4().hex[:8]}", "initial_team_lead_person_id": 3},
+        headers=auth(admin_token),
+    )
+    assert new_team.status_code == 201, new_team.text
+
+    # A fresh login, not a cached fixture token — the JWT's team_roles is a
+    # snapshot taken at login time, so it must be issued after the new
+    # TeamLeadUser role above actually exists.
+    login = api.post(
+        "/auth/login", json={"external_login": "priya.sharma@example.com", "password": "priya-pass1"}
+    )
+    priya_token = login.json()["token"]
+
     resp = api.post(
         "/person-role",
         json={"person_id": bob_person_id, "team_id": 1, "role": "NormalUser"},
-        headers=auth(tom_token),
+        headers=auth(priya_token),
     )
     assert resp.status_code == 403
 

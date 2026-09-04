@@ -85,6 +85,12 @@ CREATE TABLE person_role (
     -- Whether this Person can be assigned to work items on this Team.
     is_resource  boolean NOT NULL DEFAULT false,
     role         team_role NOT NULL DEFAULT 'NormalUser',
+    -- A shorter name this Person is known by on this Team (e.g. "Alice"
+    -- rather than "Alice Chen"), shown in place of person.name wherever a
+    -- screen displays a name in the context of this Team. Null means no
+    -- override. Level 1 is read-only (seed data only) — editing is deferred
+    -- to a dedicated Team Management screen in Level 2 (D1.4-21).
+    nickname     text,
     PRIMARY KEY (person_id, team_id)
 );
 

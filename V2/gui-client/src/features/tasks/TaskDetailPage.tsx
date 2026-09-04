@@ -31,6 +31,7 @@ import {
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openItemWindow } from "../../lib/windowNav";
+import { personDisplayName } from "../../lib/people";
 import {
   addBusinessDays,
   businessDaysBetween,
@@ -45,12 +46,10 @@ import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function formatDate(date: Date | null): string {
-  return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "—";
-}
-
-// Requested Start/End Date's own "dd-Mmm-yy" display format (mockup 1a) —
-// deliberately not the browser's locale-controlled native date-input format.
+// Shared display format for all three scheduling dates (mockup 1a used a
+// second, longer format for Planned Start with no stated reason — unified
+// here rather than carrying that inconsistency forward). Deliberately not
+// the browser's locale-controlled native date-input format.
 function formatDdMmmYy(date: Date | null): string {
   if (!date) return "—";
   const yy = String(date.getFullYear()).slice(-2);
@@ -148,12 +147,16 @@ export function TaskDetailPage() {
   const resourceCandidates = activePeople.filter((p) => teamResourcePersonIds.has(p.person_id));
   // Resources listbox ordering (D1.4-18, §3.11): checked-first, alphabetical
   // within each group, recomputed on every render off assignedIds so ticking
-  // or unticking a resource re-sorts it immediately.
+  // or unticking a resource re-sorts it immediately. Sorted and displayed by
+  // each Person's Team-scoped display name (D1.4-21: nickname if this Team
+  // set one, else their plain name), matching what's actually shown.
   const sortedResourcePeople = [...resourceCandidates].sort((a, b) => {
     const aAssigned = assignedIds.has(a.person_id);
     const bAssigned = assignedIds.has(b.person_id);
     if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
-    return a.name.localeCompare(b.name);
+    return personDisplayName(a.person_id, teamProject?.team_id, people, personRoles).localeCompare(
+      personDisplayName(b.person_id, teamProject?.team_id, people, personRoles),
+    );
   });
 
   // Computed display dates (D1.4-14) — see src/lib/schedule.ts for the V1.2
@@ -254,7 +257,7 @@ export function TaskDetailPage() {
               <option value="">(none)</option>
               {activePeople.map((p) => (
                 <option key={p.person_id} value={p.person_id}>
-                  {p.name}
+                  {personDisplayName(p.person_id, teamProject?.team_id, people, personRoles)}
                 </option>
               ))}
             </Box>
@@ -335,7 +338,9 @@ export function TaskDetailPage() {
                     title={person.name}
                     sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                   >
-                    {truncateResourceName(person.name)}
+                    {truncateResourceName(
+                      personDisplayName(person.person_id, teamProject?.team_id, people, personRoles),
+                    )}
                   </Box>
                 </Box>
               ))}
@@ -397,7 +402,7 @@ export function TaskDetailPage() {
                 <option value="">(none)</option>
                 {activePeople.map((p) => (
                   <option key={p.person_id} value={p.person_id}>
-                    {p.name}
+                    {personDisplayName(p.person_id, teamProject?.team_id, people, personRoles)}
                   </option>
                 ))}
               </FieldSelect>
@@ -456,8 +461,8 @@ export function TaskDetailPage() {
                   setField("start_relative_days_to_project", offset);
                 }}
               />
-              <FieldStatic label="Planned Start" width={82} fontSize={10.5}>
-                {formatDate(startDate)}
+              <FieldStatic label="Planned Start" width={82}>
+                {formatDdMmmYy(startDate)}
               </FieldStatic>
               <DateField
                 label="End Date"
@@ -554,7 +559,9 @@ export function TaskDetailPage() {
           <Box sx={{ p: "10px 12px" }}>
             {subTab === 0 && <DependenciesPanel taskId={id} hideHeading />}
             {subTab === 1 && <AttachmentsPanel owner={{ task_id: id }} hideHeading />}
-            {subTab === 2 && <RemarksPanel owner={{ task_id: id }} hideHeading />}
+            {subTab === 2 && (
+              <RemarksPanel owner={{ task_id: id }} hideHeading teamId={teamProject?.team_id} />
+            )}
           </Box>
         </Box>
       </Box>
