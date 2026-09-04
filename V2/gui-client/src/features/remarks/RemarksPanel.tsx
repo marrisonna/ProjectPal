@@ -10,7 +10,13 @@ import { useCreateRemark, useRemarks, usePeople, type RemarkOwner } from "../../
 
 // Modernised per Plan.md §5: no separate RemarkWindow — an inline comment
 // thread, built once here and reused by Task/Project/Component Detail.
-export function RemarksPanel({ owner }: { owner: RemarkOwner }) {
+export function RemarksPanel({
+  owner,
+  hideHeading = false,
+}: {
+  owner: RemarkOwner;
+  hideHeading?: boolean;
+}) {
   const { data: remarks, isLoading } = useRemarks(owner);
   const { data: people } = usePeople();
   const createRemark = useCreateRemark(owner);
@@ -28,9 +34,11 @@ export function RemarksPanel({ owner }: { owner: RemarkOwner }) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" gutterBottom>
-        Remarks
-      </Typography>
+      {!hideHeading && (
+        <Typography variant="subtitle1" gutterBottom>
+          Remarks
+        </Typography>
+      )}
       {isLoading && <CircularProgress size={20} />}
       <Stack spacing={1} sx={{ mb: 2 }}>
         {remarks?.map((remark) => (

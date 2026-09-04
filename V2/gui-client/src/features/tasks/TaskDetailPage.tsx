@@ -2,25 +2,27 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import {
+  DateField,
+  DenseButton,
+  FieldInput,
+  FieldLabel,
+  FieldSelect,
+  FieldStatic,
+  FieldTextArea,
+} from "../../components/DenseField";
+import {
   useAssignResource,
+  useAttachments,
   useComponents,
   useDependencies,
   usePeople,
+  usePersonRoles,
   useProjects,
+  useRemarks,
   useTask,
   useTaskResources,
   useTasks,
@@ -41,8 +43,18 @@ import { RemarksPanel } from "../remarks/RemarksPanel";
 import { DependenciesPanel } from "../dependencies/DependenciesPanel";
 import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 function formatDate(date: Date | null): string {
   return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "—";
+}
+
+// Requested Start/End Date's own "dd-Mmm-yy" display format (mockup 1a) —
+// deliberately not the browser's locale-controlled native date-input format.
+function formatDdMmmYy(date: Date | null): string {
+  if (!date) return "—";
+  const yy = String(date.getFullYear()).slice(-2);
+  return `${String(date.getDate()).padStart(2, "0")}-${MONTHS[date.getMonth()]}-${yy}`;
 }
 
 function toDateInputValue(date: Date | null): string {
@@ -61,6 +73,8 @@ function truncateResourceName(name: string): string {
     : name;
 }
 
+const TABS = ["DEPENDENCIES", "ATTACHMENTS", "REMARKS"] as const;
+
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const id = Number(taskId);
@@ -70,9 +84,12 @@ export function TaskDetailPage() {
   const { data: projects } = useProjects();
   const { data: components } = useComponents();
   const { data: people } = usePeople();
+  const { data: personRoles } = usePersonRoles();
   const { data: assignedResources } = useTaskResources(id);
   const { data: allTasks } = useTasks();
   const { data: dependencies } = useDependencies(id);
+  const { data: attachments } = useAttachments({ task_id: id });
+  const { data: remarks } = useRemarks({ task_id: id });
   const updateTask = useUpdateTask(id);
   const assignResource = useAssignResource(id);
   const unassignResource = useUnassignResource(id);
@@ -80,15 +97,19 @@ export function TaskDetailPage() {
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [resourceError, setResourceError] = useState<string | null>(null);
+  // Shared tab strip for the low-frequency sub-panels, each labelled with a
+  // count (§3.11) — only one is ever visible, matching V1.2's Remarks/
+  // Attachments/Links tabs.
+  const [subTab, setSubTab] = useState(0);
 
   useEffect(() => {
     if (task) setForm({ ...task });
   }, [task]);
 
-  // Also wait on the reference lists the form's <TextField select> options
-  // come from — rendering a select with no options yet (before they load)
-  // is a real MUI warning, not just a cosmetic flash.
-  if (isLoading || !form || !projects || !components || !people) {
+  // Also wait on the reference lists the form's select options come from —
+  // rendering a select with no options yet (before they load) would briefly
+  // show an empty box rather than the real placeholder.
+  if (isLoading || !form || !projects || !components || !people || !personRoles) {
     return <CircularProgress />;
   }
 
@@ -111,14 +132,24 @@ export function TaskDetailPage() {
   const teamProject = projects?.find((p) => p.project_id === field("project_id"));
   const teamComponents = components?.filter((c) => c.team_id === teamProject?.team_id) ?? [];
   const assignedIds = new Set(assignedResources?.map((r) => r.person_id));
-  // V1.2's Owner/Requestor/Resource pickers list Person.AllActiveInstances,
-  // not every Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
+  // V1.2's Owner/Requestor pickers list Person.AllActiveInstances, not every
+  // Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
   // usage) — matched here (D1.4-15).
   const activePeople = people?.filter((p) => p.is_active) ?? [];
+  // Resources, unlike Owner/Requestor, is scoped to the task's own Team: only
+  // people with an is_resource person_role there can actually be assigned
+  // (the server already rejects anyone else — see the assignResource catch
+  // below), so the listbox should only ever offer that set.
+  const teamResourcePersonIds = new Set(
+    personRoles
+      ?.filter((pr) => pr.team_id === teamProject?.team_id && pr.is_resource)
+      .map((pr) => pr.person_id),
+  );
+  const resourceCandidates = activePeople.filter((p) => teamResourcePersonIds.has(p.person_id));
   // Resources listbox ordering (D1.4-18, §3.11): checked-first, alphabetical
   // within each group, recomputed on every render off assignedIds so ticking
   // or unticking a resource re-sorts it immediately.
-  const sortedResourcePeople = [...activePeople].sort((a, b) => {
+  const sortedResourcePeople = [...resourceCandidates].sort((a, b) => {
     const aAssigned = assignedIds.has(a.person_id);
     const bAssigned = assignedIds.has(b.person_id);
     if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
@@ -138,79 +169,153 @@ export function TaskDetailPage() {
   const endDate = computeEndDate(startDate, duration);
 
   return (
-    <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-        <Typography variant="h5" component="h1">
-          Task #{id}
-        </Typography>
-        <IconButton
-          size="small"
-          title="Open in new window"
-          onClick={() => openItemWindow("tasks", id)}
-        >
-          <OpenInNewIcon fontSize="small" />
-        </IconButton>
-        <Box sx={{ flexGrow: 1 }} />
-        <Button variant="outlined" onClick={() => navigate("/tasks")}>
-          Back to list
-        </Button>
-        <Button variant="contained" onClick={handleSave} disabled={updateTask.isPending}>
-          Save
-        </Button>
-      </Box>
+    // Fixed, narrow width rather than filling the browser — matches the
+    // multi-window goal (D1.4-8): a Task Detail opened in its own window is
+    // meant to be small enough to sit alongside several others. Rebuilt
+    // directly against the Claude Design mockup's own markup/CSS (project
+    // b721f06c-e472-46b7-8b29-fad6315ab723, "Task Detail Compact Mockups.dc.html",
+    // option 1a) rather than approximated from screenshots (Q1.4-17).
+    <Box sx={{ width: 624, mx: "auto" }}>
+      <Box
+        sx={{
+          bgcolor: "#fff",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: "8px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          p: "12px",
+        }}
+      >
+        {/* Compact identity header: a slim icon+title strip folding in the
+            Task's own Description as its title, instead of a full labelled
+            field (§3.11's "collapse identity into one compact header"). */}
+        <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: "10px" }}>
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: "5px",
+              bgcolor: "primary.dark",
+              color: "primary.contrastText",
+              fontSize: 12,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            T
+          </Box>
+          <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+            <Box sx={{ fontSize: 9, color: "rgba(0,0,0,0.5)" }}>
+              TASK #{id}
+              {teamProject ? ` · ${teamProject.name.toUpperCase()}` : ""}
+            </Box>
+            <Box
+              component="input"
+              value={field("description") as string}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setField("description", event.target.value)}
+              sx={{
+                fontSize: 14,
+                fontWeight: 600,
+                border: "none",
+                outline: "none",
+                bgcolor: "transparent",
+                fontFamily: "inherit",
+                width: "100%",
+                p: 0,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            />
+          </Box>
+          {/* Urgency isn't shown here: it's real, computed client-side
+              (D1.2-2), but that computation isn't built until Stage 3 (see
+              TaskListPage.tsx) — showing a placeholder number would be worse
+              than not showing one. */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
+            <FieldLabel>Owner</FieldLabel>
+            <Box
+              component="select"
+              value={(field("owner_person_id") as number | "") ?? ""}
+              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
+              }
+              sx={{
+                border: "none",
+                outline: "none",
+                bgcolor: "transparent",
+                fontFamily: "inherit",
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              <option value="">(none)</option>
+              {activePeople.map((p) => (
+                <option key={p.person_id} value={p.person_id}>
+                  {p.name}
+                </option>
+              ))}
+            </Box>
+          </Box>
+          <IconButton
+            title="Open in new window"
+            size="small"
+            sx={{ p: "2px" }}
+            onClick={() => openItemWindow("tasks", id)}
+          >
+            <OpenInNewIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+          <DenseButton onClick={() => navigate("/tasks")}>BACK</DenseButton>
+          <DenseButton variant="filled" onClick={handleSave} disabled={updateTask.isPending}>
+            SAVE
+          </DenseButton>
+        </Box>
 
-      {saveError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {saveError}
-        </Alert>
-      )}
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <TextField
-          label="Description"
-          fullWidth
-          margin="normal"
-          value={field("description")}
-          onChange={(event) => setField("description", event.target.value)}
-        />
-
+        {saveError && (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {saveError}
+          </Alert>
+        )}
         {resourceError && (
           <Alert severity="error" sx={{ mb: 1 }} onClose={() => setResourceError(null)}>
             {resourceError}
           </Alert>
         )}
-        {/* Resources listbox beside rows 1+2 (Priority/... and Effort/...)
-            rather than in its own card — it's a fixed-size control (§3.11,
-            D1.4-19) and would otherwise leave an empty card around it. */}
-        <Box sx={{ display: "flex", gap: 3, alignItems: "stretch", mt: 1 }}>
-          <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column" }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-              Resources
-            </Typography>
+
+        {/* Resources beside the scheduling fields — a fixed-size control
+            (§3.11, D1.4-18) sized so its box lines up with Priority's box. */}
+        <Box sx={{ mb: 1, display: "flex", gap: "12px", alignItems: "stretch" }}>
+          <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+            <FieldLabel>Resources</FieldLabel>
+            {/* Fixed height, tuned to land exactly on the Effort row's
+                bottom (measured, not guessed — see D1.4-18): flex:1 doesn't
+                work here since the sibling column has no intrinsic bound of
+                its own to stretch against, so an unbounded resources list
+                would inflate the whole row's height instead of scrolling. */}
             <Box
               sx={{
-                width: 160,
-                flex: 1,
-                minHeight: 0,
-                maxHeight: 110,
+                width: 116,
+                height: 70,
                 overflowY: "auto",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                p: 0.5,
+                border: "1px solid rgba(0,0,0,0.15)",
+                borderRadius: "4px",
+                p: "4px 0",
               }}
             >
               {sortedResourcePeople.map((person) => (
                 <Box
                   key={person.person_id}
                   component="label"
-                  sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer" }}
+                  sx={{ display: "flex", alignItems: "center", gap: "5px", fontSize: 11, px: "6px", py: "3px", cursor: "pointer" }}
                 >
-                  <Checkbox
-                    size="small"
-                    sx={{ p: 0.5 }}
+                  <Box
+                    component="input"
+                    type="checkbox"
+                    sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
                     checked={assignedIds.has(person.person_id)}
-                    onChange={async (event) => {
+                    onChange={async (event: React.ChangeEvent<HTMLInputElement>) => {
                       setResourceError(null);
                       try {
                         if (event.target.checked) {
@@ -225,255 +330,234 @@ export function TaskDetailPage() {
                       }
                     }}
                   />
-                  <Typography variant="body2" noWrap title={person.name}>
+                  <Box
+                    component="span"
+                    title={person.name}
+                    sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  >
                     {truncateResourceName(person.name)}
-                  </Typography>
+                  </Box>
                 </Box>
               ))}
             </Box>
           </Box>
 
-          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-            {/* Row 1: Priority/Status/Task Type/Requestor/Owner. */}
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 2 }}>
-              <TextField
-                select
+          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+            {/* Row 1: Priority/Status/Task Type/Requestor, spread per the
+                mockup — widths widened a little past its own (e.g. Status
+                88 -> 108) since the mockup's demo strings ("Med", "Ready")
+                are shorter than our real enum values ("MedHigh",
+                "InProgress"); §3.11's "size fields to content" applies to
+                our actual content, not the mockup's placeholder text. */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "space-between" }}>
+              <FieldSelect
                 label="Priority"
-                value={field("priority") ?? ""}
-                onChange={(event) => setField("priority", event.target.value || null)}
+                width={84}
+                value={(field("priority") as string) ?? ""}
+                onChange={(v) => setField("priority", v || null)}
               >
-                <MenuItem value="">(none)</MenuItem>
+                <option value="">(none)</option>
                 {PRIORITY_LEVELS.map((p) => (
-                  <MenuItem key={p} value={p}>
+                  <option key={p} value={p}>
                     {p}
-                  </MenuItem>
+                  </option>
                 ))}
-              </TextField>
-              <TextField
-                select
+              </FieldSelect>
+              <FieldSelect
                 label="Status"
-                value={field("status")}
-                onChange={(event) => setField("status", event.target.value)}
+                width={108}
+                value={field("status") as string}
+                onChange={(v) => setField("status", v)}
               >
                 {TASK_STATUSES.map((s) => (
-                  <MenuItem key={s} value={s}>
+                  <option key={s} value={s}>
                     {s}
-                  </MenuItem>
+                  </option>
                 ))}
-              </TextField>
-              <TextField
-                select
+              </FieldSelect>
+              <FieldSelect
                 label="Task Type"
-                value={field("task_type") ?? ""}
-                onChange={(event) => setField("task_type", event.target.value || null)}
+                width={118}
+                value={(field("task_type") as string) ?? ""}
+                onChange={(v) => setField("task_type", v || null)}
               >
-                <MenuItem value="">(none)</MenuItem>
+                <option value="">(none)</option>
                 {TASK_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>
+                  <option key={t} value={t}>
                     {t}
-                  </MenuItem>
+                  </option>
                 ))}
-              </TextField>
-              <TextField
-                select
+              </FieldSelect>
+              <FieldSelect
                 label="Requestor"
-                value={field("requestor_person_id") ?? ""}
-                onChange={(event) =>
-                  setField(
-                    "requestor_person_id",
-                    event.target.value === "" ? null : Number(event.target.value),
-                  )
-                }
+                width={114}
+                value={(field("requestor_person_id") as number | "") ?? ""}
+                onChange={(v) => setField("requestor_person_id", v === "" ? null : Number(v))}
               >
-                <MenuItem value="">(none)</MenuItem>
+                <option value="">(none)</option>
                 {activePeople.map((p) => (
-                  <MenuItem key={p.person_id} value={p.person_id}>
+                  <option key={p.person_id} value={p.person_id}>
                     {p.name}
-                  </MenuItem>
+                  </option>
                 ))}
-              </TextField>
-              <TextField
-                select
-                label="Owner"
-                value={field("owner_person_id") ?? ""}
-                onChange={(event) =>
-                  setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
-                }
-              >
-                <MenuItem value="">(none)</MenuItem>
-                {activePeople.map((p) => (
-                  <MenuItem key={p.person_id} value={p.person_id}>
-                    {p.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              </FieldSelect>
             </Box>
 
-            {/* Row 2: Effort/Effort Type/% Allocation/dates/Duration/Tentative. */}
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              <TextField
+            {/* Row 2: Effort/Effort Type/% Allocation/dates, sized and spread
+                exactly per the mockup. */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "space-between" }}>
+              <FieldInput
                 label="Effort"
+                width={42}
                 type="number"
-                sx={{ width: 90 }}
-                value={field("effort_in_days") ?? ""}
-                onChange={(event) =>
-                  setField("effort_in_days", event.target.value === "" ? null : Number(event.target.value))
-                }
+                center
+                value={(field("effort_in_days") as number) ?? ""}
+                onChange={(v) => setField("effort_in_days", v === "" ? null : Number(v))}
               />
               {/* Two stacked radio buttons, as V1.2 uses, rather than a wider
-                  toggle switch — narrower, and needs no group label since each
-                  option already carries its own visible text (D1.4-19). */}
-              <RadioGroup
-                aria-label="Effort Type"
-                value={field("effort_type") ?? ""}
-                onChange={(event) => setField("effort_type", event.target.value)}
-                sx={{ justifyContent: "flex-end" }}
-              >
-                <FormControlLabel value="PersonDays" control={<Radio size="small" sx={{ p: 0.5 }} />} label="Days" />
-                <FormControlLabel value="Duration" control={<Radio size="small" sx={{ p: 0.5 }} />} label="Duration" />
-              </RadioGroup>
-              <TextField
-                label="% Allocation"
+                  toggle switch — bottom-aligned with the row's field-boxes
+                  rather than top-aligned like a labelled field (D1.4-19). */}
+              <Box sx={{ width: 66, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: "2px" }}>
+                {(["PersonDays", "Duration"] as const).map((opt) => (
+                  <Box
+                    key={opt}
+                    component="label"
+                    sx={{ display: "flex", alignItems: "center", gap: "4px", fontSize: 11, cursor: "pointer" }}
+                  >
+                    <Box
+                      component="input"
+                      type="radio"
+                      name="effortType"
+                      sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
+                      checked={field("effort_type") === opt}
+                      onChange={() => setField("effort_type", opt)}
+                    />
+                    {opt === "PersonDays" ? "Days" : "Duration"}
+                  </Box>
+                ))}
+              </Box>
+              <FieldInput
+                label="% Alloc"
+                width={48}
                 type="number"
-                sx={{ width: 140 }}
-                value={field("percentage_allocation") ?? ""}
-                onChange={(event) =>
-                  setField(
-                    "percentage_allocation",
-                    event.target.value === "" ? null : Number(event.target.value),
-                  )
-                }
+                center
+                value={(field("percentage_allocation") as number) ?? ""}
+                onChange={(v) => setField("percentage_allocation", v === "" ? null : Number(v))}
               />
-              <TextField
-                label="Requested Start Date"
-                type="date"
-                sx={{ width: 170 }}
+              <DateField
+                label="Requested Start"
+                width={92}
                 value={toDateInputValue(earliestStartDate)}
-                slotProps={{ inputLabel: { shrink: true } }}
-                onChange={(event) => {
-                  if (!event.target.value || !teamProject?.start_date) return;
-                  const chosen = new Date(`${event.target.value}T00:00:00`);
+                display={formatDdMmmYy(earliestStartDate)}
+                onChange={(v) => {
+                  if (!v || !teamProject?.start_date) return;
+                  const chosen = new Date(`${v}T00:00:00`);
                   const offset = businessDaysBetween(new Date(teamProject.start_date), chosen);
                   setField("start_relative_days_to_project", offset);
                 }}
-                helperText="Sets the start offset (§4.1, D1.4-19)"
               />
-              <TextField
-                label="Planned Start Date"
-                sx={{ width: 150 }}
-                value={formatDate(startDate)}
-                slotProps={{ input: { readOnly: true } }}
-                helperText="Accounts for Dependencies"
-              />
-              <TextField
+              <FieldStatic label="Planned Start" width={82} fontSize={10.5}>
+                {formatDate(startDate)}
+              </FieldStatic>
+              <DateField
                 label="End Date"
-                type="date"
-                sx={{ width: 150 }}
+                width={92}
                 value={toDateInputValue(endDate)}
-                slotProps={{ inputLabel: { shrink: true } }}
-                onChange={(event) => {
-                  if (!event.target.value || !teamProject?.start_date || duration == null) return;
-                  const chosen = new Date(`${event.target.value}T00:00:00`);
-                  // V1.2's Task.EndDate setter: back-compute the Start Date this
-                  // End Date implies (subtracting Duration business days), then
-                  // convert that to the stored offset — same as editing
-                  // Requested Start Date directly, just anchored at the other
-                  // end (D1.4-20).
+                display={formatDdMmmYy(endDate)}
+                onChange={(v) => {
+                  if (!v || !teamProject?.start_date || duration == null) return;
+                  const chosen = new Date(`${v}T00:00:00`);
+                  // V1.2's Task.EndDate setter: back-compute the Start Date
+                  // this End Date implies (subtracting Duration business
+                  // days), then convert that to the stored offset — same as
+                  // editing Requested Start Date directly, anchored at the
+                  // other end (D1.4-20).
                   const impliedStart = addBusinessDays(chosen, -(Math.ceil(duration) - 1));
                   const offset = businessDaysBetween(new Date(teamProject.start_date), impliedStart);
                   setField("start_relative_days_to_project", offset);
                 }}
-                helperText="Editing this also sets the start offset (D1.4-20)"
-              />
-              <TextField
-                label="Duration (days)"
-                sx={{ width: 130 }}
-                value={duration != null ? duration.toFixed(1) : "—"}
-                slotProps={{ input: { readOnly: true } }}
-              />
-              <FormControlLabel
-                sx={{ alignSelf: "center" }}
-                control={
-                  <Checkbox
-                    checked={Boolean(field("tentative_resource_assignment"))}
-                    onChange={(event) => setField("tentative_resource_assignment", event.target.checked)}
-                  />
-                }
-                label="Tentative"
               />
             </Box>
           </Box>
         </Box>
 
-        <TextField
-          label="Detailed Description"
-          fullWidth
-          multiline
-          minRows={4}
-          margin="normal"
-          value={field("detailed_description") ?? ""}
-          onChange={(event) => setField("detailed_description", event.target.value)}
-        />
+        <Box sx={{ mb: 1 }}>
+          <FieldTextArea
+            label="Detailed Description"
+            value={(field("detailed_description") as string) ?? ""}
+            onChange={(v) => setField("detailed_description", v)}
+          />
+        </Box>
 
-        <TextField
-          label="External Reference URL"
-          fullWidth
-          margin="normal"
-          value={field("external_reference_url") ?? ""}
-          onChange={(event) => setField("external_reference_url", event.target.value || null)}
-        />
-      </Paper>
-
-      {/* Project/Component: wide edit boxes of their own row, placed after
-          Resources/Description rather than among the short fixed-width
-          fields — their values can run long (V1.2 screenshot, D1.4-19). */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <TextField
-            select
+        {/* Project/Component: wide edit boxes of their own row, placed after
+            Resources/Description rather than among the short fixed-width
+            fields — their values can run long (V1.2 screenshot, D1.4-19). */}
+        <Box sx={{ mb: 1, display: "flex", gap: "8px" }}>
+          <FieldSelect
             label="Project"
-            value={field("project_id")}
-            onChange={(event) => setField("project_id", Number(event.target.value))}
-            sx={{ flex: 1 }}
+            flex={1}
+            value={field("project_id") as number}
+            onChange={(v) => setField("project_id", Number(v))}
           >
             {projects?.map((p) => (
-              <MenuItem key={p.project_id} value={p.project_id}>
+              <option key={p.project_id} value={p.project_id}>
                 {p.name}
-              </MenuItem>
+              </option>
             ))}
-          </TextField>
-          <TextField
-            select
+          </FieldSelect>
+          <FieldSelect
             label="Component"
-            value={field("component_id") ?? ""}
-            onChange={(event) =>
-              setField("component_id", event.target.value === "" ? null : Number(event.target.value))
-            }
-            sx={{ flex: 1 }}
+            flex={1}
+            value={(field("component_id") as number | "") ?? ""}
+            onChange={(v) => setField("component_id", v === "" ? null : Number(v))}
           >
-            <MenuItem value="">(none)</MenuItem>
+            <option value="">(none)</option>
             {teamComponents.map((c) => (
-              <MenuItem key={c.component_id} value={c.component_id}>
+              <option key={c.component_id} value={c.component_id}>
                 {c.name}
-              </MenuItem>
+              </option>
             ))}
-          </TextField>
+          </FieldSelect>
         </Box>
-      </Paper>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <DependenciesPanel taskId={id} />
-      </Paper>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <AttachmentsPanel owner={{ task_id: id }} />
-      </Paper>
-
-      <Paper sx={{ p: 3 }}>
-        <RemarksPanel owner={{ task_id: id }} />
-      </Paper>
-
-      <Divider sx={{ my: 3 }} />
+        {/* Dependencies/Attachments/Remarks share one tab strip, each
+            labelled with a count, rather than three permanently-expanded
+            cards (§3.11 — matches V1.2's Remarks/Attachments/Links tabs). */}
+        <Box sx={{ bgcolor: "#fff", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px", overflow: "hidden" }}>
+          <Box sx={{ display: "flex", borderBottom: "1px solid rgba(0,0,0,0.12)" }}>
+            {TABS.map((label, index) => {
+              const count = [dependencies?.length ?? 0, attachments?.length ?? 0, remarks?.length ?? 0][index];
+              const active = subTab === index;
+              return (
+                <Box
+                  key={label}
+                  onClick={() => setSubTab(index)}
+                  sx={{
+                    flex: 1,
+                    textAlign: "center",
+                    py: "8px",
+                    px: "4px",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: "0.3px",
+                    cursor: "pointer",
+                    borderBottom: active ? "2px solid" : "2px solid transparent",
+                    borderBottomColor: active ? "primary.dark" : "transparent",
+                    color: active ? "primary.dark" : "rgba(0,0,0,0.55)",
+                  }}
+                >
+                  {label} ({count})
+                </Box>
+              );
+            })}
+          </Box>
+          <Box sx={{ p: "10px 12px" }}>
+            {subTab === 0 && <DependenciesPanel taskId={id} hideHeading />}
+            {subTab === 1 && <AttachmentsPanel owner={{ task_id: id }} hideHeading />}
+            {subTab === 2 && <RemarksPanel owner={{ task_id: id }} hideHeading />}
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 }

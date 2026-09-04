@@ -55,6 +55,15 @@ export interface PersonRecord {
   colour: string | null;
 }
 
+// GET /person-role has no response_model server-side either (rest-api/app/
+// routes/teams.py's list_person_roles) — typed from its actual SELECT.
+export interface PersonRoleRecord {
+  person_id: number;
+  team_id: number;
+  is_resource: boolean;
+  role: string;
+}
+
 export interface RemarkRecord {
   remark_id: number;
   task_id: number | null;

@@ -22,7 +22,13 @@ import {
 } from "../../api/hooks";
 import { apiClient } from "../../api/client";
 
-export function AttachmentsPanel({ owner }: { owner: RemarkOwner }) {
+export function AttachmentsPanel({
+  owner,
+  hideHeading = false,
+}: {
+  owner: RemarkOwner;
+  hideHeading?: boolean;
+}) {
   const { data: attachments } = useAttachments(owner);
   const createLink = useCreateLinkAttachment(owner);
   const createFile = useCreateFileAttachment(owner);
@@ -63,8 +69,8 @@ export function AttachmentsPanel({ owner }: { owner: RemarkOwner }) {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1">Attachments</Typography>
+      <Box sx={{ display: "flex", justifyContent: hideHeading ? "flex-end" : "space-between", alignItems: "center" }}>
+        {!hideHeading && <Typography variant="subtitle1">Attachments</Typography>}
         <Box>
           <Button size="small" onClick={() => setLinkDialogOpen(true)}>
             Add Link

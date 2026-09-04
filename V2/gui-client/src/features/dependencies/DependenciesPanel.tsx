@@ -24,7 +24,13 @@ import {
 
 // D1.4-4: an explicit "Add Dependency" search-and-pick dialog, replacing
 // V1.2's drag-between-two-listboxes interaction for Level 1.
-export function DependenciesPanel({ taskId }: { taskId: number }) {
+export function DependenciesPanel({
+  taskId,
+  hideHeading = false,
+}: {
+  taskId: number;
+  hideHeading?: boolean;
+}) {
   const { data: dependencies } = useDependencies(taskId);
   const { data: tasks } = useTasks();
   const createDependency = useCreateDependency(taskId);
@@ -54,8 +60,8 @@ export function DependenciesPanel({ taskId }: { taskId: number }) {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1">Dependencies</Typography>
+      <Box sx={{ display: "flex", justifyContent: hideHeading ? "flex-end" : "space-between", alignItems: "center" }}>
+        {!hideHeading && <Typography variant="subtitle1">Dependencies</Typography>}
         <Button size="small" onClick={() => setDialogOpen(true)}>
           Add Dependency
         </Button>

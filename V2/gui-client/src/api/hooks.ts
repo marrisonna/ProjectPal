@@ -5,6 +5,7 @@ import type {
   ComponentRecord,
   DependencyRecord,
   PersonRecord,
+  PersonRoleRecord,
   ProjectRecord,
   RemarkRecord,
   TaskRecord,
@@ -35,6 +36,19 @@ export function usePeople() {
   return useQuery({
     queryKey: ["people"],
     queryFn: async () => unwrap<PersonRecord[]>(await apiClient.GET("/person")),
+  });
+}
+
+// Which Team(s) each Person belongs to, and whether they're a Resource on
+// it — the Task Detail Resources list is scoped to the task's own Team via
+// this (unlike Owner/Requestor, which stay org-wide per D1.4-15). Fetched
+// unfiltered (small, org-wide) rather than per-team, so it can be called
+// unconditionally alongside the page's other reference-data hooks and
+// filtered afterwards once the task's own team is known.
+export function usePersonRoles() {
+  return useQuery({
+    queryKey: ["person-roles"],
+    queryFn: async () => unwrap<PersonRoleRecord[]>(await apiClient.GET("/person-role")),
   });
 }
 
