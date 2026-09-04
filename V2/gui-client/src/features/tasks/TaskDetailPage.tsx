@@ -30,6 +30,7 @@ import {
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openItemWindow } from "../../lib/windowNav";
 import {
+  addBusinessDays,
   businessDaysBetween,
   computeDuration,
   computeEarliestStartDate,
@@ -366,10 +367,23 @@ export function TaskDetailPage() {
               />
               <TextField
                 label="End Date"
+                type="date"
                 sx={{ width: 150 }}
-                value={formatDate(endDate)}
-                slotProps={{ input: { readOnly: true } }}
-                helperText="Planned Start + Duration"
+                value={toDateInputValue(endDate)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                onChange={(event) => {
+                  if (!event.target.value || !teamProject?.start_date || duration == null) return;
+                  const chosen = new Date(`${event.target.value}T00:00:00`);
+                  // V1.2's Task.EndDate setter: back-compute the Start Date this
+                  // End Date implies (subtracting Duration business days), then
+                  // convert that to the stored offset — same as editing
+                  // Requested Start Date directly, just anchored at the other
+                  // end (D1.4-20).
+                  const impliedStart = addBusinessDays(chosen, -(Math.ceil(duration) - 1));
+                  const offset = businessDaysBetween(new Date(teamProject.start_date), impliedStart);
+                  setField("start_relative_days_to_project", offset);
+                }}
+                helperText="Editing this also sets the start offset (D1.4-20)"
               />
               <TextField
                 label="Duration (days)"
