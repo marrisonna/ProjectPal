@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
+import { invalidateEverywhere } from "../lib/liveSync";
 import type {
   AttachmentRecord,
   ComponentRecord,
@@ -82,8 +83,8 @@ export function useUpdateTask(taskId: number) {
         }),
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", taskId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      invalidateEverywhere(queryClient, ["tasks", taskId]);
+      invalidateEverywhere(queryClient, ["tasks"]);
     },
   });
 }
@@ -122,8 +123,7 @@ export function useAssignResource(taskId: number) {
           body: { person_id: personId },
         }),
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tasks", taskId, "resources"] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]),
   });
 }
 
@@ -136,8 +136,7 @@ export function useUnassignResource(taskId: number) {
           params: { path: { task_id: taskId, person_id: personId } },
         }),
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["tasks", taskId, "resources"] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]),
   });
 }
 
@@ -167,7 +166,7 @@ export function useCreateRemark(owner: RemarkOwner) {
       unwrap<RemarkRecord>(
         await apiClient.POST("/remark", { body: { remark_text: remarkText, ...owner } }),
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["remarks", ...key] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["remarks", ...key]),
   });
 }
 
@@ -190,8 +189,7 @@ export function useCreateDependency(taskId: number) {
   return useMutation({
     mutationFn: async (body: { pre_task_id?: number; post_task_id?: number }) =>
       unwrap<DependencyRecord>(await apiClient.POST("/dependency", { body })),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["dependencies", "task", taskId] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies", "task", taskId]),
   });
 }
 
@@ -204,8 +202,7 @@ export function useDeleteDependency(taskId: number) {
           params: { path: { dependency_id: dependencyId } },
         }),
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["dependencies", "task", taskId] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies", "task", taskId]),
   });
 }
 
@@ -234,7 +231,7 @@ export function useCreateLinkAttachment(owner: RemarkOwner) {
       for (const [k, v] of Object.entries(owner)) form.set(k, String(v));
       return unwrap<AttachmentRecord>(await apiClient.POST("/attachment", { body: form as never }));
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attachments", ...key] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["attachments", ...key]),
   });
 }
 
@@ -250,6 +247,6 @@ export function useCreateFileAttachment(owner: RemarkOwner) {
       for (const [k, v] of Object.entries(owner)) form.set(k, String(v));
       return unwrap<AttachmentRecord>(await apiClient.POST("/attachment", { body: form as never }));
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attachments", ...key] }),
+    onSuccess: () => invalidateEverywhere(queryClient, ["attachments", ...key]),
   });
 }

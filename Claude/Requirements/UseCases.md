@@ -88,6 +88,8 @@ See `KeyConcepts.md`'s Remark entry for why this matters and `DomainModel.md`'s 
 
 See `KeyConcepts.md`'s Merge/Conflict entry for the concept, and `DomainModel.md`'s Decisions (`D-DM-3`) for the concurrency-model decision. In the old app, this triggers as an automatic dialog whenever a background refresh detects the record changed elsewhere since it was loaded — likely a lower-stakes problem in a web app where data is fetched fresh per view rather than held in a long-lived in-memory client cache.
 
+This use case is specifically about two different *users* editing the same record — settled as out of scope for Level 1 (`D-DM-3`/`D-UC-2` above). A related but distinct question, *one* user's own multiple open windows staying in sync with each other after a save (motivated by the same V1.2 in-memory-cache behaviour, but not a conflict-resolution problem at all), is answered by `UserInterfaceWindows.md`'s `D-Win-5`.
+
 <a id="manage-people"></a>
 ## 9. Manage People (Admin)
 

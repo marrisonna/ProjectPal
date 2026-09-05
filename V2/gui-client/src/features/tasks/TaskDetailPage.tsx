@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -32,6 +32,7 @@ import {
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openItemWindow, openListWindow } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
+import { formatApiError } from "../../lib/apiErrors";
 import { personDisplayName } from "../../lib/people";
 import {
   addBusinessDays,
@@ -101,8 +102,18 @@ export function TaskDetailPage() {
   // Attachments/Links tabs.
   const [subTab, setSubTab] = useState(0);
 
+  // Reset the edit form when this task's own id changes (first load, or
+  // navigating to a different task) — deliberately *not* on every `task`
+  // change, since a cross-window live refresh (D-Win-5) re-fetches this
+  // same query in the background whenever anything invalidates it, and
+  // resetting on every one of those would silently overwrite an in-progress,
+  // unsaved edit in this window with whatever the server has right now.
+  const loadedTaskIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (task) setForm({ ...task });
+    if (task && loadedTaskIdRef.current !== task.task_id) {
+      setForm({ ...task });
+      loadedTaskIdRef.current = task.task_id;
+    }
   }, [task]);
 
   // Live off the form, not the fetched task, so this stays in sync while
@@ -127,8 +138,10 @@ export function TaskDetailPage() {
     setSaveError(null);
     try {
       await updateTask.mutateAsync(form!);
-    } catch {
-      setSaveError("Save failed — check required fields and try again.");
+    } catch (err) {
+      setSaveError(
+        `Save failed — ${formatApiError(err, "check required fields and try again.")}`,
+      );
     }
   }
 
@@ -515,9 +528,10 @@ export function TaskDetailPage() {
                         } else {
                           await unassignResource.mutateAsync(person.person_id);
                         }
-                      } catch {
+                      } catch (err) {
+                        const action = event.target.checked ? "assign" : "unassign";
                         setResourceError(
-                          `Couldn't assign ${person.name} — they may not be a resource on this Task's Team.`,
+                          `Couldn't ${action} ${person.name} — ${formatApiError(err, "they may not be a resource on this Task's Team.")}`,
                         );
                       }
                     }}

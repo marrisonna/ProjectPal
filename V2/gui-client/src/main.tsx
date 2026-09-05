@@ -9,8 +9,12 @@ import "@fontsource/inter/700.css";
 import "./index.css";
 import { theme } from "./theme/theme";
 import App from "./App.tsx";
+import { registerThisWindow } from "./lib/windowNav";
+import { startLiveSync } from "./lib/liveSync";
 
 const queryClient = new QueryClient();
+registerThisWindow();
+startLiveSync(queryClient);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
