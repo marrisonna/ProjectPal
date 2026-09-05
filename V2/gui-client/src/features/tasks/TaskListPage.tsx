@@ -1,19 +1,20 @@
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { useNavigate } from "react-router";
 import { useProjects, usePeople, useTasks } from "../../api/hooks";
 import type { TaskRecord } from "../../api/types";
+import { openItemWindow } from "../../lib/windowNav";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 // Column set adapted from V1.2's TaskWindow grid (GUITaskColumns.cs) — a
 // practical subset given V2 has no absolute Start/End dates yet (schedule is
 // derived, Stage 3) and Urgency isn't computed until Stage 3 either
 // (Plan.md D1.4-13's "strong hint, not a constraint" principle).
 export function TaskListPage() {
+  useDocumentTitle("All Tasks");
   const { data: tasks, isLoading } = useTasks();
   const { data: projects } = useProjects();
   const { data: people } = usePeople();
-  const navigate = useNavigate();
 
   const columns: GridColDef<TaskRecord>[] = [
     { field: "task_id", headerName: "ID", width: 70 },
@@ -40,7 +41,7 @@ export function TaskListPage() {
   return (
     <Box>
       <Typography variant="h5" component="h1" gutterBottom>
-        Tasks
+        All Tasks
       </Typography>
       <Box sx={{ height: 600 }}>
         <DataGrid
@@ -48,7 +49,10 @@ export function TaskListPage() {
           getRowId={(row) => row.task_id}
           columns={columns}
           loading={isLoading}
-          onRowDoubleClick={(params) => navigate(`/tasks/${params.id}`)}
+          // A new/re-focused window, not in-place navigation (D1.4-8's
+          // multi-window model — the same singleton-per-object window the
+          // Task Detail header's own "open in new window" icon uses).
+          onRowDoubleClick={(params) => openItemWindow("tasks", params.id)}
           density="compact"
           initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         />

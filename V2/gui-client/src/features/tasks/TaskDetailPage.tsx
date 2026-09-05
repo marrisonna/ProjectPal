@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -30,7 +30,8 @@ import {
   useUpdateTask,
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
-import { openItemWindow } from "../../lib/windowNav";
+import { openItemWindow, openListWindow } from "../../lib/windowNav";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { personDisplayName } from "../../lib/people";
 import {
   addBusinessDays,
@@ -77,7 +78,6 @@ const TABS = ["DEPENDENCIES", "ATTACHMENTS", "REMARKS"] as const;
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const id = Number(taskId);
-  const navigate = useNavigate();
 
   const { data: task, isLoading } = useTask(id);
   const { data: projects } = useProjects();
@@ -104,6 +104,10 @@ export function TaskDetailPage() {
   useEffect(() => {
     if (task) setForm({ ...task });
   }, [task]);
+
+  // Live off the form, not the fetched task, so this stays in sync while
+  // the Description field (in the header, below) is being edited.
+  useDocumentTitle(`Task - ${(form?.description as string | undefined) ?? id}`);
 
   // Also wait on the reference lists the form's select options come from —
   // rendering a select with no options yet (before they load) would briefly
@@ -133,18 +137,25 @@ export function TaskDetailPage() {
   const assignedIds = new Set(assignedResources?.map((r) => r.person_id));
   // V1.2's Owner/Requestor pickers list Person.AllActiveInstances, not every
   // Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
-  // usage) — matched here (D1.4-15).
+  // usage) — matched here (D1.4-15) for Requestor. Owner was narrowed to the
+  // task's own Team, same candidate set as Resources (D1.4-22).
   const activePeople = people?.filter((p) => p.is_active) ?? [];
-  // Resources, unlike Owner/Requestor, is scoped to the task's own Team: only
+  // Resources, unlike Requestor, is scoped to the task's own Team: only
   // people with an is_resource person_role there can actually be assigned
   // (the server already rejects anyone else — see the assignResource catch
-  // below), so the listbox should only ever offer that set.
+  // below), so the listbox should only ever offer that set. Owner uses the
+  // same candidate set (D1.4-22).
   const teamResourcePersonIds = new Set(
     personRoles
       ?.filter((pr) => pr.team_id === teamProject?.team_id && pr.is_resource)
       .map((pr) => pr.person_id),
   );
   const resourceCandidates = activePeople.filter((p) => teamResourcePersonIds.has(p.person_id));
+  function byDisplayName(a: { person_id: number }, b: { person_id: number }) {
+    return personDisplayName(a.person_id, teamProject?.team_id, people, personRoles).localeCompare(
+      personDisplayName(b.person_id, teamProject?.team_id, people, personRoles),
+    );
+  }
   // Resources listbox ordering (D1.4-18, §3.11): checked-first, alphabetical
   // within each group, recomputed on every render off assignedIds so ticking
   // or unticking a resource re-sorts it immediately. Sorted and displayed by
@@ -154,10 +165,11 @@ export function TaskDetailPage() {
     const aAssigned = assignedIds.has(a.person_id);
     const bAssigned = assignedIds.has(b.person_id);
     if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
-    return personDisplayName(a.person_id, teamProject?.team_id, people, personRoles).localeCompare(
-      personDisplayName(b.person_id, teamProject?.team_id, people, personRoles),
-    );
+    return byDisplayName(a, b);
   });
+  // Owner dropdown: same team-scoped candidate set as Resources (D1.4-22),
+  // plain alphabetical (no checked-first grouping — there's only one Owner).
+  const sortedOwnerPeople = [...resourceCandidates].sort(byDisplayName);
 
   // Computed display dates (D1.4-14) — see src/lib/schedule.ts for the V1.2
   // logic this reproduces. Uses the live form values so editing Effort/the
@@ -237,7 +249,7 @@ export function TaskDetailPage() {
               (D1.2-2), but that computation isn't built until Stage 3 (see
               TaskListPage.tsx) — showing a placeholder number would be worse
               than not showing one. */}
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
             <FieldLabel>Owner</FieldLabel>
             <Box
               component="select"
@@ -255,7 +267,7 @@ export function TaskDetailPage() {
               }}
             >
               <option value="">(none)</option>
-              {activePeople.map((p) => (
+              {sortedOwnerPeople.map((p) => (
                 <option key={p.person_id} value={p.person_id}>
                   {personDisplayName(p.person_id, teamProject?.team_id, people, personRoles)}
                 </option>
@@ -270,9 +282,9 @@ export function TaskDetailPage() {
           >
             <OpenInNewIcon sx={{ fontSize: 14 }} />
           </IconButton>
-          <DenseButton onClick={() => navigate("/tasks")}>BACK</DenseButton>
+          <DenseButton onClick={() => openListWindow("tasks")}>All Tasks</DenseButton>
           <DenseButton variant="filled" onClick={handleSave} disabled={updateTask.isPending}>
-            SAVE
+            Save
           </DenseButton>
         </Box>
 
@@ -446,8 +458,16 @@ export function TaskDetailPage() {
                 width={48}
                 type="number"
                 center
-                value={(field("percentage_allocation") as number) ?? ""}
-                onChange={(v) => setField("percentage_allocation", v === "" ? null : Number(v))}
+                // Stored/computed (schedule.ts's computeDuration) as a
+                // fraction, 1 = 100% — displayed here as a whole percentage.
+                value={
+                  field("percentage_allocation") != null
+                    ? (field("percentage_allocation") as number) * 100
+                    : ""
+                }
+                onChange={(v) =>
+                  setField("percentage_allocation", v === "" ? null : Number(v) / 100)
+                }
               />
               <DateField
                 label="Requested Start"

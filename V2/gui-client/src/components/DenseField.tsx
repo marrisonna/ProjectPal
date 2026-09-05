@@ -249,9 +249,20 @@ export function DenseButton({
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
         border: variant === "outlined" ? "1px solid rgba(0,0,0,0.23)" : "1px solid transparent",
-        bgcolor: variant === "filled" ? "primary.main" : "transparent",
+        bgcolor: variant === "filled" ? "primary.main" : "rgba(0,0,0,0.04)",
         color: variant === "filled" ? "primary.contrastText" : "rgba(0,0,0,0.7)",
         fontFamily: "inherit",
+        boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
+        "&:hover": disabled
+          ? undefined
+          : {
+              bgcolor: variant === "filled" ? "primary.dark" : "rgba(0,0,0,0.08)",
+            },
+        "&:active": disabled
+          ? undefined
+          : {
+              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.15)",
+            },
       }}
     >
       {children}
