@@ -27,17 +27,27 @@ export function FieldLabel({ children }: { children: ReactNode }) {
   return <Box sx={{ fontSize: 11, lineHeight: "14px", color: "rgba(0,0,0,0.6)" }}>{children}</Box>;
 }
 
+// Light grey background for any field that can't be edited right now —
+// either permanently (FieldStatic: a computed value like Planned Start,
+// never editable) or situationally (readOnly passed to an otherwise-normal
+// FieldSelect/FieldInput/FieldTextArea/DateField, e.g. the caller lacks
+// edit permission on this record). One shared colour so "can't edit this"
+// looks the same everywhere it applies.
+const READONLY_BG = "rgba(0,0,0,0.06)";
+
 function FieldShell({
   label,
   width,
   flex,
   justifyContent,
+  readOnly,
   children,
 }: {
   label: string;
   width?: number | string;
   flex?: number | string;
   justifyContent?: string;
+  readOnly?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -53,8 +63,8 @@ function FieldShell({
           alignItems: "center",
           justifyContent,
           fontSize: 12,
-          color: "rgba(0,0,0,0.87)",
-          bgcolor: "#fff",
+          color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
+          bgcolor: readOnly ? READONLY_BG : "#fff",
           boxSizing: "border-box",
         }}
       >
@@ -70,6 +80,7 @@ export function FieldSelect({
   flex,
   value,
   onChange,
+  readOnly,
   children,
 }: {
   label: string;
@@ -77,11 +88,17 @@ export function FieldSelect({
   flex?: number | string;
   value: string | number;
   onChange: (value: string) => void;
+  readOnly?: boolean;
   children: ReactNode;
 }) {
   return (
-    <FieldShell label={label} width={width} flex={flex}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={NATIVE_RESET}>
+    <FieldShell label={label} width={width} flex={flex} readOnly={readOnly}>
+      <select
+        value={value}
+        disabled={readOnly}
+        onChange={(e) => onChange(e.target.value)}
+        style={NATIVE_RESET}
+      >
         {children}
       </select>
     </FieldShell>
@@ -108,11 +125,20 @@ export function FieldInput({
   center?: boolean;
 }) {
   return (
-    <FieldShell label={label} width={width} flex={flex} justifyContent={center ? "center" : undefined}>
+    <FieldShell
+      label={label}
+      width={width}
+      flex={flex}
+      justifyContent={center ? "center" : undefined}
+      readOnly={readOnly}
+    >
       <input
         type={type}
         value={value}
-        readOnly={readOnly}
+        // disabled, not readOnly: a readOnly type="number" input still lets
+        // its spinner arrows change the value in some browsers, which
+        // readOnly is supposed to prevent — disabled has no such gap.
+        disabled={readOnly}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         style={{ ...NATIVE_RESET, textAlign: center ? "center" : "left" }}
       />
@@ -120,6 +146,9 @@ export function FieldInput({
   );
 }
 
+// Always read-only by nature (a computed value, e.g. Planned Start — never
+// has an onChange at all), so it always gets the same grey background a
+// situationally-read-only field gets, without needing its own prop for it.
 export function FieldStatic({
   label,
   width,
@@ -136,7 +165,7 @@ export function FieldStatic({
   children: ReactNode;
 }) {
   return (
-    <FieldShell label={label} width={width} flex={flex}>
+    <FieldShell label={label} width={width} flex={flex} readOnly>
       <Box
         sx={{
           color: muted ? "rgba(0,0,0,0.4)" : "inherit",
@@ -157,11 +186,13 @@ export function FieldTextArea({
   minHeight = 60,
   value,
   onChange,
+  readOnly,
 }: {
   label: string;
   minHeight?: number;
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -169,6 +200,7 @@ export function FieldTextArea({
       <Box
         component="textarea"
         value={value}
+        readOnly={readOnly}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
         sx={{
           minHeight,
@@ -181,6 +213,7 @@ export function FieldTextArea({
           resize: "vertical",
           width: "100%",
           boxSizing: "border-box",
+          bgcolor: readOnly ? READONLY_BG : "#fff",
         }}
       />
     </Box>
@@ -198,28 +231,34 @@ export function DateField({
   value,
   display,
   onChange,
+  readOnly,
 }: {
   label: string;
   width?: number | string;
   value: string;
   display: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
-    <FieldShell label={label} width={width}>
+    <FieldShell label={label} width={width} readOnly={readOnly}>
       <Box sx={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
         <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {display}
         </Box>
-        <Box component="span" sx={{ fontSize: 10, opacity: 0.55, flexShrink: 0 }}>
-          📅
-        </Box>
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, margin: 0, padding: 0, border: 0, cursor: "pointer" }}
-        />
+        {!readOnly && (
+          <Box component="span" sx={{ fontSize: 10, opacity: 0.55, flexShrink: 0 }}>
+            📅
+          </Box>
+        )}
+        {!readOnly && (
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, margin: 0, padding: 0, border: 0, cursor: "pointer" }}
+          />
+        )}
       </Box>
     </FieldShell>
   );
@@ -251,10 +290,17 @@ export function DenseButton({
         display: "flex",
         alignItems: "center",
         cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.5 : 1,
         border: variant === "outlined" ? "1px solid rgba(0,0,0,0.23)" : "1px solid transparent",
-        bgcolor: variant === "filled" ? "primary.main" : "rgba(0,0,0,0.04)",
-        color: variant === "filled" ? "primary.contrastText" : "rgba(0,0,0,0.7)",
+        // Disabled: the same grey used for a read-only field (READONLY_BG/
+        // its text colour above), not a generic opacity fade over whatever
+        // colour the button would otherwise be — opacity would just dim
+        // that colour rather than actually showing this specific grey.
+        bgcolor: disabled ? READONLY_BG : variant === "filled" ? "primary.main" : "rgba(0,0,0,0.04)",
+        color: disabled
+          ? "rgba(0,0,0,0.6)"
+          : variant === "filled"
+            ? "primary.contrastText"
+            : "rgba(0,0,0,0.7)",
         fontFamily: "inherit",
         boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
         "&:hover": disabled

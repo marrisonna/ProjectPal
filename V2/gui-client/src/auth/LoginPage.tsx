@@ -54,7 +54,7 @@ export function LoginPage() {
           <Logo variant="h5" />
         </Box>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}

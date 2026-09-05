@@ -33,7 +33,9 @@ import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openItemWindow, openListWindow } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
+import { canEditOwnedRecord } from "../../lib/permissions";
 import { personDisplayName } from "../../lib/people";
+import { useAuth } from "../../auth/AuthContext";
 import {
   addBusinessDays,
   businessDaysBetween,
@@ -79,6 +81,7 @@ const TABS = ["DEPENDENCIES", "ATTACHMENTS", "REMARKS"] as const;
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const id = Number(taskId);
+  const { person } = useAuth();
 
   const { data: task, isLoading } = useTask(id);
   const { data: projects } = useProjects();
@@ -95,26 +98,34 @@ export function TaskDetailPage() {
   const unassignResource = useUnassignResource(id);
 
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
+  // Staged, not written on click (D-Win-8): the set of person_ids the
+  // Resources checklist *would* show checked if saved right now. Compared
+  // against the query's own assignedResources at Save time to work out
+  // which assign/unassign calls actually need to happen.
+  const [resourceIds, setResourceIds] = useState<Set<number> | null>(null);
+  const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [resourceError, setResourceError] = useState<string | null>(null);
   // Shared tab strip for the low-frequency sub-panels, each labelled with a
   // count (§3.11) — only one is ever visible, matching V1.2's Remarks/
   // Attachments/Links tabs.
   const [subTab, setSubTab] = useState(0);
 
-  // Reset the edit form when this task's own id changes (first load, or
-  // navigating to a different task) — deliberately *not* on every `task`
-  // change, since a cross-window live refresh (D-Win-5) re-fetches this
-  // same query in the background whenever anything invalidates it, and
-  // resetting on every one of those would silently overwrite an in-progress,
-  // unsaved edit in this window with whatever the server has right now.
+  // Reset the edit form (and staged Resources) when this task's own id
+  // changes (first load, or navigating to a different task) — deliberately
+  // *not* on every `task`/`assignedResources` change, since a cross-window
+  // live refresh (D-Win-5) re-fetches these same queries in the background
+  // whenever anything invalidates them, and resetting on every one of those
+  // would silently overwrite in-progress, unsaved edits in this window with
+  // whatever the server has right now.
   const loadedTaskIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (task && loadedTaskIdRef.current !== task.task_id) {
+    if (task && assignedResources && loadedTaskIdRef.current !== task.task_id) {
       setForm({ ...task });
+      setResourceIds(new Set(assignedResources.map((r) => r.person_id)));
+      setDirty(false);
       loadedTaskIdRef.current = task.task_id;
     }
-  }, [task]);
+  }, [task, assignedResources]);
 
   // Live off the form, not the fetched task, so this stays in sync while
   // the Description field (in the header, below) is being edited.
@@ -123,7 +134,7 @@ export function TaskDetailPage() {
   // Also wait on the reference lists the form's select options come from —
   // rendering a select with no options yet (before they load) would briefly
   // show an empty box rather than the real placeholder.
-  if (isLoading || !form || !projects || !components || !people || !personRoles) {
+  if (isLoading || !form || !resourceIds || !projects || !components || !people || !personRoles) {
     return <CircularProgress />;
   }
 
@@ -132,12 +143,25 @@ export function TaskDetailPage() {
   }
   function setField(name: string, value: unknown) {
     setForm((prev) => ({ ...prev!, [name]: value }));
+    setDirty(true);
   }
 
   async function handleSave() {
     setSaveError(null);
     try {
       await updateTask.mutateAsync(form!);
+      // Resources are staged, not written on click (D-Win-8) — diff against
+      // the query's own last-known assignment and only now actually call
+      // assign/unassign for whatever changed, one at a time so a failure
+      // partway through stops rather than firing the rest blind.
+      const originalIds = new Set(assignedResources?.map((r) => r.person_id) ?? []);
+      for (const personId of resourceIds!) {
+        if (!originalIds.has(personId)) await assignResource.mutateAsync(personId);
+      }
+      for (const personId of originalIds) {
+        if (!resourceIds!.has(personId)) await unassignResource.mutateAsync(personId);
+      }
+      setDirty(false);
     } catch (err) {
       setSaveError(
         `Save failed — ${formatApiError(err, "check required fields and try again.")}`,
@@ -146,8 +170,13 @@ export function TaskDetailPage() {
   }
 
   const teamProject = projects?.find((p) => p.project_id === field("project_id"));
+  // Mirrors rest-api's require_owner_or_team_lead exactly (see
+  // lib/permissions.ts) — decided against the Task's *original* owner
+  // (task.owner_person_id), not form's, since that's what the server will
+  // actually check against on save regardless of a pending, unsaved
+  // reassignment in this form.
+  const canEdit = canEditOwnedRecord(person, teamProject?.team_id, task?.owner_person_id);
   const teamComponents = components?.filter((c) => c.team_id === teamProject?.team_id) ?? [];
-  const assignedIds = new Set(assignedResources?.map((r) => r.person_id));
   // V1.2's Owner/Requestor pickers list Person.AllActiveInstances, not every
   // Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
   // usage) — matched here (D1.4-15) for Requestor. Owner was narrowed to the
@@ -170,13 +199,15 @@ export function TaskDetailPage() {
     );
   }
   // Resources listbox ordering (D1.4-18, §3.11): checked-first, alphabetical
-  // within each group, recomputed on every render off assignedIds so ticking
-  // or unticking a resource re-sorts it immediately. Sorted and displayed by
-  // each Person's Team-scoped display name (D1.4-21: nickname if this Team
-  // set one, else their plain name), matching what's actually shown.
+  // within each group, recomputed on every render off the staged
+  // resourceIds (not the query's own assignedResources — D-Win-8) so
+  // ticking or unticking a resource re-sorts it immediately, before Save.
+  // Sorted and displayed by each Person's Team-scoped display name
+  // (D1.4-21: nickname if this Team set one, else their plain name),
+  // matching what's actually shown.
   const sortedResourcePeople = [...resourceCandidates].sort((a, b) => {
-    const aAssigned = assignedIds.has(a.person_id);
-    const bAssigned = assignedIds.has(b.person_id);
+    const aAssigned = resourceIds.has(a.person_id);
+    const bAssigned = resourceIds.has(b.person_id);
     if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
     return byDisplayName(a, b);
   });
@@ -193,7 +224,11 @@ export function TaskDetailPage() {
   const startDate = formTask
     ? computeStartDate(formTask, teamProject, predecessorDependencies, allTasks ?? [], projects ?? [])
     : null;
-  const duration = formTask ? computeDuration(formTask, assignedResources?.length ?? 0) : null;
+  // Live off the staged resourceIds, not the query's own assignedResources
+  // count, so toggling a Resource updates Duration/dates before Save too
+  // (D-Win-8) — same "recompute from what's on screen, not last-saved"
+  // principle already applied to Effort/the start offset above.
+  const duration = formTask ? computeDuration(formTask, resourceIds.size) : null;
   const endDate = computeEndDate(startDate, duration);
 
   return (
@@ -259,6 +294,7 @@ export function TaskDetailPage() {
             <Box
               component="input"
               value={field("description") as string}
+              readOnly={!canEdit}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => setField("description", event.target.value)}
               sx={{
                 fontSize: 14,
@@ -284,6 +320,7 @@ export function TaskDetailPage() {
             <Box
               component="select"
               value={(field("owner_person_id") as number | "") ?? ""}
+              disabled={!canEdit}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
                 setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
               }
@@ -313,19 +350,20 @@ export function TaskDetailPage() {
             <OpenInNewIcon sx={{ fontSize: 14 }} />
           </IconButton>
           <DenseButton onClick={() => openListWindow("tasks")}>All Tasks</DenseButton>
-          <DenseButton variant="filled" onClick={handleSave} disabled={updateTask.isPending}>
-            Save
-          </DenseButton>
+          {canEdit && (
+            <DenseButton
+              variant="filled"
+              onClick={handleSave}
+              disabled={!dirty || updateTask.isPending}
+            >
+              Save
+            </DenseButton>
+          )}
         </Box>
 
         {saveError && (
-          <Alert severity="error" sx={{ mb: 1 }}>
+          <Alert severity="error" sx={{ mb: 1 }} onClose={() => setSaveError(null)}>
             {saveError}
-          </Alert>
-        )}
-        {resourceError && (
-          <Alert severity="error" sx={{ mb: 1 }} onClose={() => setResourceError(null)}>
-            {resourceError}
           </Alert>
         )}
 
@@ -354,6 +392,7 @@ export function TaskDetailPage() {
                 width={84}
                 value={(field("priority") as string) ?? ""}
                 onChange={(v) => setField("priority", v || null)}
+                readOnly={!canEdit}
               >
                 <option value="">(none)</option>
                 {PRIORITY_LEVELS.map((p) => (
@@ -367,6 +406,7 @@ export function TaskDetailPage() {
                 width={108}
                 value={field("status") as string}
                 onChange={(v) => setField("status", v)}
+                readOnly={!canEdit}
               >
                 {TASK_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -379,6 +419,7 @@ export function TaskDetailPage() {
                 width={118}
                 value={(field("task_type") as string) ?? ""}
                 onChange={(v) => setField("task_type", v || null)}
+                readOnly={!canEdit}
               >
                 <option value="">(none)</option>
                 {TASK_TYPES.map((t) => (
@@ -392,6 +433,7 @@ export function TaskDetailPage() {
                 width={114}
                 value={(field("requestor_person_id") as number | "") ?? ""}
                 onChange={(v) => setField("requestor_person_id", v === "" ? null : Number(v))}
+                readOnly={!canEdit}
               >
                 <option value="">(none)</option>
                 {activePeople.map((p) => (
@@ -412,6 +454,7 @@ export function TaskDetailPage() {
                 center
                 value={(field("effort_in_days") as number) ?? ""}
                 onChange={(v) => setField("effort_in_days", v === "" ? null : Number(v))}
+                readOnly={!canEdit}
               />
               {/* Two stacked radio buttons, as V1.2 uses, rather than a wider
                   toggle switch — bottom-aligned with the row's field-boxes
@@ -427,6 +470,7 @@ export function TaskDetailPage() {
                       component="input"
                       type="radio"
                       name="effortType"
+                      disabled={!canEdit}
                       sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
                       checked={field("effort_type") === opt}
                       onChange={() => setField("effort_type", opt)}
@@ -450,6 +494,7 @@ export function TaskDetailPage() {
                 onChange={(v) =>
                   setField("percentage_allocation", v === "" ? null : Number(v) / 100)
                 }
+                readOnly={!canEdit}
               />
               <DateField
                 label="Requested Start"
@@ -466,6 +511,7 @@ export function TaskDetailPage() {
                   const offset = businessDaysBetween(new Date(teamProject.start_date), chosen);
                   setField("start_relative_days_to_project", offset);
                 }}
+                readOnly={!canEdit}
               />
               <FieldStatic label="Planned Start" width={82}>
                 {formatDdMmmYy(startDate)}
@@ -487,6 +533,7 @@ export function TaskDetailPage() {
                   const offset = businessDaysBetween(new Date(teamProject.start_date), impliedStart);
                   setField("start_relative_days_to_project", offset);
                 }}
+                readOnly={!canEdit}
               />
             </Box>
           </Box>
@@ -507,33 +554,32 @@ export function TaskDetailPage() {
                 border: "1px solid rgba(0,0,0,0.15)",
                 borderRadius: "4px",
                 p: "4px 0",
+                bgcolor: canEdit ? "transparent" : "rgba(0,0,0,0.06)",
               }}
             >
               {sortedResourcePeople.map((person) => (
                 <Box
                   key={person.person_id}
                   component="label"
-                  sx={{ display: "flex", alignItems: "center", gap: "5px", fontSize: 11, px: "6px", py: "3px", cursor: "pointer" }}
+                  sx={{ display: "flex", alignItems: "center", gap: "5px", fontSize: 11, px: "6px", py: "3px", cursor: canEdit ? "pointer" : "default" }}
                 >
                   <Box
                     component="input"
                     type="checkbox"
+                    disabled={!canEdit}
                     sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
-                    checked={assignedIds.has(person.person_id)}
-                    onChange={async (event: React.ChangeEvent<HTMLInputElement>) => {
-                      setResourceError(null);
-                      try {
-                        if (event.target.checked) {
-                          await assignResource.mutateAsync(person.person_id);
-                        } else {
-                          await unassignResource.mutateAsync(person.person_id);
-                        }
-                      } catch (err) {
-                        const action = event.target.checked ? "assign" : "unassign";
-                        setResourceError(
-                          `Couldn't ${action} ${person.name} — ${formatApiError(err, "they may not be a resource on this Task's Team.")}`,
-                        );
-                      }
+                    checked={resourceIds.has(person.person_id)}
+                    // Staged only, not written on click (D-Win-8) — the
+                    // actual assign/unassign calls happen in handleSave,
+                    // alongside the task PATCH, only once Save is pressed.
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                      setResourceIds((prev) => {
+                        const next = new Set(prev);
+                        if (event.target.checked) next.add(person.person_id);
+                        else next.delete(person.person_id);
+                        return next;
+                      });
+                      setDirty(true);
                     }}
                   />
                   <Box
@@ -556,6 +602,7 @@ export function TaskDetailPage() {
             label="Detailed Description"
             value={(field("detailed_description") as string) ?? ""}
             onChange={(v) => setField("detailed_description", v)}
+            readOnly={!canEdit}
           />
         </Box>
 
@@ -568,6 +615,7 @@ export function TaskDetailPage() {
             flex={1}
             value={field("project_id") as number}
             onChange={(v) => setField("project_id", Number(v))}
+            readOnly={!canEdit}
           >
             {projects?.map((p) => (
               <option key={p.project_id} value={p.project_id}>
@@ -580,6 +628,7 @@ export function TaskDetailPage() {
             flex={1}
             value={(field("component_id") as number | "") ?? ""}
             onChange={(v) => setField("component_id", v === "" ? null : Number(v))}
+            readOnly={!canEdit}
           >
             <option value="">(none)</option>
             {teamComponents.map((c) => (
