@@ -190,7 +190,24 @@ export function TaskDetailPage() {
     // directly against the Claude Design mockup's own markup/CSS (project
     // b721f06c-e472-46b7-8b29-fad6315ab723, "Task Detail Compact Mockups.dc.html",
     // option 1a) rather than approximated from screenshots (Q1.4-17).
-    <Box sx={{ width: 624, mx: "auto" }}>
+    // No AppShell wrapper on this route (see App.tsx's BareAuthenticatedLayout)
+    // to keep this window's own chrome minimal, so this page supplies its
+    // own (small) margin to the window edge directly, rather than relying
+    // on AppShell's <main> padding. The padding lives on this outer Box,
+    // not the fixed-width one below, so it doesn't eat into the card's own
+    // width (CssBaseline's border-box sizing would otherwise shrink it by
+    // the padding amount).
+    <Box sx={{ p: "6px" }}>
+      {/* Wide enough to keep Row 2 (Effort/.../Requested Start/Planned
+          Start/End Date, all fixed-width fields) on one line: card interior
+          is width-24(padding), the Resources+fields row leaves that
+          -116-12(gap) for the second column, and Row 2's own fixed
+          widths+gaps (42+66+48+108+82+108 + 5*8) sum to exactly 494 — so
+          this needs to be >= 24+116+12+494 = 646. Deliberately a few px
+          over that exact break-even: browsers' flex-width math isn't
+          guaranteed to land on a whole pixel, so a zero-slack fit can wrap
+          anyway on sub-pixel rounding. */}
+      <Box sx={{ width: 656, mx: "auto" }}>
       <Box
         sx={{
           bgcolor: "#fff",
@@ -299,66 +316,18 @@ export function TaskDetailPage() {
           </Alert>
         )}
 
-        {/* Resources beside the scheduling fields — a fixed-size control
-            (§3.11, D1.4-18) sized so its box lines up with Priority's box. */}
-        <Box sx={{ mb: 1, display: "flex", gap: "12px", alignItems: "stretch" }}>
-          <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-            <FieldLabel>Resources</FieldLabel>
-            {/* Fixed height, tuned to land exactly on the Effort row's
-                bottom (measured, not guessed — see D1.4-18): flex:1 doesn't
-                work here since the sibling column has no intrinsic bound of
-                its own to stretch against, so an unbounded resources list
-                would inflate the whole row's height instead of scrolling. */}
-            <Box
-              sx={{
-                width: 116,
-                height: 70,
-                overflowY: "auto",
-                border: "1px solid rgba(0,0,0,0.15)",
-                borderRadius: "4px",
-                p: "4px 0",
-              }}
-            >
-              {sortedResourcePeople.map((person) => (
-                <Box
-                  key={person.person_id}
-                  component="label"
-                  sx={{ display: "flex", alignItems: "center", gap: "5px", fontSize: 11, px: "6px", py: "3px", cursor: "pointer" }}
-                >
-                  <Box
-                    component="input"
-                    type="checkbox"
-                    sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
-                    checked={assignedIds.has(person.person_id)}
-                    onChange={async (event: React.ChangeEvent<HTMLInputElement>) => {
-                      setResourceError(null);
-                      try {
-                        if (event.target.checked) {
-                          await assignResource.mutateAsync(person.person_id);
-                        } else {
-                          await unassignResource.mutateAsync(person.person_id);
-                        }
-                      } catch {
-                        setResourceError(
-                          `Couldn't assign ${person.name} — they may not be a resource on this Task's Team.`,
-                        );
-                      }
-                    }}
-                  />
-                  <Box
-                    component="span"
-                    title={person.name}
-                    sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                  >
-                    {truncateResourceName(
-                      personDisplayName(person.person_id, teamProject?.team_id, people, personRoles),
-                    )}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-
+        {/* Resources beside the scheduling fields, at the row's right edge
+            (fields column shifted left into the space it used to occupy).
+            height:84 is fixed (not auto) so the row's own contribution to
+            the page's flow stays exactly what the fields column alone
+            needs (38+8+38), regardless of how tall Resources' own box
+            grows to — otherwise Resources would just drag Detailed
+            Description down by the same amount it grows, and could never
+            actually reach it. alignItems is flex-start, not stretch:
+            stretch would force Resources' height to match the row's own
+            (now fixed) box, shrinking it right back down instead of
+            letting it overflow past it. */}
+        <Box sx={{ mb: 1, display: "flex", gap: "12px", alignItems: "flex-start", height: 84 }}>
           <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
             {/* Row 1: Priority/Status/Task Type/Requestor, spread per the
                 mockup — widths widened a little past its own (e.g. Status
@@ -471,7 +440,11 @@ export function TaskDetailPage() {
               />
               <DateField
                 label="Requested Start"
-                width={92}
+                // Wider than the plain FieldStatic boxes (e.g. Planned
+                // Start's 82) for the same "dd-Mmm-yy" text, since DateField
+                // also reserves room for its calendar-icon glyph — at 92
+                // this was truncating the display text with an ellipsis.
+                width={108}
                 value={toDateInputValue(earliestStartDate)}
                 display={formatDdMmmYy(earliestStartDate)}
                 onChange={(v) => {
@@ -486,7 +459,7 @@ export function TaskDetailPage() {
               </FieldStatic>
               <DateField
                 label="End Date"
-                width={92}
+                width={108}
                 value={toDateInputValue(endDate)}
                 display={formatDdMmmYy(endDate)}
                 onChange={(v) => {
@@ -502,6 +475,64 @@ export function TaskDetailPage() {
                   setField("start_relative_days_to_project", offset);
                 }}
               />
+            </Box>
+          </Box>
+
+          <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+            <FieldLabel>Resources</FieldLabel>
+            {/* 83 = 99 (16 down to the box's own top, +83) reaching the
+                vertical centre of the "Detailed Description" label below
+                (row bottom 84 + row's 8px margin + half that label's own
+                14px height) — deliberately overflows past the row's own
+                fixed-height box rather than enlarging it (see the row's
+                own comment above). */}
+            <Box
+              sx={{
+                width: 116,
+                height: 83,
+                overflowY: "auto",
+                border: "1px solid rgba(0,0,0,0.15)",
+                borderRadius: "4px",
+                p: "4px 0",
+              }}
+            >
+              {sortedResourcePeople.map((person) => (
+                <Box
+                  key={person.person_id}
+                  component="label"
+                  sx={{ display: "flex", alignItems: "center", gap: "5px", fontSize: 11, px: "6px", py: "3px", cursor: "pointer" }}
+                >
+                  <Box
+                    component="input"
+                    type="checkbox"
+                    sx={{ width: 12, height: 12, m: 0, flexShrink: 0 }}
+                    checked={assignedIds.has(person.person_id)}
+                    onChange={async (event: React.ChangeEvent<HTMLInputElement>) => {
+                      setResourceError(null);
+                      try {
+                        if (event.target.checked) {
+                          await assignResource.mutateAsync(person.person_id);
+                        } else {
+                          await unassignResource.mutateAsync(person.person_id);
+                        }
+                      } catch {
+                        setResourceError(
+                          `Couldn't assign ${person.name} — they may not be a resource on this Task's Team.`,
+                        );
+                      }
+                    }}
+                  />
+                  <Box
+                    component="span"
+                    title={person.name}
+                    sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  >
+                    {truncateResourceName(
+                      personDisplayName(person.person_id, teamProject?.team_id, people, personRoles),
+                    )}
+                  </Box>
+                </Box>
+              ))}
             </Box>
           </Box>
         </Box>
@@ -585,6 +616,7 @@ export function TaskDetailPage() {
           </Box>
         </Box>
       </Box>
+    </Box>
     </Box>
   );
 }

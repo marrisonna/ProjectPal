@@ -19,8 +19,12 @@ const NATIVE_RESET: CSSProperties = {
   padding: 0,
 };
 
+// lineHeight fixed at 14px (rather than left to the font's own metrics) so
+// every label's rendered height is a known, exact value — needed by
+// TaskDetailPage.tsx's Resources listbox height, which is computed from
+// this plus other fields' fixed pixel sizes, not measured empirically.
 export function FieldLabel({ children }: { children: ReactNode }) {
-  return <Box sx={{ fontSize: 11, color: "rgba(0,0,0,0.6)" }}>{children}</Box>;
+  return <Box sx={{ fontSize: 11, lineHeight: "14px", color: "rgba(0,0,0,0.6)" }}>{children}</Box>;
 }
 
 function FieldShell({

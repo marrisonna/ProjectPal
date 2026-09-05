@@ -17,6 +17,17 @@ function AuthenticatedLayout() {
   );
 }
 
+// Task Detail windows are their own small, standalone popouts (D1.4-8) —
+// the full app bar (branding, Tasks nav, Admin/Log out) belongs on the
+// main "All Tasks"-style windows, not repeated on every one of these.
+function BareAuthenticatedLayout() {
+  return (
+    <RequireAuth>
+      <Outlet />
+    </RequireAuth>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -26,6 +37,8 @@ export default function App() {
           <Route element={<AuthenticatedLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/tasks" element={<TaskListPage />} />
+          </Route>
+          <Route element={<BareAuthenticatedLayout />}>
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
