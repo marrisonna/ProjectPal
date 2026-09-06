@@ -1,26 +1,79 @@
+import { useEffect } from "react";
+
 const ALIVE_KEY_PREFIX = "pp-window-alive:";
 function isWindowAlive(windowName: string): boolean {
   return localStorage.getItem(ALIVE_KEY_PREFIX + windowName) === "1";
 }
+function markWindowAlive(windowName: string): void {
+  localStorage.setItem(ALIVE_KEY_PREFIX + windowName, "1");
+}
+function markWindowGone(windowName: string): void {
+  localStorage.removeItem(ALIVE_KEY_PREFIX + windowName);
+}
 
 /**
  * Call once, at startup, in *every* window (main.tsx) — a no-op in the
- * main app window itself, since `window.name` is only ever set on windows
- * opened via openNamedWindow below (window.open's own `name` argument).
+ * main app window itself, since `window.name` is only ever set at this
+ * point on windows opened via openNamedWindow below (window.open's own
+ * `name` argument). Registering immediately, before React even renders,
+ * closes a race a popped-out window would otherwise have: without this,
+ * a window wouldn't count as "alive" until its own page component's
+ * useSingletonWindowIdentity effect below actually runs, which for a page
+ * like TaskDetailPage is only after its data has loaded — a real gap a
+ * fast second click could land in.
  *
- * Registers this window as "alive" under its own name in localStorage —
- * shared, live, and synchronously readable by every same-origin window
- * (unlike window.open, which requires actually opening something to find
- * out whether a name is taken — see openNamedWindow's comment for why
- * that matters).
+ * This alone is *not* sufficient for the main app window, though: it can
+ * navigate to a singleton-eligible route (e.g. clicking "Tasks" in the app
+ * bar) via plain in-place client-side routing, which never touches
+ * `window.name` — see useSingletonWindowIdentity below for the other half
+ * of this.
  */
 export function registerThisWindow(): void {
   const name = window.name;
   if (!name) return;
-  localStorage.setItem(ALIVE_KEY_PREFIX + name, "1");
-  window.addEventListener("pagehide", () => {
-    localStorage.removeItem(ALIVE_KEY_PREFIX + name);
-  });
+  markWindowAlive(name);
+  window.addEventListener("pagehide", () => markWindowGone(name));
+}
+
+/**
+ * Call from a singleton-eligible page's own component (TaskListPage.tsx:
+ * `useSingletonWindowIdentity("tasks-list")`, TaskDetailPage.tsx:
+ * `useSingletonWindowIdentity(\`tasks-${id}\`)`) — this is what makes the
+ * registry correct for a window that reached this route by plain in-place
+ * client-side navigation (e.g. the main app window's own "Tasks" nav
+ * link), not just one `window.open()` created with the name already
+ * attached. registerThisWindow above only ever looks at the *static*
+ * `window.name` a window was born with; a window can navigate to a
+ * singleton route at any point in its life without that ever changing, so
+ * relying on birth-time naming alone leaves exactly that window invisible
+ * to the registry — openNamedWindow would then (correctly, given what it
+ * can see) conclude no such window exists and create a duplicate.
+ *
+ * On mount: claims this name (`window.name = name`, marks it alive) —
+ * overwriting whatever was there before, since only one page at a time
+ * can meaningfully own a given name. On unmount (route changed away) or
+ * `pagehide` (window closed): releases it, clearing both the registry
+ * entry and `window.name` — leaving a stale `window.name` behind would be
+ * actively dangerous, not just untidy: a *later* window.open(realUrl,
+ * thisName) elsewhere, for a window this registry correctly no longer
+ * considers alive, would still find this window by the browser's own
+ * native name matching and hijack it — navigating it away from whatever
+ * it's actually showing.
+ */
+export function useSingletonWindowIdentity(name: string): void {
+  useEffect(() => {
+    window.name = name;
+    markWindowAlive(name);
+    function handlePageHide() {
+      markWindowGone(name);
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      markWindowGone(name);
+      window.name = "";
+    };
+  }, [name]);
 }
 
 /**

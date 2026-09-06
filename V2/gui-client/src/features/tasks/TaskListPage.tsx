@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useProjects, usePeople, useTasks } from "../../api/hooks";
 import type { TaskRecord } from "../../api/types";
-import { openItemWindow } from "../../lib/windowNav";
+import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 // Column set adapted from V1.2's TaskWindow grid (GUITaskColumns.cs) — a
@@ -12,6 +12,11 @@ import { useDocumentTitle } from "../../lib/useDocumentTitle";
 // (Plan.md D1.4-13's "strong hint, not a constraint" principle).
 export function TaskListPage() {
   useDocumentTitle("All Tasks");
+  // Claims the "tasks-list" identity for whichever window this page is
+  // rendered in — including the main app window, reached here by a plain
+  // in-place nav click, not window.open — so openListWindow() elsewhere
+  // can find and focus it instead of opening a duplicate (D-Win-4/10).
+  useSingletonWindowIdentity("tasks-list");
   const { data: tasks, isLoading } = useTasks();
   const { data: projects } = useProjects();
   const { data: people } = usePeople();
@@ -49,9 +54,8 @@ export function TaskListPage() {
           getRowId={(row) => row.task_id}
           columns={columns}
           loading={isLoading}
-          // A new/re-focused window, not in-place navigation (D1.4-8's
-          // multi-window model — the same singleton-per-object window the
-          // Task Detail header's own "open in new window" icon uses).
+          // A new/re-focused singleton-per-object window, not in-place
+          // navigation (D1.4-8's multi-window model).
           onRowDoubleClick={(params) => openItemWindow("tasks", params.id)}
           density="compact"
           initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}

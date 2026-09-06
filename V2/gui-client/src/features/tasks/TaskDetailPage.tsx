@@ -3,8 +3,6 @@ import { useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
-import IconButton from "@mui/material/IconButton";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import {
   DateField,
   DenseButton,
@@ -13,7 +11,9 @@ import {
   FieldSelect,
   FieldStatic,
   FieldTextArea,
+  FieldTreePicker,
 } from "../../components/DenseField";
+import { buildBreadcrumb, type TreeItem } from "../../components/TreePicker";
 import {
   useAssignResource,
   useAttachments,
@@ -30,7 +30,7 @@ import {
   useUpdateTask,
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
-import { openItemWindow, openListWindow } from "../../lib/windowNav";
+import { openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
 import { canEditOwnedRecord } from "../../lib/permissions";
@@ -82,6 +82,12 @@ export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const id = Number(taskId);
   const { person } = useAuth();
+  // See TaskListPage.tsx's own call for why this is needed even though
+  // this page is currently only ever reached via a window already named
+  // at creation (openItemWindow) — this closes the same gap for any
+  // future in-place link to a Task, and its own cleanup-on-navigate-away
+  // (which registerThisWindow alone doesn't do) is correct regardless.
+  useSingletonWindowIdentity(`tasks-${id}`);
 
   const { data: task, isLoading } = useTask(id);
   const { data: projects } = useProjects();
@@ -177,6 +183,22 @@ export function TaskDetailPage() {
   // reassignment in this form.
   const canEdit = canEditOwnedRecord(person, teamProject?.team_id, task?.owner_person_id);
   const teamComponents = components?.filter((c) => c.team_id === teamProject?.team_id) ?? [];
+  // Project/Component tree pickers (D-Win-9): scoped to the Task's own
+  // Team, same as Component's flat list always was — a Task can only move
+  // to a Project on its own Team anyway (D-DM-10), so the flat Project
+  // dropdown's org-wide list was already wider than what a move could
+  // actually succeed against.
+  const teamProjects = projects?.filter((p) => p.team_id === teamProject?.team_id) ?? [];
+  const projectTreeItems: TreeItem[] = teamProjects.map((p) => ({
+    id: p.project_id,
+    name: p.name,
+    parentId: p.parent_project_id,
+  }));
+  const componentTreeItems: TreeItem[] = teamComponents.map((c) => ({
+    id: c.component_id,
+    name: c.name,
+    parentId: c.parent_component_id,
+  }));
   // V1.2's Owner/Requestor pickers list Person.AllActiveInstances, not every
   // Person on record (V1.2/Libs/DBProjectPal/DBProjectPal/GUITaskColumns
   // usage) — matched here (D1.4-15) for Requestor. Owner was narrowed to the
@@ -311,10 +333,6 @@ export function TaskDetailPage() {
               }}
             />
           </Box>
-          {/* Urgency isn't shown here: it's real, computed client-side
-              (D1.2-2), but that computation isn't built until Stage 3 (see
-              TaskListPage.tsx) — showing a placeholder number would be worse
-              than not showing one. */}
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
             <FieldLabel>Owner</FieldLabel>
             <Box
@@ -341,14 +359,17 @@ export function TaskDetailPage() {
               ))}
             </Box>
           </Box>
-          <IconButton
-            title="Open in new window"
-            size="small"
-            sx={{ p: "2px" }}
-            onClick={() => openItemWindow("tasks", id)}
-          >
-            <OpenInNewIcon sx={{ fontSize: 14 }} />
-          </IconButton>
+          {/* Preview only: Urgency is real, computed client-side (D1.2-2),
+              but that computation isn't built until Stage 3 (see
+              TaskListPage.tsx) — this hardcoded 100 is just so the mockup's
+              header layout can be seen with something in this slot, not a
+              stand-in for the real value. Styled exactly per the Claude
+              Design mockup ("Task Detail Compact Mockups.dc.html", option
+              1a)'s own Urgency display. */}
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
+            <FieldLabel>Urgency</FieldLabel>
+            <Box sx={{ fontSize: 12, fontWeight: 700, color: "#b45309" }}>100</Box>
+          </Box>
           <DenseButton onClick={() => openListWindow("tasks")}>All Tasks</DenseButton>
           {canEdit && (
             <DenseButton
@@ -610,33 +631,25 @@ export function TaskDetailPage() {
             Resources/Description rather than among the short fixed-width
             fields — their values can run long (V1.2 screenshot, D1.4-19). */}
         <Box sx={{ mb: 1, display: "flex", gap: "8px" }}>
-          <FieldSelect
+          <FieldTreePicker
             label="Project"
             flex={1}
-            value={field("project_id") as number}
-            onChange={(v) => setField("project_id", Number(v))}
+            items={projectTreeItems}
+            selectedId={(form.project_id as number | null | undefined) ?? null}
+            breadcrumb={buildBreadcrumb(projectTreeItems, (form.project_id as number) ?? null)}
+            onSelect={(id) => id != null && setField("project_id", id)}
             readOnly={!canEdit}
-          >
-            {projects?.map((p) => (
-              <option key={p.project_id} value={p.project_id}>
-                {p.name}
-              </option>
-            ))}
-          </FieldSelect>
-          <FieldSelect
+          />
+          <FieldTreePicker
             label="Component"
             flex={1}
-            value={(field("component_id") as number | "") ?? ""}
-            onChange={(v) => setField("component_id", v === "" ? null : Number(v))}
+            items={componentTreeItems}
+            selectedId={(form.component_id as number | null | undefined) ?? null}
+            breadcrumb={buildBreadcrumb(componentTreeItems, (form.component_id as number | null) ?? null)}
+            onSelect={(id) => setField("component_id", id)}
             readOnly={!canEdit}
-          >
-            <option value="">(none)</option>
-            {teamComponents.map((c) => (
-              <option key={c.component_id} value={c.component_id}>
-                {c.name}
-              </option>
-            ))}
-          </FieldSelect>
+            allowNone
+          />
         </Box>
 
         {/* Dependencies/Attachments/Remarks share one tab strip, each

@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import { TreePicker, type TreeItem } from "./TreePicker";
 
 // Dense, WinForms-like field controls matching the Claude Design mockup
 // ("Task Detail Compact Mockups.dc.html", option 1a) pixel-for-pixel —
@@ -316,6 +317,103 @@ export function DenseButton({
       }}
     >
       {children}
+    </Box>
+  );
+}
+
+// V1.2's Project/Component "+" tree picker (see TreePicker.tsx's own
+// comment for the full V1.2 reference) — a breadcrumb-path display box
+// (TreePicker.tsx's buildBreadcrumb) plus a "+"/"−" button that toggles a
+// TreePicker open beneath it. The outside-click-to-close listener lives
+// here, on a ref wrapping *both* the button and the popover, rather than
+// inside TreePicker itself — a listener scoped to only the popover would
+// see the toggle button's own closing click as "outside" and immediately
+// re-open what that same click had just closed.
+export function FieldTreePicker({
+  label,
+  width,
+  flex,
+  items,
+  selectedId,
+  breadcrumb,
+  onSelect,
+  readOnly,
+  allowNone,
+}: {
+  label: string;
+  width?: number | string;
+  flex?: number | string;
+  items: TreeItem[];
+  selectedId: number | null;
+  breadcrumb: string;
+  onSelect: (id: number | null) => void;
+  readOnly?: boolean;
+  allowNone?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        width,
+        flex,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        position: "relative",
+      }}
+    >
+      <FieldLabel>{label}</FieldLabel>
+      <Box sx={{ display: "flex", gap: "4px" }}>
+        <Box
+          title={breadcrumb}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            height: 22,
+            px: "5px",
+            border: BORDER,
+            borderRadius: "3px",
+            display: "flex",
+            alignItems: "center",
+            fontSize: 12,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
+            bgcolor: readOnly ? READONLY_BG : "#fff",
+            boxSizing: "border-box",
+          }}
+        >
+          {breadcrumb || "(none)"}
+        </Box>
+        {!readOnly && <DenseButton onClick={() => setOpen((o) => !o)}>{open ? "−" : "+"}</DenseButton>}
+      </Box>
+      {open && (
+        <TreePicker
+          items={items}
+          selectedId={selectedId}
+          allowNone={allowNone}
+          onSelect={(id) => {
+            onSelect(id);
+            setOpen(false);
+          }}
+        />
+      )}
     </Box>
   );
 }
