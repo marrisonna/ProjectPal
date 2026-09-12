@@ -134,3 +134,35 @@ export function computeEndDate(startDate: Date | null, duration: number | null):
   if (!startDate || duration == null) return null;
   return addBusinessDays(startDate, Math.ceil(duration) - 1);
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Shared display format for every scheduling date shown anywhere in the
+ * app (Task Detail's Requested Start/Planned Start/End Date, the All Tasks
+ * grid's End Date/Planned Start) — one function so they can't drift apart
+ * the way Requested Start and Planned Start once briefly did (mockup 1a
+ * used a second, longer format for one of them with no stated reason).
+ * Deliberately not the browser's locale-controlled native date-input
+ * format.
+ */
+export function formatDdMmmYy(date: Date | null): string {
+  if (!date) return "—";
+  const yy = String(date.getFullYear()).slice(-2);
+  return `${String(date.getDate()).padStart(2, "0")}-${MONTHS[date.getMonth()]}-${yy}`;
+}
+
+/**
+ * Inverse of formatDdMmmYy, for sorting a date column's already-formatted
+ * display strings (the All Tasks grid's column filter popup, D-Win-14,
+ * sorts by the same strings it filters/displays, not a separately-tracked
+ * raw Date) — returns a millisecond timestamp, or null for "—"/unparsable.
+ */
+export function parseDdMmmYy(formatted: string): number | null {
+  const match = /^(\d{2})-([A-Za-z]{3})-(\d{2})$/.exec(formatted);
+  if (!match) return null;
+  const [, dd, mon, yy] = match;
+  const month = MONTHS.indexOf(mon);
+  if (month === -1) return null;
+  return new Date(2000 + Number(yy), month, Number(dd)).getTime();
+}

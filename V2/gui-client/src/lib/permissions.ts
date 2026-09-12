@@ -27,6 +27,21 @@ export function isTeamLead(person: WhoAmI | null, teamId: number | null | undefi
 }
 
 /**
+ * TeamLeadUser on *some* Team, regardless of which — for a screen that
+ * isn't scoped to one Team/Task and so has no single `teamId` to check
+ * `isTeamLead` against (the All Tasks grid's "T" column visibility and its
+ * Resources filter default, D-Win-15). Mirrors V1.2's own equivalent
+ * check, `Permissions.IsSuperUser` in `MainWindow.cs`'s
+ * `buttonShowTasks_Click` — a single global flag there since V1.2 had no
+ * per-Team roles at all; V2 has to fold its own per-Team roles into one
+ * yes/no answer instead.
+ */
+export function isTeamLeadOfAnyTeam(person: WhoAmI | null): boolean {
+  if (!person) return false;
+  return person.team_roles.some((tr) => tr.role === "TeamLeadUser");
+}
+
+/**
  * Mirrors rest-api/app/security/deps.py's require_owner_or_team_lead
  * exactly — the Task/Project/Component/Attachment edit-or-delete rule
  * (Requirements/UseCases.md §12, D-UC-4): the record's owner (any role

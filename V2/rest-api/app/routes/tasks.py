@@ -102,6 +102,21 @@ def list_tasks(
         return many(conn.execute(f"SELECT {_COLUMNS} FROM task {where} ORDER BY task_id", params))
 
 
+@router.get("/resources")
+def list_all_task_resources(caller: CurrentPerson = Depends(get_current_person)):
+    """Bulk equivalent of GET /task/{task_id}/resources below — every
+    task_resource row across every Task, for a screen (the All Tasks grid)
+    that needs Resources/effort-split data for many Tasks at once and
+    would otherwise be one request per row. Same unfiltered-bulk-fetch
+    pattern as /dependency, /remark, /attachment, and /person-role.
+    Registered before /{task_id} so this static path isn't swallowed by
+    that dynamic one (Starlette tries routes in declaration order, and
+    "/task/resources" also syntactically matches "/{task_id}").
+    """
+    with get_conn() as conn:
+        return many(conn.execute("SELECT task_id, person_id FROM task_resource"))
+
+
 @router.get("/{task_id}")
 def get_task(task_id: int, caller: CurrentPerson = Depends(get_current_person)):
     with get_conn() as conn:

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Box from "@mui/material/Box";
 import { TreePicker, type TreeItem } from "./TreePicker";
+import { DENSE_FONT_SIZE } from "../theme/theme";
 
 // Dense, WinForms-like field controls matching the Claude Design mockup
 // ("Task Detail Compact Mockups.dc.html", option 1a) pixel-for-pixel —
@@ -63,7 +64,7 @@ function FieldShell({
           display: "flex",
           alignItems: "center",
           justifyContent,
-          fontSize: 12,
+          fontSize: DENSE_FONT_SIZE,
           color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
           bgcolor: readOnly ? READONLY_BG : "#fff",
           boxSizing: "border-box",
@@ -208,7 +209,7 @@ export function FieldTextArea({
           p: "4px 5px",
           border: BORDER,
           borderRadius: "3px",
-          fontSize: 12,
+          fontSize: DENSE_FONT_SIZE,
           lineHeight: 1.4,
           fontFamily: "inherit",
           resize: "vertical",
@@ -285,7 +286,7 @@ export function DenseButton({
         height: 22,
         px: "12px",
         borderRadius: "3px",
-        fontSize: 12,
+        fontSize: DENSE_FONT_SIZE,
         fontWeight: 600,
         letterSpacing: "0.3px",
         display: "flex",
@@ -390,7 +391,7 @@ export function FieldTreePicker({
             borderRadius: "3px",
             display: "flex",
             alignItems: "center",
-            fontSize: 12,
+            fontSize: DENSE_FONT_SIZE,
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",

@@ -15,7 +15,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="static">
-        <Toolbar sx={{ gap: 2 }}>
+        {/* minHeight explicit, not just variant="dense"'s 48px — about half
+            MUI's default 64px toolbar height (D-Win-11), the same "too much
+            chrome for how little it shows" complaint Task Detail's own
+            AppShell removal (App.tsx's BareAuthenticatedLayout) already
+            responded to for that window. */}
+        <Toolbar variant="dense" sx={{ gap: 2, minHeight: 36, py: 0 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 3, flexGrow: 1 }}>
             <RouterLink to="/" style={{ color: "inherit", textDecoration: "none" }}>
               <Logo />
@@ -35,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </Toolbar>
       </AppBar>
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 1 }}>
         {children}
       </Box>
     </Box>

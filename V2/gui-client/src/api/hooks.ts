@@ -113,6 +113,17 @@ export function useTaskResources(taskId: number) {
   });
 }
 
+// Every task_resource row across every Task at once — for a screen (the
+// All Tasks grid) that needs Resources/effort-split data for many Tasks
+// simultaneously and would otherwise be one request per row.
+export function useAllTaskResources() {
+  return useQuery({
+    queryKey: ["task-resources-all"],
+    queryFn: async () =>
+      unwrap<{ task_id: number; person_id: number }[]>(await apiClient.GET("/task/resources")),
+  });
+}
+
 export function useAssignResource(taskId: number) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -123,7 +134,10 @@ export function useAssignResource(taskId: number) {
           body: { person_id: personId },
         }),
       ),
-    onSuccess: () => invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]),
+    onSuccess: () => {
+      invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]);
+      invalidateEverywhere(queryClient, ["task-resources-all"]);
+    },
   });
 }
 
@@ -136,7 +150,10 @@ export function useUnassignResource(taskId: number) {
           params: { path: { task_id: taskId, person_id: personId } },
         }),
       ),
-    onSuccess: () => invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]),
+    onSuccess: () => {
+      invalidateEverywhere(queryClient, ["tasks", taskId, "resources"]);
+      invalidateEverywhere(queryClient, ["task-resources-all"]);
+    },
   });
 }
 
@@ -158,15 +175,29 @@ export function useRemarks(owner: RemarkOwner) {
   });
 }
 
+// Every Remark across every Task/Project/Component at once — same
+// bulk-fetch-and-group-client-side shape as useAllTaskResources above, for
+// the All Tasks grid's Remarks count column.
+export function useAllRemarks() {
+  return useQuery({
+    queryKey: ["remarks"],
+    queryFn: async () => unwrap<RemarkRecord[]>(await apiClient.GET("/remark")),
+  });
+}
+
 export function useCreateRemark(owner: RemarkOwner) {
   const queryClient = useQueryClient();
-  const key = Object.entries(owner)[0];
   return useMutation({
     mutationFn: async (remarkText: string) =>
       unwrap<RemarkRecord>(
         await apiClient.POST("/remark", { body: { remark_text: remarkText, ...owner } }),
       ),
-    onSuccess: () => invalidateEverywhere(queryClient, ["remarks", ...key]),
+    // Invalidating the bare ["remarks"] key also invalidates the more
+    // specific ["remarks", ...key] queries (React Query's invalidateQueries
+    // matches by key *prefix*, not exact key, by default) — so this one
+    // call covers both this owner's own remarks list and useAllRemarks'
+    // bulk one, rather than needing both spelled out.
+    onSuccess: () => invalidateEverywhere(queryClient, ["remarks"]),
   });
 }
 
@@ -182,18 +213,36 @@ export function useDependencies(taskId: number) {
   });
 }
 
+// Every Dependency across every Task at once — for the All Tasks grid's
+// Planned Start/End Date columns, which (like Task Detail's own) need a
+// Task's direct predecessors to compute (lib/schedule.ts's computeStartDate).
+export function useAllDependencies() {
+  return useQuery({
+    queryKey: ["dependencies"],
+    queryFn: async () => unwrap<DependencyRecord[]>(await apiClient.GET("/dependency")),
+  });
+}
+
 // D1.4-7: the mutation an "Add Dependency" dialog calls today, and a future
-// drag-and-drop handler could call unchanged.
-export function useCreateDependency(taskId: number) {
+// drag-and-drop handler could call unchanged. taskId itself is no longer
+// used in the body (invalidating the bare ["dependencies"] key below
+// already covers it) — kept as a parameter so this still reads, at the
+// call site, as "create a dependency for this task", not a bare mutation
+// with no obvious connection to one.
+export function useCreateDependency(_taskId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { pre_task_id?: number; post_task_id?: number }) =>
       unwrap<DependencyRecord>(await apiClient.POST("/dependency", { body })),
-    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies", "task", taskId]),
+    // Invalidating the bare ["dependencies"] key also covers the more
+    // specific ["dependencies", "task", taskId] queries (React Query's
+    // invalidateQueries matches by key prefix by default) — one call
+    // covers this Task's own list and useAllDependencies' bulk one.
+    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies"]),
   });
 }
 
-export function useDeleteDependency(taskId: number) {
+export function useDeleteDependency(_taskId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (dependencyId: number) =>
@@ -202,7 +251,7 @@ export function useDeleteDependency(taskId: number) {
           params: { path: { dependency_id: dependencyId } },
         }),
       ),
-    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies", "task", taskId]),
+    onSuccess: () => invalidateEverywhere(queryClient, ["dependencies"]),
   });
 }
 
@@ -219,9 +268,18 @@ export function useAttachments(owner: RemarkOwner) {
   });
 }
 
+// Every Attachment across every Task/Project/Component at once — same
+// bulk-fetch-and-group-client-side shape as useAllTaskResources above, for
+// the All Tasks grid's Attachments count column.
+export function useAllAttachments() {
+  return useQuery({
+    queryKey: ["attachments"],
+    queryFn: async () => unwrap<AttachmentRecord[]>(await apiClient.GET("/attachment")),
+  });
+}
+
 export function useCreateLinkAttachment(owner: RemarkOwner) {
   const queryClient = useQueryClient();
-  const key = Object.entries(owner)[0];
   return useMutation({
     mutationFn: async ({ name, url }: { name: string; url: string }) => {
       const form = new FormData();
@@ -231,13 +289,14 @@ export function useCreateLinkAttachment(owner: RemarkOwner) {
       for (const [k, v] of Object.entries(owner)) form.set(k, String(v));
       return unwrap<AttachmentRecord>(await apiClient.POST("/attachment", { body: form as never }));
     },
-    onSuccess: () => invalidateEverywhere(queryClient, ["attachments", ...key]),
+    // See useCreateRemark's comment: invalidating the bare ["attachments"]
+    // key also covers the more specific ["attachments", ...key] queries.
+    onSuccess: () => invalidateEverywhere(queryClient, ["attachments"]),
   });
 }
 
 export function useCreateFileAttachment(owner: RemarkOwner) {
   const queryClient = useQueryClient();
-  const key = Object.entries(owner)[0];
   return useMutation({
     mutationFn: async ({ name, file }: { name: string; file: File }) => {
       const form = new FormData();
@@ -247,6 +306,6 @@ export function useCreateFileAttachment(owner: RemarkOwner) {
       for (const [k, v] of Object.entries(owner)) form.set(k, String(v));
       return unwrap<AttachmentRecord>(await apiClient.POST("/attachment", { body: form as never }));
     },
-    onSuccess: () => invalidateEverywhere(queryClient, ["attachments", ...key]),
+    onSuccess: () => invalidateEverywhere(queryClient, ["attachments"]),
   });
 }

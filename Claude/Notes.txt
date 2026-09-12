@@ -321,4 +321,14 @@ be used rather than the 'name' from the 'person' table.
 In the test data, populate the nickname for team #1, for Alice, Priya and Nadia to be just theor first names.  Don't populate it for team #2.
 No changes yet, just tell me what you think.
 
-On the V2 TaskDetail Window, what is the purpose of the 'Back' button?
+How feasible is it to implement the urgency calculation now, using exactly the PP V1.2 algorithm?
+
+---------------------------
+
+We don't need the 'orig_task_number' column on the task table, or anywhere through the code base or windows - please remove it.
+
+Can you give me a SQL script that will adjust all of the start_date and due_date fields on the project table.
+I the date is less than 1-Dec-2014, I want to add on 4372 days.
+Don't run the script.
+
+

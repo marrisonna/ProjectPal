@@ -43,22 +43,11 @@ import {
   computeEarliestStartDate,
   computeEndDate,
   computeStartDate,
+  formatDdMmmYy,
 } from "../../lib/schedule";
 import { RemarksPanel } from "../remarks/RemarksPanel";
 import { DependenciesPanel } from "../dependencies/DependenciesPanel";
 import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// Shared display format for all three scheduling dates (mockup 1a used a
-// second, longer format for Planned Start with no stated reason — unified
-// here rather than carrying that inconsistency forward). Deliberately not
-// the browser's locale-controlled native date-input format.
-function formatDdMmmYy(date: Date | null): string {
-  if (!date) return "—";
-  const yy = String(date.getFullYear()).slice(-2);
-  return `${String(date.getDate()).padStart(2, "0")}-${MONTHS[date.getMonth()]}-${yy}`;
-}
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
