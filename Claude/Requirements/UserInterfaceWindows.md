@@ -73,6 +73,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Navigation:** The only entry point (`Program.Main` creates it). Opens `TaskWindow`, `ComponentWindow`, `ProjectDetail`, `ProjectWindow`, Find (all modeless), and — behind a password prompt (`PasswordWindow`) — `AdminWindow`; also opens Manage People (modeless singleton) and `ConfigWindow` (modal), both from the status-strip "Config" split button's dropdown.
 
+**Drag and Drop Behaviour:** None — the report grid has no drag-drop wiring.
+
 **Status:** Live — the primary shell, and the only place Admin and Manage People are reachable from.
 
 <a id="task-window"></a>
@@ -83,6 +85,11 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** A filterable/sortable grid (read-only cells; editing happens in `TaskDetail`) with columns ID, Urgency, Resources, Status, Tentatively-Assigned Resources, Description, Affected Component, Project, Priority, End Date, Start Date, Attachments, Remarks, Owner (plus hidden columns for Effort, % Allocation, Requested By, the old app's Private flag, Ref URL, Detailed Description). Default filter narrows to open-ish statuses and, unless the user is a SuperUser, to their own tasks; default sort is Urgency descending. A second tab lazily renders the same (filtered) tasks as a read-only Gantt chart.
 
 **Interactions:** Double-click a row or a Gantt bar opens `TaskDetail`. Rows can be deleted directly from the grid (with confirmation). Drag-drop onto grid cells is enabled (e.g. reassigning a resource). Column headers sort/filter.
+
+**Drag and Drop Behaviour:** (`GUITask.cs`, `Libs/CustomGUIControls/.../GridControl.cs`)
+- **Can be dragged out:** a Task row — the grid's generic drag mechanism starts a Move-effect drag by default, or a Link-effect drag if Ctrl is held when the drag starts; which effect is needed depends on the drop target (§4's "Ctrl-modified drag effect" pattern below).
+- **Accepts drops:** a Task dropped onto another Task row in this same grid creates a Dependency (the dragged Task becomes a pre-dependency of the row dropped onto) — this target only accepts a Link-effect drag, i.e. **Ctrl must be held**. A circular-dependency check blocks the drop with a message box if it would create a cycle. A plain (no-Ctrl) drag has no effect when dropped back onto this grid.
+- **Where a dragged Task can be dropped elsewhere:** a sub-component row in `ComponentWindow`'s (§3.8) embedded tree, to reassign the Task's Affected Component (no Ctrl); a sub-project row in `ProjectDetail`'s (§3.5) embedded tree, to move the Task into that project (no Ctrl); the "Depends Upon"/"Dependants" listboxes in `TaskDetail` (§3.3) or `ProjectDetail` (§3.5), to create a Dependency (Ctrl); a Person row in Manage People (§3.12) — shows a droppable cursor but the drop handler is empty, a confirmed dead sub-feature.
 
 **Navigation:** Opened from `MainWindow`'s "Task List" button — modeless, multiple instances can be open at once and are redisplayed together when data changes. Opens `TaskDetail`.
 
@@ -99,6 +106,12 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** OK saves (validates required fields for a brand-new task); Cancel discards a not-yet-saved new task and restores any dependencies removed during the edit; Delete Task (permission-gated); drag files onto the form to attach them; closing with unsaved changes prompts to save.
 
+**Drag and Drop Behaviour:** (`TaskDetail.cs`)
+- **Can be dragged out:** the Task title label — Move effect by default, Link effect if Ctrl is held when the drag starts (same source pattern as `TaskWindow`'s grid rows). Can be dropped on the same destinations listed under `TaskWindow`'s (§3.2) "Where a dragged Task can be dropped elsewhere" entry.
+- **Accepts drops:**
+  - OS files dragged from Explorer, dropped anywhere on the window, are added as File Attachments (`Utils.DragDrop.DroppedFiles`) — unrelated to the Ctrl/Link mechanism below; a plain drag from Explorer is all that's needed.
+  - A Task or Project dropped onto the **"Depends Upon"** list makes the dragged item a pre-dependency of this Task; dropped onto **"Dependants"** makes this Task a pre-dependency of the dragged item. Both require the drag to have been started with **Ctrl held** (Link effect); a message box blocks the drop if it would create a circular dependency, or would make a parent Project depend on its own sub-Task (or vice versa).
+
 **Navigation:** Reached via a singleton-per-task pattern (re-focuses an existing window rather than opening a duplicate) from `TaskWindow`, `ComponentWindow`, `ProjectDetail`, Find, and the Gantt view — modeless (`Show`) in all of these. Two special constructors create a **brand-new** Task from `ProjectDetail`'s or `ComponentWindow`'s embedded controls, opened **modally** (`ShowDialog`) in that case. Opens `ComponentWindow`, `ProjectDetail`, `RemarkWindow`.
 
 **Status:** Live — the most heavily used window in the app.
@@ -111,6 +124,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** A read-only, filterable/sortable grid: Name, Priority, Parent (visible columns), plus Is Active, Total Active Task Count, Total Active Task Effort, Owner, Start Date, Due Date (available columns). Default filter is active projects only; default sort is Priority descending. No add/edit/delete on this window itself.
 
 **Interactions:** Double-click a row opens `ProjectDetail`. Column sort/filter.
+
+**Drag and Drop Behaviour:** None — unlike `TaskWindow`, this grid does not have `AllowCellDrop` enabled (confirmed absent from the codebase's 4-file list of grids that do: `ComponentControl.xaml.cs`, `FormManagePeople.cs`, `ProjectControl.xaml.cs`, `TaskWindow.cs`).
 
 **Navigation:** Opened from `MainWindow`'s "Project List" button — modeless. Opens `ProjectDetail`.
 
@@ -125,6 +140,12 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Add/rename/delete a sub-project; drag-drop to reparent projects or move a Task into a project; drag-drop dependency links; expand/collapse rows; open the Gantt view for this project's subtree; click the parent link to navigate up.
 
+**Drag and Drop Behaviour:** (`ProjectDetail.cs`, `ProjectControl.xaml.cs`)
+- **The window's own title** (this Project itself): drag source — Move effect by default, Link effect if Ctrl is held. Drop target — accepts only a dragged Project, reparenting it under this one (no Ctrl; blocked by an `IsDescendantOf` cycle guard if it would create a loop). Does **not** accept a dragged Task.
+- **Each sub-project row** in the embedded tree (a separate control, `ProjectControl.xaml.cs`): drag source — offers Copy+Move by default, or Link only if Ctrl is held. Drop target — accepts a dragged Project (reparents it under this row, no Ctrl, same cycle guard) **or** a dragged Task (moves the Task into this row's project, no Ctrl — the Ctrl/Copy branch here requests a Copy effect that a Task's own drag source never offers, so Ctrl+dropping a Task on a project row does not work in practice).
+- **Attachments grid:** accepts OS files dragged from Explorer, added as File Attachments — unrelated to Ctrl/Link.
+- **"Depends Upon"/"Dependants" listboxes:** same behaviour as `TaskDetail`'s (§3.3) — accepts a dragged Task or Project to create a Dependency, **Ctrl must be held**; blocked by circular-dependency and parent-Project/sub-Task guards.
+
 **Navigation:** Reached via a singleton-per-project pattern from `ProjectWindow`, `TaskDetail` (Project field / dependency double-click), the Gantt view, the embedded project-row control (click to open a sub-project), and `MainWindow`'s "Show Projects" button (opens the top-level/no-project view) — modeless in all cases. Opens `NewProject` (modal), Plan Display, `TaskDetail` (new task), and itself (parent/child navigation).
 
 **Status:** Live — the core window for browsing/editing the project hierarchy.
@@ -138,6 +159,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Create/Rename or Cancel; Enter confirms.
 
+**Drag and Drop Behaviour:** None.
+
 **Navigation:** Opened modally from `ProjectDetail`'s toolbar ("Add New Project") and from the embedded project-row's right-click "Rename" menu. Opens nothing; the caller performs the actual create/rename after a successful result.
 
 **Status:** Live.
@@ -149,7 +172,13 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Displayed:** A read-only visualization: Task/Project/Component bars recursively laid out from the given Project (or from all top-level active projects and orphan tasks), colour-coded by resource and by priority/status, with a "today" marker line. Hovering a bar shows a tooltip; nothing here is a form field to edit directly.
 
-**Interactions:** Double-click a Task bar opens `TaskDetail`; double-click a Project bar opens `ProjectDetail`; double-click a Component bar opens `ComponentWindow`; Ctrl+double-click a Project bar opens another Plan Display scoped to that sub-project. Dragging a bar horizontally shifts its Start Date by the dragged number of business days (permission-gated, respects dependency constraints) — the one directly-editable interaction this view offers.
+**Interactions:** Double-click a Task bar opens `TaskDetail`; double-click a Project bar opens `ProjectDetail`; double-click a Component bar opens `ComponentWindow`; Ctrl+double-click a Project bar opens another Plan Display scoped to that sub-project. Shift+dragging a Task or Project bar horizontally shifts its Start Date by the dragged number of business days (permission-gated, respects dependency constraints) — the one directly-editable interaction this view offers.
+
+**Drag and Drop Behaviour:** (`Libs/PlanDisplay/Task.cs`, `Libs/PlanDisplay/Project.cs`) — this view uses two entirely separate drag gestures on the same bars, selected by which modifier key is held when the drag starts:
+- **Shift+drag** (a Task or Project bar): **not** a Windows drag-drop operation at all — a local mouse-move "rubber-band" gesture (`StartMove`/`FinishMove`) that, on release, shifts the bar's own Start Date by the number of business days dragged (`Event.DayShift`, handled in `GanttDisplayHelper.cs`). For a Task, the new date is floored at its dependency predecessors' latest end date unless the shift is a delay. This is a real, working, persisting feature.
+- **Ctrl+drag** (a Task or Project bar): starts a genuine OS-level drag-drop operation (Link effect, via the same `DragHelper` mechanism used elsewhere) — but no drop target of any kind exists anywhere in the Gantt view or its hosting window (checked `FormPlanDisplay.cs`, its Designer file, `PlanControl.xaml`/`.xaml.cs`, and every other file under `Libs/PlanDisplay/`: no `AllowDrop`, `DragEnter`, or `Drop` handler exists). **This drag goes nowhere — a confirmed dead/incomplete sub-feature**, in the same category as dragging a Task onto a Person row (§3.12).
+- A plain drag (no modifier key) does nothing.
+- This view is not itself a drop target for anything dragged in from elsewhere.
 
 **Navigation:** Reached via a singleton-per-project pattern from `ProjectDetail`'s "Gantt Display" toolbar button and via Ctrl+double-click drill-down from itself — modeless. Opens `TaskDetail`, `ProjectDetail`, `ComponentWindow`, and itself.
 
@@ -164,6 +193,11 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Drag a component onto the title to reparent it; click the parent link to navigate up; toggle the task-visibility filter; add a child component; drag-drop files onto the attachments grid.
 
+**Drag and Drop Behaviour:** (`ComponentWindow.cs`, `ComponentControl.xaml.cs`)
+- **The window's own title** (this Component itself): drop target only — accepts a dragged Component, reparenting it under this one (no Ctrl; `IsDescendantOf` cycle guard). Does **not** accept a dragged Task — a Task dropped on the root title does nothing.
+- **Each sub-component row** in the embedded tree (a separate control, `ComponentControl.xaml.cs`, used recursively for every descendant shown): drag source — ignores Ctrl entirely, always offers every effect (`DragDropEffects.All`). Drop target — accepts a dragged Component (reparents it under this row, same cycle guard) **or** a dragged Task (reassigns the Task's Affected Component to this row's component, no Ctrl needed). Reassigning a Task's Component this way only works by dropping on a row in the tree, not on the window's own root title.
+- **Attachments grid:** accepts OS files dragged from Explorer, added as File Attachments.
+
 **Navigation:** Reached via a singleton-per-component pattern from `MainWindow`'s "Show Components" button (top level), Find, the Gantt view, `TaskDetail` (Component field), the embedded sub-component tree, and itself (parent/child navigation) — modeless. Opens `NewComponent` (modal), `TaskDetail`, and itself.
 
 **Status:** Live.
@@ -176,6 +210,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** Parent component name (read-only), Component Name (editable).
 
 **Interactions:** Create/Rename or Cancel; Enter confirms.
+
+**Drag and Drop Behaviour:** None.
 
 **Navigation:** Opened modally from `ComponentWindow`'s "add" button and from the embedded component tree's rename action. Opens nothing.
 
@@ -190,6 +226,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** OK saves and closes (disabled if not permitted); Cancel discards.
 
+**Drag and Drop Behaviour:** None — `GUIRemark`'s `IGridItem` methods are all no-op stubs, both as a drag source and a drop target.
+
 **Navigation:** Reached via a singleton-per-remark pattern — created fresh from `TaskDetail`'s "Add" button, or reopened for viewing from a remark elsewhere in the app. Modeless. Opens nothing.
 
 **Status:** Live.
@@ -202,6 +240,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** Search text box (editable), checkboxes for which types to search and whether to include closed items and attachment contents (all editable), a read-only results grid (type, description, and related metadata).
 
 **Interactions:** Find scans the selected sources (showing the Progress Indicator while it runs) and populates the results grid, sorted with highlighted items first. Double-clicking a result routes to the matching detail window by type.
+
+**Drag and Drop Behaviour:** None — `FindResult`'s `IGridItem` methods are all no-op stubs, both as a drag source and a drop target.
 
 **Navigation:** Opened from `MainWindow`'s "Find" button — modeless. Opens Progress Indicator, and via double-click: `TaskDetail`, `ComponentWindow`, `ProjectDetail`, `RemarkWindow` (via `TaskDetail` for a Remark result).
 
@@ -216,6 +256,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** A "New Person" button opens the New Person dialog; "Delete Person" checks whether the selected Person still owns, requests, or is resourced on anything and, if so, blocks the delete with an explanation; otherwise confirms via the same New Person dialog before deleting.
 
+**Drag and Drop Behaviour:** (`GUIPerson.cs`) The grid does have `AllowCellDrop` enabled, but a Person row can never be dragged out (`PopulateDragDropDataObject` unconditionally returns `false`). It does show a Link-drop cursor when a Task is dragged over a Person row (requires the Task's own drag to have been started with Ctrl held) — but the drop handler itself is an empty method body, so **nothing happens on drop**. A confirmed dead/incomplete sub-feature, same category as the Gantt view's Ctrl+drag (§3.7).
+
 **Navigation:** Opened from `MainWindow`'s "Manage Users" status-strip item — modeless singleton (re-focuses if already open). Opens the New Person dialog (modal, for both add and delete-confirm).
 
 **Status:** Live.
@@ -228,6 +270,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** Name (editable when adding, read-only/pre-filled when confirming a delete), a "name already exists" warning that also disables OK when triggered.
 
 **Interactions:** OK/Cancel; Enter confirms.
+
+**Drag and Drop Behaviour:** None.
 
 **Navigation:** Opened modally, only from Manage People. Opens nothing.
 
@@ -242,6 +286,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Every control here performs an immediate, consequential action (relaunching the app under a different identity, migrating storage backend, toggling encryption, dumping all attachments to a local temp folder) rather than editing a record.
 
+**Drag and Drop Behaviour:** None.
+
 **Navigation:** Opened only from `MainWindow`'s "Admin" menu item, behind `PasswordWindow` (skipped if already a SuperUser) — modal. Opens nothing.
 
 **Status:** Live — these operations are largely specific to `V1.2`'s particular architecture (local storage-backend switching, in-process re-launch-as-another-user) and are unlikely to carry forward as designed; see `UseCases.md`'s "Administer the System" use case.
@@ -254,6 +300,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** "Hide Closed Projects" (editable), "View Private Items" (editable, visible/persisted only for SuperUsers — tied to the old app's Private/Visibility flag that `DomainModel.md` has since dropped), "Save settings and restart" button.
 
 **Interactions:** OK persists settings; Restart persists then relaunches the app.
+
+**Drag and Drop Behaviour:** None.
 
 **Navigation:** Opened only from `MainWindow`'s "Config" split button — modal. Opens nothing.
 
@@ -268,6 +316,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** OK/Cancel.
 
+**Drag and Drop Behaviour:** None.
+
 **Navigation:** Opened only from `MainWindow`, immediately before `AdminWindow` — modal, skipped entirely if the user is already a SuperUser. Opens nothing.
 
 **Status:** Live.
@@ -280,6 +330,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 **Displayed:** A single progress bar (read-only, driven by the caller).
 
 **Interactions:** None — purely passive, closed programmatically when the search finishes.
+
+**Drag and Drop Behaviour:** None.
 
 **Navigation:** Opened only from Find, positioned over it, closed by it. Opens nothing.
 
@@ -294,6 +346,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Per-field "Yours"/"Theirs" radio choice; OK applies the merge; Cancel discards it. The dialog is only shown at all if a real conflict exists — otherwise the merge happens silently.
 
+**Drag and Drop Behaviour:** None.
+
 **Navigation:** Instantiated only by the app's periodic database-sync logic, one dialog per conflicting Task/Project/Component — modal, and not reachable from any menu or button. Opens nothing.
 
 **Status:** Live, but condition-triggered only — a user may go an entire session without ever seeing one of these.
@@ -307,6 +361,8 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Interactions:** Check All / None / OK (applies the filter) / Cancel (discards); losing focus also just hides it.
 
+**Drag and Drop Behaviour:** None.
+
 **Navigation:** Not opened via `Show`/`ShowDialog` from application code — it's embedded per-column by the grid control itself whenever a grid sets its filter row visible.
 
 **Status:** Live, widely used — worth documenting as a reusable grid-filtering UI pattern for `V2` (§4) rather than as its own screen.
@@ -319,6 +375,11 @@ Patterns that recur across many windows above, described once here rather than r
 - **Singleton-per-object windows.** `TaskDetail`, `ProjectDetail`, `ComponentWindow`, `RemarkWindow`, and Plan Display all cache one window instance per underlying database object and re-focus the existing window instead of opening a duplicate when the same item is opened twice.
 - **Grid double-click opens detail.** Every list/grid window (`TaskWindow`, `ProjectWindow`, Find's results, the Gantt views) uses double-click on a row/bar as the way into that item's detail window, consistently across the app.
 - **Drag-and-drop is the primary way to restructure the hierarchy.** Reparenting a Project or Component, moving a Task into a Project, and creating a Dependency are all done by dragging one item onto another, rather than through a picker dialog or menu command (the Component/Project text field in `TaskDetail` is the one exception, offering an explicit tree-picker).
+- **Ctrl-modified drag effect: not a universal "hold Ctrl to drag" rule — it selects which of two behaviours a drop performs, and it is per-target, not per-source.** Almost every drag source in the app (grid rows via `GridControl.cs`; the Task/Project title labels in `TaskDetail`/`ProjectDetail`; the Task/Project Gantt bars) computes its effect the same way at the moment the drag starts: **not holding Ctrl** offers a Move effect; **holding Ctrl** offers a Link effect instead (never both). Each drop target then only accepts one of the two:
+  - **Move-only targets** (work *without* Ctrl): reparenting a Project or Component (dropping on a title/tree row), moving a Task into a Project (dropping on a sub-project row), reassigning a Task's Affected Component (dropping on a sub-component row).
+  - **Link-only targets** (work *only with* Ctrl held): creating a Dependency — dropping a Task on another Task in a grid, or dropping a Task/Project onto a "Depends Upon"/"Dependants" listbox.
+  - So holding Ctrl is required for exactly one family of operations (Dependency creation) and actively *prevents* the other family (reparenting/reassigning) from working, since a Link-effect drag doesn't satisfy a Move-only target. A user dragging a Task onto a Project row to move it in, then immediately dragging a Project onto a Dependency listbox to link it, uses the *opposite* Ctrl state for each.
+  - **Exceptions:** dragging a Component's own name (`ComponentControl.xaml.cs`) ignores Ctrl and always offers every effect, so reparenting a Component works with or without Ctrl held. The Gantt view's bars additionally support a **Shift**+drag gesture (§3.7) that isn't Windows drag-drop at all — it's a separate, in-window reschedule gesture; Ctrl+drag on a bar *is* real drag-drop, but has no drop target anywhere in the app (§3.7) and Person rows' drop handler is empty (§3.12) — both confirmed dead sub-features, not something a Ctrl/no-Ctrl mistake would fix.
 - **Modal vs. modeless is used deliberately, not arbitrarily.** Small, single-purpose data-entry dialogs (`NewProject`, `NewComponent`, New Person, `PasswordWindow`, the merge dialogs) are modal. Anything that's a "place to work" — a list, a detail editor, the Gantt view — is modeless, so a user can have several open side by side (e.g. a Task open next to its Project).
 - **Permission-gated editability, not permission-gated visibility.** Read-only vs. editable is usually decided per-field at render time (e.g. a Remark becomes read-only if the user lacks edit rights on it, admin-only grid columns are read-only for non-SuperUsers) rather than by hiding the field entirely — see `KeyConcepts.md`'s Role / Permission Level entry.
 - **A background timer drives both refresh and conflict detection.** `MainWindow`'s 10-second timer both refreshes displayed data and is what surfaces the merge dialogs in §3.18 — the two concerns (auto-refresh, conflict handling) are implemented as one mechanism in the old app, which won't hold once `V2`'s later levels target real-time multi-user editing (`DomainModel.md`'s Future Extensions).

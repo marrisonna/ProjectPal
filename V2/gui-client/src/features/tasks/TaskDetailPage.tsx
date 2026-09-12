@@ -33,6 +33,7 @@ import {
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
 import { openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
 import { canEditOwnedRecord } from "../../lib/permissions";
@@ -299,7 +300,24 @@ export function TaskDetailPage() {
           over that exact break-even: browsers' flex-width math isn't
           guaranteed to land on a whole pixel, so a zero-slack fit can wrap
           anyway on sub-pixel rounding. */}
-      <Box sx={{ width: 656, mx: "auto" }}>
+      <Box
+        sx={{ width: 656, mx: "auto" }}
+        onDragOver={(event) => {
+          // D1.4-10: confirmed (manually) that native HTML5 drag-and-drop
+          // crosses two separate window.open()'d Task Detail windows, not
+          // just tabs — see 4_GuiClient/Plan.md §6.2. Switch to the
+          // Dependencies tab as soon as a dragged Task enters this window,
+          // so the "Depends upon"/"Dependants" drop targets are visible
+          // without the user needing to have pre-selected that tab.
+          // Deliberately doesn't switch back on dragleave/drag-cancel —
+          // dragenter/dragleave fire spuriously as the pointer crosses
+          // child element boundaries, and there's no need to revert once
+          // shown.
+          if (!event.dataTransfer.types.includes(TASK_DRAG_MIME_TYPE)) return;
+          event.preventDefault();
+          if (subTab !== 0) setSubTab(0);
+        }}
+      >
       <Box
         sx={{
           bgcolor: "#fff",
@@ -314,6 +332,23 @@ export function TaskDetailPage() {
             field (§3.11's "collapse identity into one compact header"). */}
         <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: "10px" }}>
           <Box
+            draggable
+            onDragStart={(event) => {
+              // D1.4-10: Ctrl-drag this Task's icon badge (standing in for
+              // its title — the description field next to it is a
+              // live-editable <input>, not a plain label, so it can't
+              // double as the drag source without colliding with native
+              // text-selection drag) onto a different, already open Task
+              // Detail window's Dependencies tab, matching V1.2's own
+              // Ctrl-drag-creates-a-Dependency convention
+              // (Requirements/UserInterfaceWindows.md §4).
+              if (!event.ctrlKey) {
+                event.preventDefault();
+                return;
+              }
+              event.dataTransfer.setData(TASK_DRAG_MIME_TYPE, String(id));
+              event.dataTransfer.effectAllowed = "link";
+            }}
             sx={{
               width: 24,
               height: 24,
@@ -326,6 +361,7 @@ export function TaskDetailPage() {
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
+              cursor: "grab",
             }}
           >
             T
