@@ -15,6 +15,8 @@ import {
 } from "../../components/DenseField";
 import { buildBreadcrumb, type TreeItem } from "../../components/TreePicker";
 import {
+  useAllDependencies,
+  useAllTaskResources,
   useAssignResource,
   useAttachments,
   useComponents,
@@ -38,12 +40,15 @@ import { personDisplayName } from "../../lib/people";
 import { useAuth } from "../../auth/AuthContext";
 import {
   addBusinessDays,
+  buildScheduleGraph,
   businessDaysBetween,
   computeDuration,
   computeEarliestStartDate,
   computeEndDate,
-  computeStartDate,
+  computeTaskRowColour,
+  computeUrgency,
   formatDdMmmYy,
+  getTaskSchedule,
 } from "../../lib/schedule";
 import { RemarksPanel } from "../remarks/RemarksPanel";
 import { DependenciesPanel } from "../dependencies/DependenciesPanel";
@@ -86,6 +91,12 @@ export function TaskDetailPage() {
   const { data: assignedResources } = useTaskResources(id);
   const { data: allTasks } = useTasks();
   const { data: dependencies } = useDependencies(id);
+  // Bulk, unfiltered — the recursive Start/End date evaluator
+  // (lib/schedule.ts's buildScheduleGraph, D1.5-2/§4.7) needs every
+  // Dependency and every Task's real assigned-Resource count to resolve a
+  // predecessor's own predecessors, not just this Task's own direct ones.
+  const { data: allDependencies } = useAllDependencies();
+  const { data: allTaskResources } = useAllTaskResources();
   const { data: attachments } = useAttachments({ task_id: id });
   const { data: remarks } = useRemarks({ task_id: id });
   const updateTask = useUpdateTask(id);
@@ -231,16 +242,38 @@ export function TaskDetailPage() {
   // start offset updates these before Save, matching V1.2's live recalculation.
   const formTask = task ? ({ ...task, ...form } as typeof task) : null;
   const earliestStartDate = formTask ? computeEarliestStartDate(formTask, teamProject) : null;
-  const predecessorDependencies = dependencies?.filter((d) => d.post_task_id === id) ?? [];
-  const startDate = formTask
-    ? computeStartDate(formTask, teamProject, predecessorDependencies, allTasks ?? [], projects ?? [])
-    : null;
+
+  // The full recursive Task/Project schedule graph (D1.5-2/§4.7) needs
+  // this Task's own *live* form state, not the last-saved copy already
+  // sitting in allTasks — substituted in here so a predecessor chain
+  // resolved through this Task (were one to exist) sees the same
+  // in-progress edits the rest of this page already does, and so this
+  // Task's own StartDate reflects a live-edited start offset immediately.
+  // Same substitution for its own staged Resource count (D-Win-8: toggling
+  // a Resource updates Duration/dates before Save, not just on the
+  // query's own last-saved assignedResources).
+  const tasksForSchedule = (allTasks ?? []).map((t) => (t.task_id === id && formTask ? formTask : t));
+  const resourceCountByTaskId = new Map<number, number>();
+  for (const r of allTaskResources ?? []) {
+    resourceCountByTaskId.set(r.task_id, (resourceCountByTaskId.get(r.task_id) ?? 0) + 1);
+  }
+  resourceCountByTaskId.set(id, resourceIds.size);
+  const scheduleGraph = buildScheduleGraph(
+    tasksForSchedule,
+    projects ?? [],
+    allDependencies ?? [],
+    resourceCountByTaskId,
+  );
+  const startDate = formTask ? getTaskSchedule(scheduleGraph, id).startDate : null;
   // Live off the staged resourceIds, not the query's own assignedResources
   // count, so toggling a Resource updates Duration/dates before Save too
   // (D-Win-8) — same "recompute from what's on screen, not last-saved"
   // principle already applied to Effort/the start offset above.
   const duration = formTask ? computeDuration(formTask, resourceIds.size) : null;
   const endDate = computeEndDate(startDate, duration);
+  const urgency = formTask
+    ? computeUrgency(formTask, new Map(projects?.map((p) => [p.project_id, p]) ?? []), startDate, endDate)
+    : 100;
 
   return (
     // Fixed, narrow width rather than filling the browser — matches the
@@ -348,16 +381,29 @@ export function TaskDetailPage() {
               ))}
             </Box>
           </Box>
-          {/* Preview only: Urgency is real, computed client-side (D1.2-2),
-              but that computation isn't built until Stage 3 (see
-              TaskListPage.tsx) — this hardcoded 100 is just so the mockup's
-              header layout can be seen with something in this slot, not a
-              stand-in for the real value. Styled exactly per the Claude
-              Design mockup ("Task Detail Compact Mockups.dc.html", option
-              1a)'s own Urgency display. */}
+          {/* Real, computed client-side (D1.2-2/D1.5-1) — the same
+              computeUrgency TaskListPage.tsx's Urgency column uses.
+              Background is V1.2's own row colour (KeyConcepts.md §12.2's
+              "Applying it to a Task's row colour", D1.5-5): white when not
+              urgent, fading to light red as Urgency climbs past 100, or a
+              fixed grey when this Task's own Priority is unset/Cancelled/
+              Closed regardless of the number. Position/layout otherwise
+              unchanged from the Claude Design mockup ("Task Detail Compact
+              Mockups.dc.html", option 1a)'s own Urgency display. */}
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", px: "6px", borderLeft: "1px solid rgba(0,0,0,0.1)" }}>
             <FieldLabel>Urgency</FieldLabel>
-            <Box sx={{ fontSize: 12, fontWeight: 700, color: "#b45309" }}>100</Box>
+            <Box
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: "rgba(0,0,0,0.75)",
+                px: "6px",
+                borderRadius: "3px",
+                bgcolor: computeTaskRowColour(formTask?.priority ?? null, urgency),
+              }}
+            >
+              {urgency.toFixed(1)}
+            </Box>
           </Box>
           <DenseButton onClick={() => openListWindow("tasks")}>All Tasks</DenseButton>
           {canEdit && (

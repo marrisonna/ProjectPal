@@ -18,7 +18,13 @@ import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { personDisplayName } from "../../lib/people";
 import { isTeamLeadOfAnyTeam } from "../../lib/permissions";
 import { useAuth } from "../../auth/AuthContext";
-import { computeDuration, computeEndDate, computeStartDate, formatDdMmmYy } from "../../lib/schedule";
+import {
+  buildScheduleGraph,
+  computeUrgency,
+  computeUrgencyColour,
+  formatDdMmmYy,
+  getTaskSchedule,
+} from "../../lib/schedule";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
 import {
   columnFilterPasses,
@@ -147,6 +153,24 @@ export function TaskListPage() {
   const projectsById = useMemo(() => byId(projects, "project_id"), [projects]);
   const componentsById = useMemo(() => byId(components, "component_id"), [components]);
 
+  // Every user's All Tasks view is hard-restricted to their own Team(s)
+  // (D-Win-17) — not a clearable column filter like the Resources default
+  // (D-Win-15), but a floor under the row set itself: a Team Lead
+  // previously saw every Task company-wide with no filter at all, and a
+  // non-Team-Lead could reach the same thing simply by clearing their own
+  // Resources filter, since `useTasks()` itself was never Team-scoped. A
+  // Task whose own Project can't be resolved (missing/unloaded) is
+  // excluded rather than shown, since Team membership can't be verified
+  // for it — fail closed, not open.
+  const myTeamIds = useMemo(
+    () => new Set(person?.team_roles.map((tr) => tr.team_id) ?? []),
+    [person],
+  );
+  const teamScopedTasks = useMemo(
+    () => (tasks ?? []).filter((t) => myTeamIds.has(projectsById.get(t.project_id)?.team_id ?? -1)),
+    [tasks, projectsById, myTeamIds],
+  );
+
   const resourceIdsByTask = useMemo(() => {
     const map = new Map<number, number[]>();
     for (const r of allTaskResources ?? []) {
@@ -156,17 +180,6 @@ export function TaskListPage() {
     }
     return map;
   }, [allTaskResources]);
-
-  const predecessorsByTask = useMemo(() => {
-    const map = new Map<number, typeof allDependencies>();
-    for (const dep of allDependencies ?? []) {
-      if (dep.post_task_id == null) continue;
-      const list = map.get(dep.post_task_id);
-      if (list) list.push(dep);
-      else map.set(dep.post_task_id, [dep]);
-    }
-    return map;
-  }, [allDependencies]);
 
   const remarksCountByTask = useMemo(() => {
     const map = new Map<number, number>();
@@ -186,24 +199,61 @@ export function TaskListPage() {
     return map;
   }, [allAttachments]);
 
-  // Planned Start/End Date computed once per Task here, not separately in
-  // each column's own valueGetter — computeStartDate/computeEndDate is the
-  // exact same pipeline TaskDetailPage.tsx uses for one Task at a time
-  // (lib/schedule.ts), just run for every row; End Date needs Start
-  // Date's own result, so this avoids computing Start Date twice.
-  const scheduleByTask = useMemo(() => {
-    const map = new Map<number, { startDate: Date | null; endDate: Date | null }>();
-    for (const task of tasks ?? []) {
-      const project = projectsById.get(task.project_id);
-      const predecessors = predecessorsByTask.get(task.task_id) ?? [];
-      const startDate = computeStartDate(task, project, predecessors, tasks ?? [], projects ?? []);
-      const resourceCount = resourceIdsByTask.get(task.task_id)?.length ?? 0;
-      const duration = computeDuration(task, resourceCount);
-      const endDate = computeEndDate(startDate, duration);
-      map.set(task.task_id, { startDate, endDate });
-    }
+  const resourceCountByTaskId = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [taskId, ids] of resourceIdsByTask) map.set(taskId, ids.length);
     return map;
-  }, [tasks, projects, projectsById, predecessorsByTask, resourceIdsByTask]);
+  }, [resourceIdsByTask]);
+
+  // The full recursive Task/Project schedule graph (lib/schedule.ts's
+  // buildScheduleGraph, D1.5-2/§4.7) built once per render pass here, not
+  // separately per column's own valueGetter — Planned Start/End Date and
+  // Urgency all read from the same `getTaskSchedule` call per row below,
+  // each Task's schedule resolved at most once regardless of how many
+  // other rows/columns end up asking for it (its own predecessors,
+  // ancestor Projects, etc., via the graph's internal memoization).
+  const scheduleGraph = useMemo(
+    () => buildScheduleGraph(tasks ?? [], projects ?? [], allDependencies ?? [], resourceCountByTaskId),
+    [tasks, projects, allDependencies, resourceCountByTaskId],
+  );
+
+  function taskUrgency(row: TaskRecord): number {
+    const { startDate, endDate } = getTaskSchedule(scheduleGraph, row.task_id);
+    return computeUrgency(row, projectsById, startDate, endDate);
+  }
+
+  // V1.2 colours a Task's whole grid row (`GUITask.Colour`, KeyConcepts.md
+  // §12.2's "Applying it to a Task's row colour"), not just one cell — but
+  // DataGrid has no per-row inline-style hook, only discrete CSS classes
+  // via `getRowClassName`, so this mirrors V1.2's own "precompute a
+  // 101-entry palette" approach (`Colours.cs`) as CSS classes instead of a
+  // C# array, keyed by the same `m` bucket `computeUrgencyColour` itself
+  // buckets into.
+  const urgencyRowSx = useMemo(() => {
+    // A *descendant* selector (the space before the class), not `&.foo` —
+    // `sx` here is on the `<DataGrid>` root itself, but `getRowClassName`
+    // puts the class on each row, a descendant of that root, not on the
+    // root element itself. `&.foo` (no space) would only ever match were
+    // this class somehow applied to `.MuiDataGrid-root` directly — it
+    // silently matched nothing until caught by checking the actual
+    // rendered row background rather than assuming the class existing was
+    // enough.
+    const sx: Record<string, { bgcolor: string }> = {
+      "& .urgency-row-grey": { bgcolor: "rgb(190, 190, 190)" },
+    };
+    for (let m = 0; m <= 100; m++) {
+      sx[`& .urgency-row-${m}`] = { bgcolor: computeUrgencyColour(100 + m) };
+    }
+    return sx;
+  }, []);
+
+  function urgencyRowClassName(row: TaskRecord): string {
+    if (row.priority == null || row.priority === "Cancelled" || row.priority === "Closed") {
+      return "urgency-row-grey";
+    }
+    const m = Math.max(0, Math.min(100, Math.trunc(taskUrgency(row)) - 100));
+    return `urgency-row-${m}`;
+  }
 
   function personName(personId: number | null, project: ProjectRecord | undefined): string {
     if (personId == null) return "—";
@@ -235,7 +285,7 @@ export function TaskListPage() {
     const config = filterConfigs[field];
     if (!config) return [];
     const values = new Set<string>();
-    for (const row of tasks ?? []) {
+    for (const row of teamScopedTasks) {
       if (!passesAllFilters(row, field)) continue;
       for (const v of config.getValues(row)) values.add(v);
     }
@@ -304,9 +354,9 @@ export function TaskListPage() {
         width: 80,
         align: "right",
         headerAlign: "right",
-        valueGetter: () => 100,
+        valueGetter: (_value, row) => taskUrgency(row),
       },
-      () => ["100"],
+      (row) => [String(taskUrgency(row))],
       "number",
     ),
     withFilter(
@@ -388,9 +438,9 @@ export function TaskListPage() {
         field: "end_date",
         headerName: "End Date",
         width: 100,
-        valueGetter: (_value, row) => formatDdMmmYy(scheduleByTask.get(row.task_id)?.endDate ?? null),
+        valueGetter: (_value, row) => formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).endDate),
       },
-      (row) => [formatDdMmmYy(scheduleByTask.get(row.task_id)?.endDate ?? null)],
+      (row) => [formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).endDate)],
       "date",
     ),
     withFilter(
@@ -398,9 +448,9 @@ export function TaskListPage() {
         field: "start_date",
         headerName: "Planned Start",
         width: 100,
-        valueGetter: (_value, row) => formatDdMmmYy(scheduleByTask.get(row.task_id)?.startDate ?? null),
+        valueGetter: (_value, row) => formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).startDate),
       },
-      (row) => [formatDdMmmYy(scheduleByTask.get(row.task_id)?.startDate ?? null)],
+      (row) => [formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).startDate)],
       "date",
     ),
     withFilter(
@@ -498,11 +548,6 @@ export function TaskListPage() {
       "date",
     ),
     withFilter(
-      { field: "orig_task_number", headerName: "Orig Task ID", width: 100 },
-      (row) => [row.orig_task_number ?? ""],
-      "string",
-    ),
-    withFilter(
       { field: "external_reference_url", headerName: "Ref URL", width: 160 },
       (row) => [row.external_reference_url ?? ""],
       "string",
@@ -514,7 +559,7 @@ export function TaskListPage() {
     ),
   ];
 
-  const filteredTasks = (tasks ?? []).filter((row) => passesAllFilters(row));
+  const filteredTasks = teamScopedTasks.filter((row) => passesAllFilters(row));
 
   return (
     // No heading here — the window's own title bar ("All Tasks", set by
@@ -569,11 +614,8 @@ export function TaskListPage() {
         // uses the largest page size the MIT license allows, with the
         // pagination footer left visible so a Task list over 100 rows is
         // still reachable.
-        // Default sort: Urgency descending (D-Win-16) — inert today since
-        // every row's Urgency is still the fixed 100 placeholder (Stage 3,
-        // D1.2-2 hasn't landed yet), but the ordering takes effect on its
-        // own the moment real per-Task values do, with nothing further to
-        // change here.
+        // Default sort: Urgency descending (D-Win-16) — real per-Task
+        // values now that 5_UrgencyCalculation has landed (D1.5-1).
         initialState={{
           pagination: { paginationModel: { pageSize: 100 } },
           sorting: { sortModel: [{ field: "urgency", sort: "desc" }] },
@@ -583,6 +625,11 @@ export function TaskListPage() {
         // mode) — MUI's own default cycle adds a third "unsorted" click;
         // this removes that third state to match.
         sortingOrder={["asc", "desc"]}
+        // Urgency's own row colour-coding (D1.5-5, urgencyRowSx/
+        // urgencyRowClassName above) — a discrete CSS class per row rather
+        // than an inline style, since DataGrid has no per-row inline-style
+        // hook.
+        getRowClassName={(params) => urgencyRowClassName(params.row)}
         sx={{
           fontSize: DENSE_FONT_SIZE,
           // Zeroed out here, not clawed back with a negative margin on the
@@ -597,6 +644,7 @@ export function TaskListPage() {
           // FilterableHeader's own label re-adds this same 10px as its
           // own padding, since the title text still wants it.
           "& .MuiDataGrid-columnHeader": { paddingLeft: 0, paddingRight: 0 },
+          ...urgencyRowSx,
         }}
       />
     </Box>

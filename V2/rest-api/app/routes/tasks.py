@@ -22,7 +22,7 @@ from app.security.deps import (
 router = APIRouter(prefix="/task", tags=["tasks"])
 
 _COLUMNS = (
-    "task_id, project_id, component_id, orig_task_number, priority, description, "
+    "task_id, project_id, component_id, priority, description, "
     "detailed_description, external_reference_url, requestor_person_id, owner_person_id, "
     "date_added, effort_in_days, effort_type, percentage_allocation, task_type, status, "
     "status_date, tentative_resource_assignment, start_relative_days_to_project"

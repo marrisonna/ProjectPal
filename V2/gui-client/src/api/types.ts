@@ -8,7 +8,6 @@ export interface TaskRecord {
   task_id: number;
   project_id: number;
   component_id: number | null;
-  orig_task_number: string | null;
   priority: string | null;
   description: string;
   detailed_description: string | null;

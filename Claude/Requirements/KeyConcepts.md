@@ -143,12 +143,12 @@ For an open Task, Urgency is the product of two factors:
 
 It's key because it's the system's synthesized signal for "what should I actually look at next" — Priority and Status alone tell a user what a task is, but not when it deserves attention relative to everything else on their plate; Urgency is what turns those raw fields into a single ranking a person or a manager can scan at a glance.
 
-The two factors are multiplied and scaled to produce the final score (roughly 0–200+), which callers then feed into a colour-mapping function to render as a highlight colour. It fits into the solution as a presentation-layer calculation built entirely from other domain data (Priority, Status, dates, the Project hierarchy) rather than as data of its own — the specific constants involved (the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are tuned, hand-picked values from the old implementation rather than derived from any external rule, worth treating as a starting point to validate against real usage rather than as fixed requirements when the new system reimplements this (`Q-KC-3`).
+The two factors are multiplied and scaled to produce the final score (roughly 0–200+), which callers then feed into a colour-mapping function to render as a highlight colour. It fits into the solution as a presentation-layer calculation built entirely from other domain data (Priority, Status, dates, the Project hierarchy) rather than as data of its own — the specific constants involved (the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are tuned, hand-picked values from the old implementation rather than derived from any external rule, worth treating as a starting point to validate against real usage rather than as fixed requirements when the new system reimplements this — ported unchanged for now (`D-KC-3`).
 
 <a id="current-urgency-algorithm"></a>
 ### 12.1 Current Urgency Algorithm
 
-This is the algorithm as implemented today (`GUITask.Urgency`, `V1.2\Apps\ProjectPal\ProjectPal\Tasks\GUITask.cs`), stated in full so it can be evaluated, reused, or deliberately replaced with eyes open.
+This is the algorithm as implemented today (`GUITask.Urgency`, `V1.2\Apps\ProjectPal\ProjectPal\Tasks\GUITask.cs`), stated in full so it can be evaluated, reused, or deliberately replaced with eyes open. Verified line-by-line against that source on 2026-09-12: every constant, branch, and edge case here matches it exactly. Two things in that file are deliberately not reflected here, both confirmed dead: a `Urgency_orig` property on the same class that no caller anywhere in V1.2 ever references (every real call site uses `Urgency`, the getter documented here), and a `minProjectDueDate` local computed inside `Urgency` itself while walking the ancestor chain but never subsequently read — a leftover from an earlier version of the algorithm, with zero effect on the value returned today.
 
 **Symbols and constants**
 
@@ -218,8 +218,8 @@ A Task sits directly under one Project of Medium priority (`n = 1`, `P[0] = Pr(M
 - Band: `max₀ = 3 + 0.5 = 3.5`, `min₀ = max(0, 2.5) = 2.5` → `[2.5, 3.5]` (loop doesn't run since `n = 1`).
 - `taskFactor = 3 / 3 = 1`. `finalTaskPriority = 1 × (2.5 + 3.5)/2 = 3`. `taskPriorityMultiplier = (3−3)/3 + 1 = 1`.
 - `taskDate` = midpoint = `today + ⌊20/2⌋ = today + 10`. `daysUntilDue = 10` (future).
-- `earlyMultiplier = 0.5 ^ (10/60) ≈ 0.891`.
-- `U = 100 × 1 × 0.891 ≈ 89.1`. `Urgency = 89.1`.
+- `earlyMultiplier = 0.5 ^ (10/60) ≈ 0.8909`.
+- `U = 100 × 1 × 0.8909 ≈ 89.09`. `Urgency = 89.0` (found rounded to `89.1` on an earlier pass over this example — that used a 3-decimal intermediate, `0.891`, before multiplying; carried through at full precision, `⌊89.0899 × 10⌋ / 10 = 89.0`, confirmed against `computeUrgency`'s own unit tests, `schedule.urgency.test.ts`).
 
 A task on-track and comfortably not due yet lands just under the 100 baseline.
 
@@ -261,9 +261,16 @@ Given an Urgency value `U`:
 
 In short: any Urgency at or below 100 renders as pure white; Urgency at or above 200 renders as the full light-red `RGB(255, 128, 128)`; anything in between is a straight-line fade between the two, driven only by the `G`/`B` channels.
 
+**Applying it to a Task's row colour.** `UrgencyColour` computes a colour from a number; it is not itself what decides a Task row's actual background in the grid. That's a separate property, `GUITask.Colour` (`V1.2\Apps\ProjectPal\ProjectPal\Tasks\GUITask.cs`), missed by an earlier pass over this section and confirmed by reading that property directly:
+
+1. If the Task's own **Priority** — not Status; a Task can be `Status = Closed` with `Priority = High`, or vice versa, since they're independent fields (§11) — is unset, `Cancelled`, or `Closed`: the row colour is a fixed grey, `RGB(190, 190, 190)` (`Colours.ReadOnlyColour`), regardless of what `Urgency`/`UrgencyColour` would otherwise produce.
+2. Otherwise: the row colour is `UrgencyColour(Urgency)`, exactly as computed above.
+
+So a Task's own Priority field, not just its computed Urgency score, decides *whether* the urgency colour is even shown at all — a Cancelled- or Closed-priority Task always renders as flat grey no matter how high its raw Urgency number would otherwise be.
+
 **Worked example 1 — below the threshold**
 
-Urgency = 89.1 (worked example 2 above). `u = 89`, `m = max(0, min(100, 89 − 100)) = max(0, −11) = 0`.
+Urgency = 89.0 (worked example 2 above). `u = 89`, `m = max(0, min(100, 89 − 100)) = max(0, −11) = 0`.
 Colour = `RGB(255, 255, 255)` — plain white, no highlighting.
 
 **Worked example 2 — partway through the range**
@@ -337,9 +344,10 @@ It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can
 
 - **Q-KC-1: Identity direction** — how a Person authenticates (e.g. federating to an external identity provider, per the Person entry above) is a Foundational Decision (§18) flagged throughout this document (Person, Role / Permission Level) as needing a stated direction — still open; see `Goals.md`'s Level 1/2 "identity direction" framing questions.
 - **Q-KC-2: Status vocabulary** — the exact set of Status values (Priority / Status entry above) is open to revisiting for the new system; only the two-field shape (importance vs. lifecycle state) is settled.
-- **Q-KC-3: Urgency algorithm constants** — the specific tuned constants in the current Urgency algorithm (§12: the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are hand-picked values from the old implementation, not derived from any external rule — worth validating against real usage rather than treating as fixed requirements when `V2` reimplements this.
 
 <a id="decisions"></a>
 ## 20. Decisions
 
-None yet — when an open question above is answered, its entry moves here as `D-KC-<N>`, in the three-line format described in `Claude/Guidelines/ImplementationApproach.md` §3.2.
+- **D-KC-3** (decided 2026-09-12)<br>
+  **Question:** `Q-KC-3` — the specific tuned constants in the current Urgency algorithm (§12: the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are hand-picked values from the old implementation, not derived from any external rule — worth validating against real usage rather than treating as fixed requirements when `V2` reimplements this?<br>
+  **Decision:** ported unchanged for now — see `Claude/Level1_Implementation/5_UrgencyCalculation/Plan.md`'s `D1.5-1`, the canonical record of this decision. Validating the constants against real usage remains a live possibility later; it isn't resolved or blocked by this.

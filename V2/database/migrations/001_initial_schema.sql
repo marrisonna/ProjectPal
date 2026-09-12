@@ -152,7 +152,6 @@ CREATE TABLE task (
     task_id                        serial PRIMARY KEY,
     project_id                      integer NOT NULL REFERENCES project(project_id),
     component_id                     integer REFERENCES component(component_id),
-    orig_task_number                  text,
     priority                           priority_level,
     description                         text NOT NULL,
     detailed_description                  text,

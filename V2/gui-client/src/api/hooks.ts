@@ -214,8 +214,9 @@ export function useDependencies(taskId: number) {
 }
 
 // Every Dependency across every Task at once — for the All Tasks grid's
-// Planned Start/End Date columns, which (like Task Detail's own) need a
-// Task's direct predecessors to compute (lib/schedule.ts's computeStartDate).
+// Planned Start/End Date columns, which (like Task Detail's own) need the
+// full recursive Task/Project dependency graph to compute correctly
+// (lib/schedule.ts's buildScheduleGraph/getTaskSchedule, D1.5-2/§4.7).
 export function useAllDependencies() {
   return useQuery({
     queryKey: ["dependencies"],

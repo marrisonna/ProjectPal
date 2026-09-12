@@ -1,18 +1,18 @@
 import type { DependencyRecord, ProjectRecord, TaskRecord } from "../api/types";
 
 /**
- * Reproduces V1.2's Task scheduling engine
- * (V1.2/Libs/DBProjectPal/DBProjectPal/Task.cs — EarliestStartDate, StartDate,
- * Duration, EndDate) — dates were never stored on Task in either version
+ * Reproduces V1.2's Task/Project scheduling engine
+ * (V1.2/Libs/DBProjectPal/DBProjectPal/Task.cs and Project.cs —
+ * EarliestStartDate, StartDate, Duration, EndDate, LatestPreDepenentEndDate
+ * on both) exactly, including the full recursive Task/Project dependency
+ * graph (5_UrgencyCalculation/Plan.md D1.5-2/§4.7 — upgraded from an
+ * earlier one-level-only approximation this module used to make, once
+ * Urgency's own need for accurate dates made that approximation worth
+ * fixing rather than merely inheriting). Dates were never stored on Task
+ * or Project in either version
  * (Claude/Level1_Implementation/8_ValidationAndVerification/Plan.md §4.1);
- * V1.2's UI computed them for display, so V2's GUI needs to as well
+ * V1.2's UI computed them for display every time, so V2's GUI does too
  * (4_GuiClient/Plan.md D1.4-14).
- *
- * Bounded for Stage 2: accounts for one level of predecessor Dependencies
- * (a direct predecessor's own earliest start + duration, or a predecessor
- * Project's due_date directly), not the full recursive dependency graph a
- * correct Gantt render needs — that full-tree walk is Stage 3's job
- * (4_GuiClient/Plan.md §6.3), reusing these same primitives.
  */
 
 export function addBusinessDays(start: Date, days: number): Date {
@@ -80,59 +80,428 @@ export function computeEarliestStartDate(
   return addBusinessDays(new Date(project.start_date), task.start_relative_days_to_project);
 }
 
-/** One direct predecessor's own end date — approximated (not recursed
- * further), per this module's Stage 2 scope note above. */
-function approximatePredecessorEndDate(
-  dependency: DependencyRecord,
-  tasks: TaskRecord[],
-  projects: ProjectRecord[],
-): Date | null {
-  if (dependency.pre_project_id != null) {
-    const project = projects.find((p) => p.project_id === dependency.pre_project_id);
-    return project?.due_date ? new Date(project.due_date) : null;
-  }
-  if (dependency.pre_task_id != null) {
-    const preTask = tasks.find((t) => t.task_id === dependency.pre_task_id);
-    const preProject = projects.find((p) => p.project_id === preTask?.project_id);
-    if (!preTask) return null;
-    const earliestStart = computeEarliestStartDate(preTask, preProject);
-    const duration = computeDuration(preTask, 1); // resource count unknown at this depth
-    if (!earliestStart || duration == null) return null;
-    return addBusinessDays(earliestStart, Math.ceil(duration) - 1);
-  }
-  return null;
-}
-
-/** V1.2's Task.StartDate: the later of EarliestStartDate and (latest direct
- * predecessor's end date + 1 business day). */
-export function computeStartDate(
-  task: TaskRecord,
-  project: ProjectRecord | undefined,
-  predecessorDependencies: DependencyRecord[],
-  allTasks: TaskRecord[],
-  allProjects: ProjectRecord[],
-): Date | null {
-  const earliestStart = computeEarliestStartDate(task, project);
-
-  let latestPredecessorEnd: Date | null = null;
-  for (const dep of predecessorDependencies) {
-    const end = approximatePredecessorEndDate(dep, allTasks, allProjects);
-    if (end && (!latestPredecessorEnd || end > latestPredecessorEnd)) latestPredecessorEnd = end;
-  }
-  const constrainedStart = latestPredecessorEnd
-    ? addBusinessDays(latestPredecessorEnd, 1)
-    : null;
-
-  if (constrainedStart && earliestStart) {
-    return constrainedStart > earliestStart ? constrainedStart : earliestStart;
-  }
-  return constrainedStart ?? earliestStart;
-}
-
-/** V1.2's Task.EndDate: StartDate + Duration business days. */
+/** V1.2's Task.EndDate/Project.EndDate: StartDate + Duration business days
+ * (Duration is already a calendar-day count computed elsewhere). */
 export function computeEndDate(startDate: Date | null, duration: number | null): Date | null {
   if (!startDate || duration == null) return null;
   return addBusinessDays(startDate, Math.ceil(duration) - 1);
+}
+
+export interface ComputedSchedule {
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+const NO_SCHEDULE: ComputedSchedule = { startDate: null, endDate: null };
+
+function laterOf(a: Date | null, b: Date | null): Date | null {
+  if (a && b) return a > b ? a : b;
+  return a ?? b;
+}
+
+type NodeKind = "task" | "project";
+
+/**
+ * Opaque, lazily-resolved handle on one Task/Project dependency graph — see
+ * `getTaskSchedule`/`getProjectSchedule`. Every node's schedule is resolved
+ * at most once regardless of how many other nodes reference it (D1.5-4's
+ * ancestor-band memoization, generalised to this bigger graph), and a
+ * visited-node guard (`resolving`) turns a malformed cyclic graph into an
+ * unresolved (`null`/`null`) result for the node that would otherwise loop
+ * forever, rather than actually hanging — V1.2's own equivalent has no such
+ * guard (D1.5-3's reasoning, generalised the same way).
+ */
+export interface ScheduleGraph {
+  tasksById: Map<number, TaskRecord>;
+  projectsById: Map<number, ProjectRecord>;
+  childTasksByProject: Map<number, TaskRecord[]>;
+  childProjectsByParent: Map<number, ProjectRecord[]>;
+  preDependenciesByNode: Map<string, DependencyRecord[]>;
+  resourceCountByTaskId: Map<number, number>;
+  cache: Map<string, ComputedSchedule>;
+  resolving: Set<string>;
+}
+
+/**
+ * Builds the lookup structure `getTaskSchedule`/`getProjectSchedule` resolve
+ * against — cheap (a handful of `O(n)` index passes over data every caller
+ * already has loaded, per 5_UrgencyCalculation/Plan.md §3.2/§4.7), with
+ * nothing actually resolved until asked for. `resourceCountByTaskId` needs
+ * every Task's real assigned-Resource count, not just the one(s) a caller
+ * is directly displaying — V1.2's own `Task.Duration` always uses a Task's
+ * real Resources, recursive lookup or not (confirmed by reading
+ * `Task.cs`'s `Duration` getter directly), so a predecessor reached only
+ * through recursion needs its own real count too, not a placeholder.
+ */
+export function buildScheduleGraph(
+  tasks: TaskRecord[],
+  projects: ProjectRecord[],
+  dependencies: DependencyRecord[],
+  resourceCountByTaskId: Map<number, number>,
+): ScheduleGraph {
+  const tasksById = new Map(tasks.map((t) => [t.task_id, t]));
+  const projectsById = new Map(projects.map((p) => [p.project_id, p]));
+
+  const childTasksByProject = new Map<number, TaskRecord[]>();
+  for (const t of tasks) {
+    const list = childTasksByProject.get(t.project_id);
+    if (list) list.push(t);
+    else childTasksByProject.set(t.project_id, [t]);
+  }
+
+  const childProjectsByParent = new Map<number, ProjectRecord[]>();
+  for (const p of projects) {
+    if (p.parent_project_id == null) continue;
+    const list = childProjectsByParent.get(p.parent_project_id);
+    if (list) list.push(p);
+    else childProjectsByParent.set(p.parent_project_id, [p]);
+  }
+
+  const preDependenciesByNode = new Map<string, DependencyRecord[]>();
+  for (const dep of dependencies) {
+    const postKey =
+      dep.post_task_id != null
+        ? `task:${dep.post_task_id}`
+        : dep.post_project_id != null
+          ? `project:${dep.post_project_id}`
+          : null;
+    if (!postKey) continue;
+    const list = preDependenciesByNode.get(postKey);
+    if (list) list.push(dep);
+    else preDependenciesByNode.set(postKey, [dep]);
+  }
+
+  return {
+    tasksById,
+    projectsById,
+    childTasksByProject,
+    childProjectsByParent,
+    preDependenciesByNode,
+    resourceCountByTaskId,
+    cache: new Map(),
+    resolving: new Set(),
+  };
+}
+
+/** A node's own `ExpectedEndDate` for cross-referencing as a predecessor —
+ * V1.2's `ITaskOrProject.ExpectedEndDate` on both Task and Project is just
+ * `EndDate` itself, no special-casing by status/priority (that exclusion
+ * only applies inside `resolveProject`'s own aggregation over its
+ * children, not to how a node reports its end date to something depending
+ * on it). */
+function resolveNode(graph: ScheduleGraph, kind: NodeKind, id: number): ComputedSchedule {
+  const key = `${kind}:${id}`;
+  const cached = graph.cache.get(key);
+  if (cached) return cached;
+  if (graph.resolving.has(key)) return NO_SCHEDULE;
+
+  graph.resolving.add(key);
+  const result = kind === "task" ? resolveTask(graph, id) : resolveProject(graph, id);
+  graph.resolving.delete(key);
+
+  graph.cache.set(key, result);
+  return result;
+}
+
+/** V1.2's Task/Project.LatestPreDepenentEndDate: the *max* of every direct
+ * Dependency predecessor's own end date and the parent Project's own
+ * LatestPreDepenentEndDate — not a fallback used only when this node has no
+ * direct predecessor of its own, but always compared against it, taking
+ * whichever is later. This is what makes a node with no dependency of its
+ * own still inherit a constraint from its ancestry.
+ *
+ * `visitedParents` guards this function's own walk *up* the
+ * `parent_project_id` chain specifically — a separate recursion axis from
+ * `resolveNode`'s own `resolving` guard (which only protects against a
+ * cyclic *Dependency* graph, not a cyclic containment chain). Caught by
+ * `schedule.dates.test.ts`'s own cyclic-parent-chain case: without this,
+ * a cyclic `parent_project_id` chain recurses here forever even though
+ * `resolveNode` was never re-entered for the same node. */
+function resolveLatestPreDependentEnd(
+  graph: ScheduleGraph,
+  kind: NodeKind,
+  id: number,
+  parentProjectId: number | null,
+  visitedParents: Set<number> = new Set(),
+): Date | null {
+  let latest: Date | null = null;
+  for (const dep of graph.preDependenciesByNode.get(`${kind}:${id}`) ?? []) {
+    const preEnd =
+      dep.pre_task_id != null
+        ? resolveNode(graph, "task", dep.pre_task_id).endDate
+        : dep.pre_project_id != null
+          ? resolveNode(graph, "project", dep.pre_project_id).endDate
+          : null;
+    latest = laterOf(latest, preEnd);
+  }
+  if (parentProjectId != null && !visitedParents.has(parentProjectId)) {
+    visitedParents.add(parentProjectId);
+    const parent = graph.projectsById.get(parentProjectId);
+    const parentLatest = resolveLatestPreDependentEnd(
+      graph,
+      "project",
+      parentProjectId,
+      parent?.parent_project_id ?? null,
+      visitedParents,
+    );
+    latest = laterOf(latest, parentLatest);
+  }
+  return latest;
+}
+
+function resolveTask(graph: ScheduleGraph, taskId: number): ComputedSchedule {
+  const task = graph.tasksById.get(taskId);
+  if (!task) return NO_SCHEDULE;
+
+  const project = graph.projectsById.get(task.project_id);
+  const earliestStart = computeEarliestStartDate(task, project);
+  const latestPreDependentEnd = resolveLatestPreDependentEnd(graph, "task", taskId, task.project_id);
+  const constrainedStart = latestPreDependentEnd ? addBusinessDays(latestPreDependentEnd, 1) : null;
+  const startDate = laterOf(constrainedStart, earliestStart);
+
+  const resourceCount = graph.resourceCountByTaskId.get(taskId) ?? 0;
+  const duration = computeDuration(task, resourceCount);
+  const endDate = computeEndDate(startDate, duration);
+
+  return { startDate, endDate };
+}
+
+function resolveProject(graph: ScheduleGraph, projectId: number): ComputedSchedule {
+  const project = graph.projectsById.get(projectId);
+  if (!project) return NO_SCHEDULE;
+
+  // V1.2's Project.EndDate: the max EndDate over every child Task/Project —
+  // but Cancelled/Closed children are excluded from the aggregation
+  // entirely (Task.cs's own status; a sub-Project's own Priority, since a
+  // Project has no separate status field — Project.cs's EndDate getter,
+  // read directly, checks exactly these two conditions and no others).
+  let endDate: Date | null = null;
+  for (const childTask of graph.childTasksByProject.get(projectId) ?? []) {
+    if (childTask.status === "Cancelled" || childTask.status === "Closed") continue;
+    endDate = laterOf(endDate, resolveNode(graph, "task", childTask.task_id).endDate);
+  }
+  for (const childProject of graph.childProjectsByParent.get(projectId) ?? []) {
+    if (childProject.priority === "Cancelled" || childProject.priority === "Closed") continue;
+    endDate = laterOf(endDate, resolveNode(graph, "project", childProject.project_id).endDate);
+  }
+
+  // V1.2's Project.StartDate: the later of its own stored start_date and
+  // (latest predecessor's end date + 1 business day) — always compared,
+  // not a fallback only used when there's no own start_date (Project's
+  // own base start is never null, unlike a Task's).
+  const ownStart = project.start_date ? new Date(project.start_date) : null;
+  const latestPreDependentEnd = resolveLatestPreDependentEnd(
+    graph,
+    "project",
+    projectId,
+    project.parent_project_id,
+  );
+  const constrainedStart = latestPreDependentEnd ? addBusinessDays(latestPreDependentEnd, 1) : null;
+  const startDate = laterOf(constrainedStart, ownStart);
+
+  return { startDate, endDate };
+}
+
+export function getTaskSchedule(graph: ScheduleGraph, taskId: number): ComputedSchedule {
+  return resolveNode(graph, "task", taskId);
+}
+
+export function getProjectSchedule(graph: ScheduleGraph, projectId: number): ComputedSchedule {
+  return resolveNode(graph, "project", projectId);
+}
+
+/**
+ * Urgency (`Requirements/KeyConcepts.md` §12.1, `V1.2/Apps/ProjectPal/
+ * ProjectPal/Tasks/GUITask.cs`'s `Urgency` getter) — ported exactly,
+ * constants included, per 5_UrgencyCalculation/Plan.md's D1.5-1 (verified
+ * line-by-line against that source, §12.1's own updated preamble records
+ * the verification and the two confirmed-dead pieces of that source
+ * deliberately not reflected here).
+ */
+
+// Requirements/KeyConcepts.md §12.1's Pr(x): High=5, MedHigh=4, Med=3,
+// MedLow=2, Low=1, Closed=0, Cancelled=-1 — the same 7-value vocabulary for
+// both a Task's own priority and every ancestor Project's, matching
+// V1.2's PriorityValue enum member names exactly (8_ValidationAndVerification/
+// Plan.md D1.8-4 already confirmed V2's own Priority strings align to these
+// names, not V1.2's differently-worded GUI dropdown labels).
+const PRIORITY_WEIGHT: Record<string, number> = {
+  High: 5,
+  MedHigh: 4,
+  Med: 3,
+  MedLow: 2,
+  Low: 1,
+  Closed: 0,
+  Cancelled: -1,
+};
+
+// A missing/unrecognised Priority is always treated as Med (3) — both for
+// a Task's own Priority and every ancestor Project's, matching V1.2's
+// `Priority.HasValue` check (Task) and `?? PriorityValue._3_Med` (Project).
+function priorityWeight(priority: string | null): number {
+  if (priority == null) return 3;
+  return PRIORITY_WEIGHT[priority] ?? 3;
+}
+
+// A UTC-normalised day number, so calendar-day differences (unlike
+// addBusinessDays/businessDaysBetween above, which deliberately walk
+// day-by-day) can be plain subtraction without a local-timezone DST
+// transition silently shifting the count by a day (§12.1's own two
+// day-count computations are plain `.Days` on a `DateTime` TimeSpan in
+// V1.2 — calendar days, not business days, per D1.5's own §4.3 callout).
+function calendarDayNumber(date: Date): number {
+  return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+}
+
+function calendarDaysBetween(start: Date, end: Date): number {
+  return calendarDayNumber(end) - calendarDayNumber(start);
+}
+
+function addCalendarDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+/** §12.1 Step 1: the effective-priority band `[min, max]`, root-first over
+ * a Task's own Project and every ancestor above it (V1.2's own
+ * `parentProjectPriorityList`, built bottom-up then reversed) — a cycle
+ * guard stops a malformed `parent_project_id` chain from looping forever
+ * (D1.5-3's reasoning, applied here too), which V1.2's own equivalent walk
+ * doesn't have. */
+function ancestorPriorityChain(
+  projectId: number | undefined,
+  projectsById: Map<number, ProjectRecord>,
+): number[] {
+  const chain: number[] = [];
+  const visited = new Set<number>();
+  let current = projectId != null ? projectsById.get(projectId) : undefined;
+  while (current && !visited.has(current.project_id)) {
+    visited.add(current.project_id);
+    chain.push(priorityWeight(current.priority));
+    current = current.parent_project_id != null ? projectsById.get(current.parent_project_id) : undefined;
+  }
+  chain.reverse();
+  return chain;
+}
+
+function priorityBand(ancestorPriorities: number[]): { min: number; max: number } {
+  const n = ancestorPriorities.length;
+  let max = n === 0 ? 0.5 : ancestorPriorities[0] + 0.5;
+  let min = Math.max(0, max - 1);
+
+  for (let i = 1; i < n; i++) {
+    let thisPriorityMax = ancestorPriorities[i] + 0.5;
+    const thisPriorityMin = Math.max(0, thisPriorityMax - 1) / 6;
+    thisPriorityMax /= 6;
+
+    const thisMean = thisPriorityMax + thisPriorityMin;
+    const thisExaggerate = Math.pow(thisMean, 1.5);
+
+    const newMax = min + thisExaggerate * thisPriorityMax * (max - min);
+    const newMin = min + thisExaggerate * thisPriorityMin * (max - min);
+    max = newMax;
+    min = newMin;
+  }
+
+  return { min, max };
+}
+
+/**
+ * Requirements/KeyConcepts.md §12.1's `U`, rounded to one decimal place —
+ * `startDate`/`endDate` are passed in (from `getTaskSchedule`, §4.7) rather
+ * than recomputed here, since every caller already has them from the same
+ * call it uses for direct display; `today` defaults to the real current
+ * date but is a parameter so it can be pinned in tests (worked examples,
+ * §12.1's own three).
+ */
+export function computeUrgency(
+  task: Pick<TaskRecord, "status" | "status_date" | "priority" | "project_id">,
+  projectsById: Map<number, ProjectRecord>,
+  startDate: Date | null,
+  endDate: Date | null,
+  today: Date = new Date(),
+): number {
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  let result: number;
+
+  if (task.status === "Cancelled" || task.status === "Closed") {
+    if (task.status_date) {
+      const d = calendarDaysBetween(new Date(task.status_date), todayDateOnly);
+      result = d > 10 ? Math.trunc(100 / d) / 10 : 1;
+    } else {
+      result = 1;
+    }
+  } else {
+    const { min, max } = priorityBand(ancestorPriorityChain(task.project_id, projectsById));
+
+    const taskFactor = priorityWeight(task.priority) / 3;
+    const finalTaskPriority = (taskFactor * (min + max)) / 2;
+    const taskPriorityMultiplier = (finalTaskPriority - 3) / 3 + 1;
+
+    let taskDate: Date | null = null;
+    if (startDate) {
+      if (task.status === "NotStarted" || !endDate) {
+        taskDate = startDate;
+      } else if (task.status === "InProgress") {
+        taskDate = addCalendarDays(startDate, Math.trunc(calendarDaysBetween(startDate, endDate) / 2));
+      } else {
+        taskDate = endDate;
+      }
+    }
+
+    if (!taskDate) {
+      result = 100 * taskPriorityMultiplier;
+    } else {
+      const daysUntilDue = calendarDaysBetween(todayDateOnly, taskDate);
+      result =
+        daysUntilDue <= 0
+          ? 100 * taskPriorityMultiplier * (1 - daysUntilDue / 60)
+          : 100 * taskPriorityMultiplier * Math.pow(0.5, daysUntilDue / 60);
+    }
+  }
+
+  return Math.trunc(result * 10) / 10;
+}
+
+// Requirements/KeyConcepts.md §12.2 ("Current Urgency-to-Colour Algorithm"),
+// V1.2's `Utils.Colours.UrgencyColour` — a 101-entry white-to-light-red
+// blend, indexed by how far Urgency sits into the 100-200 range (clamped).
+const URGENCY_COLOUR_WHITE = { r: 255, g: 255, b: 255 };
+const URGENCY_COLOUR_MAX = { r: 255, g: 128, b: 128 };
+
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.trunc(value)));
+}
+
+export function computeUrgencyColour(urgency: number): string {
+  const u = Math.trunc(urgency);
+  const mixMax = Math.max(0, Math.min(100, u - 100)) / 100;
+  const mixMin = 1 - mixMax;
+  const r = clampByte(URGENCY_COLOUR_WHITE.r * mixMin + URGENCY_COLOUR_MAX.r * mixMax);
+  const g = clampByte(URGENCY_COLOUR_WHITE.g * mixMin + URGENCY_COLOUR_MAX.g * mixMax);
+  const b = clampByte(URGENCY_COLOUR_WHITE.b * mixMin + URGENCY_COLOUR_MAX.b * mixMax);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// V1.2's own Read-Only grey (`Colours.ReadOnlyColour`) — not part of the
+// urgency-to-colour blend itself, but what a Task's row shows *instead of*
+// it under the gating rule below.
+const READ_ONLY_GREY = "rgb(190, 190, 190)";
+
+/**
+ * V1.2's actual Task row colour (`GUITask.Colour`, `Tasks/GUITask.cs`) —
+ * not the same thing as `computeUrgencyColour` alone. A Task whose own
+ * Priority (not Status — the two are independent, §11) is unset,
+ * Cancelled, or Closed always renders as flat grey, regardless of its
+ * computed Urgency; only otherwise does the urgency colour actually show.
+ * `Requirements/KeyConcepts.md` §12.2's own "Applying it to a Task's row
+ * colour" documents this exactly — found missing from that section on a
+ * first pass over it, added once `GUITask.Colour` was read directly.
+ */
+export function computeTaskRowColour(priority: string | null, urgency: number): string {
+  if (priority == null || priority === "Cancelled" || priority === "Closed") return READ_ONLY_GREY;
+  return computeUrgencyColour(urgency);
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
