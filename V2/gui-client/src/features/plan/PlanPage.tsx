@@ -62,6 +62,20 @@ const MONTH_LINE_WIDTH = 2;
 // per-depth colour needed.
 const PROJECT_BOX_FILL = "rgba(52, 108, 158, 0.15)";
 
+// A bar's own hover tooltip (name + date range) — a plain SVG `<title>`
+// used to do this, but a native title tooltip's position is entirely
+// browser-controlled and can't be offset, so the cursor itself ends up
+// covering the tooltip's own first letter. Replaced with this custom,
+// cursor-tracking one instead, specifically so it can be nudged clear of
+// the cursor (D1.4-28).
+interface BarTooltip {
+  text: string;
+  x: number;
+  y: number;
+}
+const TOOLTIP_OFFSET_X = 15;
+const TOOLTIP_OFFSET_Y = 15;
+
 // Manual row reorder (D1.4-27) — local-only, never written to the server:
 // the user can drag a Task/Project row up or down among its own siblings
 // (never changing which Project it belongs to), and "Memorise order"
@@ -294,6 +308,9 @@ export function PlanPage() {
   // The name shown in the read-only label below the zoom controls while
   // hovering a Task/Project bar — cleared the moment the mouse leaves it.
   const [hoveredLabel, setHoveredLabel] = useState("");
+  // Custom bar-hover tooltip (D1.4-28) — see BarTooltip above for why this
+  // replaced a plain SVG <title>.
+  const [barTooltip, setBarTooltip] = useState<BarTooltip | null>(null);
   // The date under the cursor, tracked continuously across the whole
   // drawing area (not just while over a bar) — a plain `onMouseMove`
   // suffices here (unlike the wheel handler above, nothing needs
@@ -780,6 +797,7 @@ export function PlanPage() {
                   barHeight={barHeight}
                   boxed={boxed}
                   onHoverChange={setHoveredLabel}
+                  onTooltipChange={setBarTooltip}
                 />
               ))}
             </Box>
@@ -854,6 +872,29 @@ export function PlanPage() {
           {dragLabel}
         </Box>
       )}
+      {/* Custom bar-hover tooltip (D1.4-28) — replaces a native SVG
+          <title> specifically so it can be nudged clear of the cursor,
+          which otherwise covers its own first letter. */}
+      {barTooltip && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: barTooltip.x + TOOLTIP_OFFSET_X,
+            top: barTooltip.y + TOOLTIP_OFFSET_Y,
+            bgcolor: "#ffffe1",
+            border: "1px solid rgba(0,0,0,0.4)",
+            borderRadius: "2px",
+            px: "4px",
+            py: "2px",
+            fontSize: DENSE_FONT_SIZE,
+            pointerEvents: "none",
+            zIndex: 1300,
+            whiteSpace: "pre",
+          }}
+        >
+          {barTooltip.text}
+        </Box>
+      )}
     </Box>
   );
 }
@@ -911,6 +952,7 @@ function GanttBarRect({
   barHeight,
   boxed,
   onHoverChange,
+  onTooltipChange,
 }: {
   bar: GanttBar;
   scaleX: number;
@@ -918,6 +960,7 @@ function GanttBarRect({
   barHeight: number;
   boxed: boolean;
   onHoverChange: (label: string) => void;
+  onTooltipChange: (tooltip: BarTooltip | null) => void;
 }) {
   if (!bar.startDate || !bar.endDate) return null;
   const title = `${bar.label}\n${formatDdMmmYy(bar.startDate)} → ${formatDdMmmYy(bar.endDate)}`;
@@ -947,9 +990,11 @@ function GanttBarRect({
       style={{ cursor: bar.kind === "task" ? "pointer" : "default" }}
       onDoubleClick={bar.kind === "task" ? () => openItemWindow("tasks", bar.id) : undefined}
       onMouseEnter={() => onHoverChange(bar.hoverLabel)}
-      onMouseLeave={() => onHoverChange("")}
-    >
-      <title>{title}</title>
-    </rect>
+      onMouseMove={(event) => onTooltipChange({ text: title, x: event.clientX, y: event.clientY })}
+      onMouseLeave={() => {
+        onHoverChange("");
+        onTooltipChange(null);
+      }}
+    />
   );
 }
