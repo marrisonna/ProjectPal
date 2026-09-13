@@ -465,3 +465,38 @@ describe("buildGanttLayout with excludeWeekends (D1.4-35)", () => {
     expect(projectBBarWithout.x).toBe(5 * PIXELS_PER_DAY);
   });
 });
+
+describe("buildGanttLayout: a bar spans the full start day through the full end day (D1.4-37)", () => {
+  it("a task starting and ending the same day is a full one-day-wide bar, not a sliver", () => {
+    const project = makeProject({ project_id: 1, name: "P", start_date: "2026-01-05" }); // Monday
+    const task = makeTask({ task_id: 1, project_id: 1, description: "T", effort_in_days: 1, start_relative_days_to_project: 0 });
+    const graph = buildScheduleGraph([task], [project], [], new Map());
+
+    const layout = buildGanttLayout(graph, [], 1);
+    const taskBar = layout.bars.find((b) => b.kind === "task")!;
+    expect(taskBar.startDate).toEqual(taskBar.endDate); // sanity: genuinely same-day
+    expect(taskBar.width).toBe(PIXELS_PER_DAY);
+  });
+
+  it("a 3-calendar-day task (Mon-Wed inclusive) is 3 days wide, not 2", () => {
+    const project = makeProject({ project_id: 1, name: "P", start_date: "2026-01-05" }); // Monday
+    const task = makeTask({ task_id: 1, project_id: 1, description: "T", effort_in_days: 3, start_relative_days_to_project: 0 });
+    const graph = buildScheduleGraph([task], [project], [], new Map());
+
+    const layout = buildGanttLayout(graph, [], 1);
+    const taskBar = layout.bars.find((b) => b.kind === "task")!;
+    expect(taskBar.width).toBe(3 * PIXELS_PER_DAY);
+  });
+
+  it("composes correctly with excludeWeekends: a task ending Friday is the same width whether or not weekends are shown, since there's no weekend inside its own span to compress away", () => {
+    const project = makeProject({ project_id: 1, name: "P", start_date: "2026-01-05" }); // Monday
+    const task = makeTask({ task_id: 1, project_id: 1, description: "T", effort_in_days: 5, start_relative_days_to_project: 0 });
+    const graph = buildScheduleGraph([task], [project], [], new Map());
+
+    const withWeekends = buildGanttLayout(graph, [], 1, new Date(), undefined, false);
+    expect(withWeekends.bars.find((b) => b.kind === "task")!.width).toBe(5 * PIXELS_PER_DAY);
+
+    const withoutWeekends = buildGanttLayout(graph, [], 1, new Date(), undefined, true);
+    expect(withoutWeekends.bars.find((b) => b.kind === "task")!.width).toBe(5 * PIXELS_PER_DAY);
+  });
+});

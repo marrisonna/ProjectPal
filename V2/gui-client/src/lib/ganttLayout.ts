@@ -355,7 +355,19 @@ export function buildGanttLayout(
     // `to` being compared against a *weekday* reference point), so
     // anchoring both ends to minDate (already a fixed, consistent
     // reference for the whole chart) sidesteps that asymmetry entirely.
-    const endX = minDate && row.endDate ? dayOffset(minDate, row.endDate) * PIXELS_PER_DAY : x;
+    //
+    // The right edge is one calendar day *past* endDate itself — endDate
+    // is a whole day the bar occupies, not an instant it stops at, so
+    // the bar has to reach the start of the day *after* it to actually
+    // cover that day's own full width (D1.4-37: a bar spans from the
+    // beginning of its start day to the end of its end day — a task that
+    // starts and ends the same day is a full one-day-wide bar, not the
+    // sliver `endX === x` would otherwise draw). Adding the day here,
+    // before `dayOffset` runs, rather than adding 1 to the final offset
+    // afterwards, is what keeps this correct under "Weekends" exclusion
+    // too — e.g. an endDate of Friday needs to reach Saturday's own
+    // (weekend-clamped) offset, not just "Friday's offset + 1 unit".
+    const endX = minDate && row.endDate ? dayOffset(minDate, addCalendarDays(row.endDate, 1)) * PIXELS_PER_DAY : x;
     const width = row.startDate && row.endDate ? Math.max(1, endX - x) : 0;
     return {
       kind: row.kind,
