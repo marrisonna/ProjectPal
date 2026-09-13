@@ -359,7 +359,8 @@ export function calendarDaysBetween(start: Date, end: Date): number {
   return calendarDayNumber(end) - calendarDayNumber(start);
 }
 
-function addCalendarDays(date: Date, days: number): Date {
+// Exported for features/plan/PlanPage.tsx's date-under-cursor indicator.
+export function addCalendarDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;

@@ -11,8 +11,8 @@ import {
   useProjects,
   useTasks,
 } from "../../api/hooks";
-import { buildScheduleGraph, formatDdMmmYy } from "../../lib/schedule";
-import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, type GanttBar } from "../../lib/ganttLayout";
+import { addCalendarDays, buildScheduleGraph, formatDdMmmYy } from "../../lib/schedule";
+import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, computeGridLines, type GanttBar } from "../../lib/ganttLayout";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 
 const LABEL_COLUMN_WIDTH = 220;
@@ -22,6 +22,15 @@ const BASE_FONT_SIZE = 11;
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 1000;
 const TODAY_BUTTON_FRACTION = 0.25;
+// The Project "extent" guide lines' own colour — same strokeWidth-1
+// black as the week/month grid below, just more opaque.
+const EXTENT_LINE_COLOUR = "rgba(0,0,0,0.3)";
+// Same colour/thickness family as EXTENT_LINE_COLOUR, considerably more
+// transparent, since these cover the whole chart rather than one bar's
+// own edges. Month lines reuse this same colour, just twice as thick.
+const GRID_LINE_COLOUR = "rgba(0,0,0,0.07)";
+const WEEK_LINE_WIDTH = 1;
+const MONTH_LINE_WIDTH = 2;
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -75,6 +84,26 @@ export function PlanPage() {
   const zoomYRef = useRef(zoomY);
   zoomXRef.current = zoomX;
   zoomYRef.current = zoomY;
+
+  // The name shown in the read-only label below the zoom controls while
+  // hovering a Task/Project bar — cleared the moment the mouse leaves it.
+  const [hoveredLabel, setHoveredLabel] = useState("");
+  // The date under the cursor, tracked continuously across the whole
+  // drawing area (not just while over a bar) — a plain `onMouseMove`
+  // suffices here (unlike the wheel handler above, nothing needs
+  // preventDefault, so there's no passive-listener obstacle to a normal
+  // JSX handler).
+  const [hoveredDate, setHoveredDate] = useState("");
+
+  function handleDrawingAreaMouseMove(event: { clientX: number }) {
+    const drawingArea = drawingAreaRef.current;
+    if (!drawingArea || !layout?.minDate) return;
+    const rect = drawingArea.getBoundingClientRect();
+    const contentX = Math.max(0, drawingArea.scrollLeft + (event.clientX - rect.left));
+    const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomXRef.current / 100);
+    const dayOffset = Math.floor(contentX / effectivePixelsPerDay);
+    setHoveredDate(formatDdMmmYy(addCalendarDays(layout.minDate, dayOffset)));
+  }
 
   // Applying a new zoom must keep one particular point still under the
   // same screen position afterwards — the *anchor*. For a wheel-driven
@@ -233,6 +262,7 @@ export function PlanPage() {
     layout.todayX,
   ) + CHART_RIGHT_PADDING;
   const chartHeightBase = Math.max(ROW_HEIGHT, layout.rowCount * ROW_HEIGHT);
+  const gridLines = computeGridLines(layout.minDate, chartWidthBase);
 
   const scaleX = zoomX / 100;
   const scaleY = zoomY / 100;
@@ -262,6 +292,57 @@ export function PlanPage() {
           Zoom Reset
         </DenseButton>
         <DenseButton onClick={() => scrollToToday(TODAY_BUTTON_FRACTION)}>Today</DenseButton>
+      </Box>
+      {/* Date under the cursor (left, right-aligned, right edge 2em
+          before the drawing area's own left edge) and the hovered
+          Task/Project's name (right, V1.2's own Gantt hover-caption
+          syntax — lib/ganttLayout.ts's hoverLabel/buildProjectChain),
+          whose own left edge lines up with the drawing area's left edge
+          below (not the row-label column to its left) — the date
+          control's width plus the 2em gap after it together add up to
+          the same total offset (that column's width plus the Gantt
+          area's own 1px outer left border; box-sizing: border-box
+          already folds the label pane's own right border into its 220px
+          width, confirmed against the rendered layout — a second +1 for
+          that border double-counts it). */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+        <Box
+          component="input"
+          type="text"
+          readOnly
+          value={hoveredDate}
+          sx={{
+            width: `calc(${LABEL_COLUMN_WIDTH + 1}px - 2em)`,
+            flexShrink: 0,
+            textAlign: "right",
+            fontSize: DENSE_FONT_SIZE,
+            fontFamily: "inherit",
+            border: "none",
+            outline: "none",
+            bgcolor: "transparent",
+            px: 0,
+            py: "3px",
+            color: "rgba(0,0,0,0.6)",
+          }}
+        />
+        <Box sx={{ width: "2em", flexShrink: 0 }} />
+        <Box
+          component="input"
+          type="text"
+          readOnly
+          value={hoveredLabel}
+          sx={{
+            flexGrow: 1,
+            fontSize: DENSE_FONT_SIZE,
+            fontFamily: "inherit",
+            border: "none",
+            outline: "none",
+            bgcolor: "transparent",
+            px: 0,
+            py: "3px",
+            color: "rgba(0,0,0,0.6)",
+          }}
+        />
       </Box>
       {layout.bars.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
@@ -308,9 +389,66 @@ export function PlanPage() {
           <Box
             ref={drawingAreaRef}
             onScroll={() => syncScrollTop(drawingAreaRef.current!, labelAreaRef.current)}
+            onMouseMove={handleDrawingAreaMouseMove}
+            onMouseLeave={() => setHoveredDate("")}
             sx={{ flexGrow: 1, height: PANE_HEIGHT, overflow: "auto" }}
           >
-            <Box component="svg" width={chartWidth} height={chartHeight} sx={{ display: "block" }}>
+            {/* V1.2's own Gantt background (Libs/PlanDisplay/Project.cs's
+                `OuterBrush`, ARGB(64,200,255,210) painted behind each
+                project's bars) composites to roughly #f1fff4 over a white
+                page — this is that colour, nudged a touch lighter still,
+                per request. On the SVG itself (the full scrollable
+                canvas), not the pane around it, so it covers the whole
+                chart area and scrolls with the content, not just
+                whatever's currently in the viewport. */}
+            <Box component="svg" width={chartWidth} height={chartHeight} sx={{ display: "block", bgcolor: "#f5fff7" }}>
+              {/* Week (Monday) and month (1st) grid lines — drawn first,
+                  so they sit behind everything else (the extent guides,
+                  arrows, and bars all paint over them). */}
+              {gridLines.weekLineXs.map((x) => (
+                <line
+                  key={`week-${x}`}
+                  x1={x * scaleX}
+                  y1={0}
+                  x2={x * scaleX}
+                  y2={chartHeight}
+                  stroke={GRID_LINE_COLOUR}
+                  strokeWidth={WEEK_LINE_WIDTH}
+                />
+              ))}
+              {gridLines.monthLineXs.map((x) => (
+                <line
+                  key={`month-${x}`}
+                  x1={x * scaleX}
+                  y1={0}
+                  x2={x * scaleX}
+                  y2={chartHeight}
+                  stroke={GRID_LINE_COLOUR}
+                  strokeWidth={MONTH_LINE_WIDTH}
+                />
+              ))}
+              {layout.bars.map((bar) =>
+                bar.kind === "project" && bar.subtreeBottomY != null ? (
+                  <g key={`extent-${bar.id}`}>
+                    <line
+                      x1={bar.x * scaleX}
+                      y1={bar.y * scaleY + barHeight}
+                      x2={bar.x * scaleX}
+                      y2={bar.subtreeBottomY * scaleY}
+                      stroke={EXTENT_LINE_COLOUR}
+                      strokeWidth={1}
+                    />
+                    <line
+                      x1={(bar.x + bar.width) * scaleX}
+                      y1={bar.y * scaleY + barHeight}
+                      x2={(bar.x + bar.width) * scaleX}
+                      y2={bar.subtreeBottomY * scaleY}
+                      stroke={EXTENT_LINE_COLOUR}
+                      strokeWidth={1}
+                    />
+                  </g>
+                ) : null,
+              )}
               <line
                 x1={todayX}
                 y1={0}
@@ -338,7 +476,14 @@ export function PlanPage() {
                 </marker>
               </defs>
               {layout.bars.map((bar) => (
-                <GanttBarRect key={`bar-${bar.kind}-${bar.id}`} bar={bar} scaleX={scaleX} scaleY={scaleY} barHeight={barHeight} />
+                <GanttBarRect
+                  key={`bar-${bar.kind}-${bar.id}`}
+                  bar={bar}
+                  scaleX={scaleX}
+                  scaleY={scaleY}
+                  barHeight={barHeight}
+                  onHoverChange={setHoveredLabel}
+                />
               ))}
             </Box>
           </Box>
@@ -399,11 +544,13 @@ function GanttBarRect({
   scaleX,
   scaleY,
   barHeight,
+  onHoverChange,
 }: {
   bar: GanttBar;
   scaleX: number;
   scaleY: number;
   barHeight: number;
+  onHoverChange: (label: string) => void;
 }) {
   if (!bar.startDate || !bar.endDate) return null;
   const title = `${bar.label}\n${formatDdMmmYy(bar.startDate)} → ${formatDdMmmYy(bar.endDate)}`;
@@ -418,6 +565,8 @@ function GanttBarRect({
       strokeWidth={bar.kind === "project" ? 1.5 : 1}
       style={{ cursor: bar.kind === "task" ? "pointer" : "default" }}
       onDoubleClick={bar.kind === "task" ? () => openItemWindow("tasks", bar.id) : undefined}
+      onMouseEnter={() => onHoverChange(bar.hoverLabel)}
+      onMouseLeave={() => onHoverChange("")}
     >
       <title>{title}</title>
     </rect>

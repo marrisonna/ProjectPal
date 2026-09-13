@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildScheduleGraph } from "./schedule";
-import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout } from "./ganttLayout";
+import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, computeGridLines } from "./ganttLayout";
 import type { DependencyRecord, ProjectRecord, TaskRecord } from "../api/types";
 
 function makeTask(overrides: Partial<TaskRecord> & { task_id: number; project_id: number }): TaskRecord {
@@ -143,5 +143,142 @@ describe("buildGanttLayout", () => {
     const layout = buildGanttLayout(graph, [], null);
 
     expect(layout.bars.map((b) => b.id)).toEqual([1]);
+  });
+
+  describe("subtreeBottomY (the Project 'extent' guide lines)", () => {
+    it("is null for a Task bar, and for a childless Project", () => {
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const childless = makeProject({ project_id: 2, parent_project_id: 1, name: "Childless" });
+      const task = makeTask({ task_id: 1, project_id: 1, description: "T", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph([task], [root, childless], [], new Map([[1, 1]]));
+      const layout = buildGanttLayout(graph, [], 1);
+
+      const taskBar = layout.bars.find((b) => b.kind === "task")!;
+      const childlessBar = layout.bars.find((b) => b.id === 2)!;
+      expect(taskBar.subtreeBottomY).toBeNull();
+      expect(childlessBar.subtreeBottomY).toBeNull();
+    });
+
+    it("reaches the bottom of a Project's own last direct Task", () => {
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const taskA = makeTask({ task_id: 1, project_id: 1, description: "A", effort_in_days: 1 });
+      const taskB = makeTask({ task_id: 2, project_id: 1, description: "B", effort_in_days: 1, start_relative_days_to_project: 5 });
+
+      const graph = buildScheduleGraph([taskA, taskB], [root], [], new Map([[1, 1], [2, 1]]));
+      const layout = buildGanttLayout(graph, [], 1);
+
+      const rootBar = layout.bars.find((b) => b.kind === "project")!;
+      const lastBar = layout.bars[layout.bars.length - 1];
+      expect(rootBar.subtreeBottomY).toBe(lastBar.y + BAR_HEIGHT);
+    });
+
+    it("reaches all the way to the last row of a nested sub-Project's own subtree, for every ancestor", () => {
+      // Root -> TaskRoot, SubA -> TaskSubA, SubSubA -> TaskSubSubA
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const subA = makeProject({ project_id: 2, parent_project_id: 1, name: "SubA" });
+      const subSubA = makeProject({ project_id: 3, parent_project_id: 2, name: "SubSubA" });
+      const taskRoot = makeTask({ task_id: 1, project_id: 1, description: "TaskRoot", effort_in_days: 1 });
+      const taskSubA = makeTask({ task_id: 2, project_id: 2, description: "TaskSubA", effort_in_days: 1 });
+      const taskSubSubA = makeTask({ task_id: 3, project_id: 3, description: "TaskSubSubA", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph(
+        [taskRoot, taskSubA, taskSubSubA],
+        [root, subA, subSubA],
+        [],
+        new Map([[1, 1], [2, 1], [3, 1]]),
+      );
+      const layout = buildGanttLayout(graph, [], 1);
+
+      const rootBar = layout.bars.find((b) => b.id === 1 && b.kind === "project")!;
+      const subABar = layout.bars.find((b) => b.id === 2)!;
+      const subSubABar = layout.bars.find((b) => b.id === 3)!;
+      const lastBar = layout.bars[layout.bars.length - 1];
+
+      // All three (deepest to shallowest) reach the very last row —
+      // TaskSubSubA is the last descendant of all of them.
+      expect(subSubABar.subtreeBottomY).toBe(lastBar.y + BAR_HEIGHT);
+      expect(subABar.subtreeBottomY).toBe(lastBar.y + BAR_HEIGHT);
+      expect(rootBar.subtreeBottomY).toBe(lastBar.y + BAR_HEIGHT);
+    });
+
+    it("stops a Project's extent at its own last child, not a later sibling Project's subtree", () => {
+      // Root -> SubB (-> TaskSubB), SubC (no children) — SubB's own
+      // extent must stop at TaskSubB, not run on into SubC's row.
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const subB = makeProject({ project_id: 2, parent_project_id: 1, name: "SubB" });
+      const subC = makeProject({ project_id: 3, parent_project_id: 1, name: "SubC" });
+      const taskSubB = makeTask({ task_id: 1, project_id: 2, description: "TaskSubB", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph([taskSubB], [root, subB, subC], [], new Map([[1, 1]]));
+      const layout = buildGanttLayout(graph, [], 1);
+
+      const subBBar = layout.bars.find((b) => b.id === 2)!;
+      const taskSubBBar = layout.bars.find((b) => b.kind === "task")!;
+      const subCBar = layout.bars.find((b) => b.id === 3)!;
+
+      expect(subBBar.subtreeBottomY).toBe(taskSubBBar.y + BAR_HEIGHT);
+      expect(subCBar.subtreeBottomY).toBeNull();
+    });
+  });
+
+  describe("hoverLabel ('P/T - name : [ancestor chain]', adapted from V1.2's own Gantt hover caption)", () => {
+    it("for a top-level Project (no parent), is 'P - name' with no ' : [...]' suffix at all", () => {
+      const root = makeProject({ project_id: 1, name: "Marketing" });
+      const graph = buildScheduleGraph([], [root], [], new Map());
+      const layout = buildGanttLayout(graph, [], 1);
+
+      expect(layout.bars.find((b) => b.id === 1)!.hoverLabel).toBe("P: Marketing");
+    });
+
+    it("for a nested Project, is 'P - name : [ancestor chain]', excluding itself from the chain", () => {
+      const root = makeProject({ project_id: 1, name: "Marketing" });
+      const child = makeProject({ project_id: 2, parent_project_id: 1, name: "Website" });
+      const grandchild = makeProject({ project_id: 3, parent_project_id: 2, name: "Login Page" });
+
+      const graph = buildScheduleGraph([], [root, child, grandchild], [], new Map());
+      const layout = buildGanttLayout(graph, [], 1);
+
+      expect(layout.bars.find((b) => b.id === 2)!.hoverLabel).toBe("P: Website : [Marketing]");
+      expect(layout.bars.find((b) => b.id === 3)!.hoverLabel).toBe("P: Login Page : [Marketing=>Website]");
+    });
+
+    it("for a Task, is 'T - description : [chain]', including its own Project in the chain", () => {
+      const root = makeProject({ project_id: 1, name: "Marketing" });
+      const child = makeProject({ project_id: 2, parent_project_id: 1, name: "Website" });
+      const task = makeTask({ task_id: 1, project_id: 2, description: "Fix bug", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph([task], [root, child], [], new Map([[1, 1]]));
+      const layout = buildGanttLayout(graph, [], 1);
+
+      expect(layout.bars.find((b) => b.kind === "task")!.hoverLabel).toBe("T: Fix bug : [Marketing=>Website]");
+    });
+  });
+});
+
+describe("computeGridLines", () => {
+  it("returns no lines when there's no minDate (nothing to lay out at all)", () => {
+    expect(computeGridLines(null, 500)).toEqual({ weekLineXs: [], monthLineXs: [] });
+  });
+
+  it("places a week line at every Monday, and a month line at every 1st-of-month, within the chart's date range", () => {
+    const minDate = new Date(2026, 0, 5); // a Monday
+    expect(minDate.getDay()).toBe(1);
+
+    const { weekLineXs, monthLineXs } = computeGridLines(minDate, 30 * PIXELS_PER_DAY);
+
+    // Mondays 5/12/19/26-Jan and 2-Feb (day offsets 0/7/14/21/28) all fall
+    // within a 30-day range from minDate.
+    expect(weekLineXs).toEqual([0, 7, 14, 21, 28].map((d) => d * PIXELS_PER_DAY));
+    // 1-Feb-2026 is 27 days after 5-Jan-2026.
+    expect(monthLineXs).toEqual([27 * PIXELS_PER_DAY]);
+  });
+
+  it("stops at the given chart width, not beyond it", () => {
+    const minDate = new Date(2026, 0, 5); // a Monday
+    const { weekLineXs } = computeGridLines(minDate, 10 * PIXELS_PER_DAY);
+
+    // Only the Mondays at day offset 0 and 7 fit within a 10-day range.
+    expect(weekLineXs).toEqual([0, 7 * PIXELS_PER_DAY]);
   });
 });
