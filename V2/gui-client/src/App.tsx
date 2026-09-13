@@ -3,7 +3,6 @@ import { AuthProvider } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AppShell } from "./app/AppShell";
-import { Dashboard } from "./app/Dashboard";
 import { TaskListPage } from "./features/tasks/TaskListPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
@@ -36,7 +35,10 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<AuthenticatedLayout />}>
-            <Route path="/" element={<Dashboard />} />
+            {/* Every role lands on All Tasks for now — a TeamLeadUser should
+                eventually land on the not-yet-built "MainWindow" instead
+                (D1.4-XX, Claude/Level1_Implementation/4_GuiClient/Plan.md). */}
+            <Route path="/" element={<Navigate to="/tasks" replace />} />
             <Route path="/tasks" element={<TaskListPage />} />
           </Route>
           <Route element={<BareAuthenticatedLayout />}>
