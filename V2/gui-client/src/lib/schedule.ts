@@ -525,6 +525,17 @@ export function formatDdMmmYy(date: Date | null): string {
 }
 
 /**
+ * The Gantt view's month-start footer marker (D1.4-26): "Mmm" normally,
+ * "Mmm-YY" for January so a marker crossing a year boundary still shows
+ * which year it's entering without needing every marker to carry one.
+ */
+export function formatMonthMarker(date: Date): string {
+  const month = MONTHS[date.getMonth()];
+  if (date.getMonth() !== 0) return month;
+  return `${month}-${String(date.getFullYear()).slice(-2)}`;
+}
+
+/**
  * Inverse of formatDdMmmYy, for sorting a date column's already-formatted
  * display strings (the All Tasks grid's column filter popup, D-Win-14,
  * sorts by the same strings it filters/displays, not a separately-tracked

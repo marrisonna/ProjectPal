@@ -23,6 +23,11 @@ const MAX_LABEL_COLUMN_WIDTH = 600;
 // "Show Names" off entirely, rather than leaving an unusably thin column.
 const LABEL_COLUMN_COLLAPSE_THRESHOLD = 24;
 const RESIZE_HANDLE_WIDTH = 6;
+// Height reserved at the bottom of the drawing area's own scrollable
+// content for the month-marker footer (D1.4-26) — kept a fixed size, not
+// scaled by vertical zoom, since it's positioned along the date axis
+// (horizontal), not the row axis zoomY otherwise scales.
+const MONTH_FOOTER_HEIGHT = 20;
 const CHART_RIGHT_PADDING = 40;
 const BASE_FONT_SIZE = 11;
 const MIN_ZOOM = 10;
@@ -101,6 +106,14 @@ export function PlanPage() {
 
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
+  // The chart's own horizontal scroll now lives one level up from
+  // drawingAreaRef (D1.4-26) — drawingAreaRef itself only scrolls
+  // vertically (chart rows); hScrollAreaRef wraps it together with the
+  // month-footer row below it, so the two scroll horizontally as one
+  // unit with no separate JS syncing needed for that axis (see the
+  // layout note by the JSX below for why this replaced an earlier
+  // `position: sticky` footer attempt).
+  const hScrollAreaRef = useRef<HTMLDivElement>(null);
   const ganttAreaRef = useRef<HTMLDivElement>(null);
 
   // Zoom (D1.4-24 follow-up): the layout this page renders from
@@ -171,9 +184,10 @@ export function PlanPage() {
 
   function handleDrawingAreaMouseMove(event: { clientX: number }) {
     const drawingArea = drawingAreaRef.current;
-    if (!drawingArea || !layout?.minDate) return;
+    const hScrollArea = hScrollAreaRef.current;
+    if (!drawingArea || !hScrollArea || !layout?.minDate) return;
     const rect = drawingArea.getBoundingClientRect();
-    const contentX = Math.max(0, drawingArea.scrollLeft + (event.clientX - rect.left));
+    const contentX = Math.max(0, hScrollArea.scrollLeft + (event.clientX - rect.left));
     const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomXRef.current / 100);
     const dayOffset = Math.floor(contentX / effectivePixelsPerDay);
     setHoveredDate(formatDdMmmYy(addCalendarDays(layout.minDate, dayOffset)));
@@ -204,13 +218,13 @@ export function PlanPage() {
   const pendingVerticalAnchorRef = useRef<PendingZoomAnchor | null>(null);
 
   function applyZoomX(newZoomX: number, anchorClientX?: number) {
-    const drawingArea = drawingAreaRef.current;
-    if (drawingArea) {
-      const rect = drawingArea.getBoundingClientRect();
+    const hScrollArea = hScrollAreaRef.current;
+    if (hScrollArea) {
+      const rect = hScrollArea.getBoundingClientRect();
       const viewportOffset = (anchorClientX ?? rect.left + rect.width / 2) - rect.left;
       const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomXRef.current / 100);
       pendingHorizontalAnchorRef.current = {
-        contentOffset: (drawingArea.scrollLeft + viewportOffset) / effectivePixelsPerDay,
+        contentOffset: (hScrollArea.scrollLeft + viewportOffset) / effectivePixelsPerDay,
         viewportOffset,
       };
     }
@@ -232,11 +246,11 @@ export function PlanPage() {
   }
 
   useLayoutEffect(() => {
-    const drawingArea = drawingAreaRef.current;
+    const hScrollArea = hScrollAreaRef.current;
     const anchor = pendingHorizontalAnchorRef.current;
-    if (!drawingArea || !anchor) return;
+    if (!hScrollArea || !anchor) return;
     const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomX / 100);
-    drawingArea.scrollLeft = Math.max(0, anchor.contentOffset * effectivePixelsPerDay - anchor.viewportOffset);
+    hScrollArea.scrollLeft = Math.max(0, anchor.contentOffset * effectivePixelsPerDay - anchor.viewportOffset);
     pendingHorizontalAnchorRef.current = null;
   }, [zoomX]);
 
@@ -295,13 +309,13 @@ export function PlanPage() {
   }, [layout]);
 
   function scrollToToday(fraction: number) {
-    const drawingArea = drawingAreaRef.current;
-    if (!drawingArea || !layout) return;
+    const hScrollArea = hScrollAreaRef.current;
+    if (!hScrollArea || !layout) return;
     const todayXScaled = layout.todayX * (zoomX / 100);
-    const maxScrollLeft = Math.max(0, drawingArea.scrollWidth - drawingArea.clientWidth);
-    drawingArea.scrollLeft = Math.min(
+    const maxScrollLeft = Math.max(0, hScrollArea.scrollWidth - hScrollArea.clientWidth);
+    hScrollArea.scrollLeft = Math.min(
       maxScrollLeft,
-      Math.max(0, todayXScaled - fraction * drawingArea.clientWidth),
+      Math.max(0, todayXScaled - fraction * hScrollArea.clientWidth),
     );
   }
 
@@ -512,14 +526,37 @@ export function PlanPage() {
               />
             </>
           )}
-          <Box
-            ref={drawingAreaRef}
-            onScroll={() => syncScrollTop(drawingAreaRef.current!, labelAreaRef.current)}
-            onMouseMove={handleDrawingAreaMouseMove}
-            onMouseLeave={() => setHoveredDate("")}
-            sx={{ flexGrow: 1, height: "100%", overflow: "auto" }}
-          >
-            {/* V1.2's own Gantt background (Libs/PlanDisplay/Project.cs's
+          {/* The chart's own horizontal scroll (D1.4-26) lives here, one
+              level above the chart's vertical scroll (`drawingAreaRef`
+              below) — not the same element. An earlier attempt kept both
+              axes on one `overflow: auto` element and pinned the
+              month-footer to its bottom via `position: sticky`; that
+              looked right but a real browser quirk surfaced under test:
+              once a sticky child is in play, the browser's own computed
+              max `scrollTop` for that element stops accounting for the
+              sticky child's full height, so the last row or two could
+              still end up scrolled in behind the "pinned" footer with no
+              way to scroll further and reveal it. Splitting the two axes
+              across two nested elements sidesteps that entirely — this
+              outer one only ever scrolls horizontally (`overflow-x:
+              auto`, `overflow-y: hidden`), wrapping both the chart
+              (vertical-scroll only) and the footer row (fixed height, no
+              scroll of its own) at the same fixed width — so the footer
+              tracks horizontal scrolling for free, as a normal sibling in
+              the same horizontally-scrolling box, with no JS syncing
+              needed for that axis; and its own native horizontal
+              scrollbar, being *this* element's, necessarily renders below
+              both of them. */}
+          <Box ref={hScrollAreaRef} sx={{ flexGrow: 1, height: "100%", overflowX: "auto", overflowY: "hidden" }}>
+            <Box sx={{ width: chartWidth, height: "100%", display: "flex", flexDirection: "column" }}>
+              <Box
+                ref={drawingAreaRef}
+                onScroll={() => syncScrollTop(drawingAreaRef.current!, labelAreaRef.current)}
+                onMouseMove={handleDrawingAreaMouseMove}
+                onMouseLeave={() => setHoveredDate("")}
+                sx={{ flexGrow: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
+              >
+              {/* V1.2's own Gantt background (Libs/PlanDisplay/Project.cs's
                 `OuterBrush`, ARGB(64,200,255,210) painted behind each
                 project's bars) composites to roughly #f1fff4 over a white
                 page — this is that colour, nudged a touch lighter still,
@@ -623,6 +660,41 @@ export function PlanPage() {
                   onHoverChange={setHoveredLabel}
                 />
               ))}
+            </Box>
+              </Box>
+              {/* Month-start footer (D1.4-26) — a fixed-height, non-scrolling
+                  sibling row below the chart, sharing hScrollAreaRef's own
+                  horizontal scroll (both are inside its chartWidth-wide
+                  flex column) so it tracks horizontal scrolling with no
+                  extra syncing code, while staying untouched by the
+                  chart's own independent vertical scroll (drawingAreaRef,
+                  above) since it lives outside that scrollable element
+                  entirely. */}
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  width: chartWidth,
+                  height: MONTH_FOOTER_HEIGHT,
+                  bgcolor: "#fff",
+                  borderTop: "1px solid rgba(0,0,0,0.12)",
+                  overflow: "hidden",
+                }}
+              >
+                <Box component="svg" width={chartWidth} height={MONTH_FOOTER_HEIGHT} sx={{ display: "block" }}>
+                  {gridLines.monthMarkers.map((marker) => (
+                    <text
+                      key={`month-label-${marker.x}`}
+                      x={marker.x * scaleX}
+                      y={MONTH_FOOTER_HEIGHT / 2 + 4}
+                      textAnchor="middle"
+                      fontSize={BASE_FONT_SIZE}
+                      fill="rgba(0,0,0,0.6)"
+                    >
+                      {marker.label}
+                    </text>
+                  ))}
+                </Box>
+              </Box>
             </Box>
           </Box>
         </Box>

@@ -4,6 +4,7 @@ import {
   calendarDaysBetween,
   computeTaskRowColour,
   computeUrgency,
+  formatMonthMarker,
   getProjectSchedule,
   getTaskSchedule,
   type ScheduleGraph,
@@ -304,12 +305,21 @@ export function buildGanttLayout(
   return { bars, arrows, rowCount: rows.length, minDate, todayX };
 }
 
+export interface MonthMarker {
+  x: number;
+  label: string;
+}
+
 export interface GridLines {
   // x positions (base units, pre-zoom-scale — the renderer applies the
   // same scaleX it applies to everything else) of each Monday and each
   // 1st-of-month within the chart's date range.
   weekLineXs: number[];
   monthLineXs: number[];
+  // Same x positions as monthLineXs, paired with the footer label to show
+  // for the month that's about to begin at that x (D1.4-26) — "Mmm", or
+  // "Mmm-YY" for January (formatMonthMarker, schedule.ts).
+  monthMarkers: MonthMarker[];
 }
 
 /**
@@ -326,15 +336,19 @@ export interface GridLines {
  * with `addCalendarDays` by a day right around a DST transition.
  */
 export function computeGridLines(minDate: Date | null, chartWidthBase: number): GridLines {
-  if (!minDate) return { weekLineXs: [], monthLineXs: [] };
+  if (!minDate) return { weekLineXs: [], monthLineXs: [], monthMarkers: [] };
   const totalDays = Math.ceil(chartWidthBase / PIXELS_PER_DAY);
   const weekLineXs: number[] = [];
   const monthLineXs: number[] = [];
+  const monthMarkers: MonthMarker[] = [];
   for (let dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
     const date = addCalendarDays(minDate, dayOffset);
     const x = dayOffset * PIXELS_PER_DAY;
     if (date.getDay() === 1) weekLineXs.push(x);
-    if (date.getDate() === 1) monthLineXs.push(x);
+    if (date.getDate() === 1) {
+      monthLineXs.push(x);
+      monthMarkers.push({ x, label: formatMonthMarker(date) });
+    }
   }
-  return { weekLineXs, monthLineXs };
+  return { weekLineXs, monthLineXs, monthMarkers };
 }

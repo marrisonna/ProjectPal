@@ -258,20 +258,32 @@ describe("buildGanttLayout", () => {
 
 describe("computeGridLines", () => {
   it("returns no lines when there's no minDate (nothing to lay out at all)", () => {
-    expect(computeGridLines(null, 500)).toEqual({ weekLineXs: [], monthLineXs: [] });
+    expect(computeGridLines(null, 500)).toEqual({ weekLineXs: [], monthLineXs: [], monthMarkers: [] });
   });
 
   it("places a week line at every Monday, and a month line at every 1st-of-month, within the chart's date range", () => {
     const minDate = new Date(2026, 0, 5); // a Monday
     expect(minDate.getDay()).toBe(1);
 
-    const { weekLineXs, monthLineXs } = computeGridLines(minDate, 30 * PIXELS_PER_DAY);
+    const { weekLineXs, monthLineXs, monthMarkers } = computeGridLines(minDate, 30 * PIXELS_PER_DAY);
 
     // Mondays 5/12/19/26-Jan and 2-Feb (day offsets 0/7/14/21/28) all fall
     // within a 30-day range from minDate.
     expect(weekLineXs).toEqual([0, 7, 14, 21, 28].map((d) => d * PIXELS_PER_DAY));
     // 1-Feb-2026 is 27 days after 5-Jan-2026.
     expect(monthLineXs).toEqual([27 * PIXELS_PER_DAY]);
+    expect(monthMarkers).toEqual([{ x: 27 * PIXELS_PER_DAY, label: "Feb" }]);
+  });
+
+  it("labels a January month marker with its year (Mmm-YY)", () => {
+    const minDate = new Date(2025, 11, 1); // 1-Dec-2025
+    const { monthMarkers } = computeGridLines(minDate, 45 * PIXELS_PER_DAY);
+
+    // 1-Jan-2026 is 31 days after 1-Dec-2025.
+    expect(monthMarkers).toEqual([
+      { x: 0, label: "Dec" },
+      { x: 31 * PIXELS_PER_DAY, label: "Jan-26" },
+    ]);
   });
 
   it("stops at the given chart width, not beyond it", () => {
