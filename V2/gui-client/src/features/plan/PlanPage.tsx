@@ -750,6 +750,7 @@ export function PlanPage() {
                     flexShrink: 0,
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     borderRight: "1px solid rgba(0,0,0,0.12)",
                     px: "4px",
                   }}
