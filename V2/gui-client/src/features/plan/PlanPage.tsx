@@ -13,7 +13,15 @@ import {
   useTasks,
 } from "../../api/hooks";
 import { addCalendarDays, buildScheduleGraph, formatDdMmmYy } from "../../lib/schedule";
-import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, computeGridLines, type GanttBar } from "../../lib/ganttLayout";
+import {
+  BAR_HEIGHT,
+  PIXELS_PER_DAY,
+  ROW_HEIGHT,
+  buildGanttLayout,
+  computeGridLines,
+  type GanttBar,
+  type GanttCustomOrder,
+} from "../../lib/ganttLayout";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 
 const DEFAULT_LABEL_COLUMN_WIDTH = 220;
@@ -53,6 +61,16 @@ const MONTH_LINE_WIDTH = 2;
 // progressively darker through plain alpha compositing, with no
 // per-depth colour needed.
 const PROJECT_BOX_FILL = "rgba(52, 108, 158, 0.15)";
+
+// Manual row reorder (D1.4-27) — local-only, never written to the server:
+// the user can drag a Task/Project row up or down among its own siblings
+// (never changing which Project it belongs to), and "Memorise order"
+// persists the current session's order to this browser's localStorage,
+// scoped per Person so a shared browser profile can't mix up two
+// different users' preferred orderings.
+function ganttOrderStorageKey(personId: number): string {
+  return `projectpal.ganttOrder.${personId}`;
+}
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -98,11 +116,26 @@ export function PlanPage() {
     return map;
   }, [allTaskResources]);
 
+  // Manual row order override (D1.4-27) — loaded once Person is known;
+  // starts empty (falls back to the default date/alphabetical order)
+  // until a saved one is found.
+  const [customOrder, setCustomOrder] = useState<GanttCustomOrder>({});
+  useEffect(() => {
+    if (!person) return;
+    const raw = localStorage.getItem(ganttOrderStorageKey(person.person_id));
+    if (!raw) return;
+    try {
+      setCustomOrder(JSON.parse(raw) as GanttCustomOrder);
+    } catch {
+      // Ignore unreadable/corrupt storage — falls back to default order.
+    }
+  }, [person]);
+
   const layout = useMemo(() => {
     if (!projects || !tasks || !dependencies) return null;
     const graph = buildScheduleGraph(tasks, projects, dependencies, resourceCountByTaskId);
-    return buildGanttLayout(graph, dependencies, projectId);
-  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId]);
+    return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder);
+  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder]);
 
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
@@ -170,6 +203,78 @@ export function PlanPage() {
     }
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+  }
+
+  // Manual row reorder (D1.4-27) — dragging a row's own label up/down
+  // among its siblings (same `parentKey`, i.e. same parent Project, or
+  // "root" for a top-level Project): never changes hierarchy/parent, only
+  // relative order, and is purely local (never written to the server —
+  // "Memorise order" below only ever touches this browser's localStorage).
+  // `rowDragRef` holds the in-progress drag's own state (not React state:
+  // nothing here needs a row-by-row re-render while dragging); only the
+  // floating drag-label's own text/position triggers re-renders.
+  interface RowDrag {
+    bar: GanttBar;
+    siblings: GanttBar[]; // this bar's own sibling group, in current order
+  }
+  const rowDragRef = useRef<RowDrag | null>(null);
+  const [dragLabel, setDragLabel] = useState("");
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+
+  function handleRowMouseDown(bar: GanttBar, event: { clientX: number; clientY: number }) {
+    if (!layout) return;
+    const siblings = layout.bars.filter((b) => b.parentKey === bar.parentKey).sort((a, b) => a.y - b.y);
+    rowDragRef.current = { bar, siblings };
+    setDragLabel(bar.label);
+    setDragPosition({ x: event.clientX, y: event.clientY });
+
+    function handleMouseMove(moveEvent: MouseEvent) {
+      setDragPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
+    }
+    function handleMouseUp(upEvent: MouseEvent) {
+      const drag = rowDragRef.current;
+      rowDragRef.current = null;
+      setDragLabel("");
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (!drag || !labelAreaRef.current) return;
+
+      // Where the cursor landed, in the label pane's own content
+      // coordinates (scroll-adjusted) — compared against each sibling's
+      // own row midpoint to find the drop position. Bounded entirely to
+      // `drag.siblings` (same parentKey) by construction: there is no way
+      // for this calculation to ever produce a position outside the
+      // dragged row's own parent's set of children, which is exactly what
+      // "can't be dragged beyond the bounds of the parent project" means
+      // here — not a clamp bolted on afterwards, but a direct consequence
+      // of only ever comparing against this one sibling group.
+      const rect = labelAreaRef.current.getBoundingClientRect();
+      const contentY = labelAreaRef.current.scrollTop + (upEvent.clientY - rect.top);
+      const effectiveRowHeight = ROW_HEIGHT * (zoomYRef.current / 100);
+      const effectiveScaleY = zoomYRef.current / 100;
+
+      const others: string[] = [];
+      let targetIndex = 0;
+      for (const sib of drag.siblings) {
+        if (sib.kind === drag.bar.kind && sib.id === drag.bar.id) continue;
+        others.push(`${sib.kind}:${sib.id}`);
+        const midY = sib.y * effectiveScaleY + effectiveRowHeight / 2;
+        if (midY < contentY) targetIndex++;
+      }
+      const draggedKey = `${drag.bar.kind}:${drag.bar.id}`;
+      others.splice(targetIndex, 0, draggedKey);
+
+      const currentOrder = drag.siblings.map((s) => `${s.kind}:${s.id}`);
+      if (others.join("|") === currentOrder.join("|")) return; // dropped back in place
+      setCustomOrder((prev) => ({ ...prev, [drag.bar.parentKey]: others }));
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }
+
+  function handleMemoriseOrder() {
+    if (!person) return;
+    localStorage.setItem(ganttOrderStorageKey(person.person_id), JSON.stringify(customOrder));
   }
 
   // The name shown in the read-only label below the zoom controls while
@@ -508,6 +613,8 @@ export function PlanPage() {
                       y={bar.y * scaleY + barHeight + 1}
                       fontSize={fontSize}
                       fontWeight={bar.kind === "project" ? 700 : 400}
+                      style={{ cursor: "grab" }}
+                      onMouseDown={(event) => handleRowMouseDown(bar, event)}
                     >
                       {bar.label}
                     </text>
@@ -697,6 +804,39 @@ export function PlanPage() {
               </Box>
             </Box>
           </Box>
+        </Box>
+      )}
+      {showNames && layout.bars.length > 0 && (
+        <Box sx={{ display: "flex", mt: 1, flexShrink: 0 }}>
+          <Box sx={{ width: labelColumnWidth, flexShrink: 0 }}>
+            <DenseButton onClick={handleMemoriseOrder}>Memorise order</DenseButton>
+          </Box>
+        </Box>
+      )}
+      {/* Floating 50%-opacity drag label (D1.4-27) — follows the cursor
+          while reordering a row; `pointerEvents: "none"` so it never
+          itself becomes the element under the cursor (which would break
+          the drop-target calculation in handleRowMouseDown's own
+          mouseup handler, reading from labelAreaRef, not this overlay). */}
+      {dragLabel && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: dragPosition.x + 12,
+            top: dragPosition.y + 12,
+            opacity: 0.5,
+            bgcolor: "background.paper",
+            border: "1px solid rgba(0,0,0,0.3)",
+            borderRadius: "3px",
+            px: "6px",
+            py: "2px",
+            fontSize: DENSE_FONT_SIZE,
+            pointerEvents: "none",
+            zIndex: 1300,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {dragLabel}
         </Box>
       )}
     </Box>

@@ -67,6 +67,34 @@ export interface GanttBar {
   // Gantt hover caption (GanttDisplayHelper.cs), which puts the chain
   // first and has no "P:"/"T:" prefix.
   hoverLabel: string;
+  // The sibling group this bar belongs to (D1.4-27, manual row reorder)
+  // — "root" for a top-level Project, or `project:<id>` for a direct
+  // child (Task or sub-Project) of Project `<id>`. Drag-reordering is
+  // scoped to bars sharing the same parentKey: it's how the UI knows
+  // which other bars are this bar's own draggable siblings, and where the
+  // parent's own bounds are (never letting a drag imply a hierarchy/
+  // parent change, which stays entirely off-limits — only relative order
+  // among existing siblings is ever user-editable).
+  parentKey: string;
+}
+
+// A parent's children (Tasks and sub-Projects together, in this parent's
+// current display order) keyed by `parentKey` — the caller's own record
+// of any manual reordering (D1.4-27). Purely a display-order override: it
+// never adds, removes, or reparents anything, and any child key not
+// present in a given list keeps its default relative position, appended
+// after every explicitly-ordered child (so a newly added Task/Project a
+// user has never reordered still shows up sensibly rather than
+// disappearing from view).
+export type GanttCustomOrder = Record<string, string[]>;
+
+function applyCustomOrder<T>(items: T[], keyOf: (item: T) => string, order: string[] | undefined): T[] {
+  if (!order || order.length === 0) return items;
+  const rank = new Map(order.map((key, index) => [key, index]));
+  return items
+    .map((item, index) => ({ item, rank: rank.get(keyOf(item)) ?? order.length + index }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((entry) => entry.item);
 }
 
 export interface GanttArrow {
@@ -93,6 +121,7 @@ interface RawRow {
   endDate: Date | null;
   color: string;
   hoverLabel: string;
+  parentKey: string;
 }
 
 // V1.2's AddPlanDetail excludes a Task with Status Closed/Cancelled or no
@@ -148,6 +177,8 @@ function collectRows(
   depth: number,
   today: Date,
   rows: RawRow[],
+  parentKey: string,
+  customOrder: GanttCustomOrder | undefined,
 ): void {
   const project = graph.projectsById.get(projectId);
   if (!project) return;
@@ -167,34 +198,54 @@ function collectRows(
     // V1.2's own FullName getter, which likewise omits its "=> [...]"
     // suffix entirely when Parent is null.
     hoverLabel: ancestorChain ? `P: ${project.name} : [${ancestorChain}]` : `P: ${project.name}`,
+    parentKey,
   });
 
+  // Default order — Tasks by start date, then sub-Projects alphabetically
+  // — same as before D1.4-27. A user's own manual reorder (`customOrder`,
+  // keyed by this Project's own childKey) is applied across *both*
+  // together afterwards, since visually they're all just this Project's
+  // child rows: a user is free to drag a Task above/below a sub-Project,
+  // not just reorder within one or the other.
   const tasks = (graph.childTasksByProject.get(projectId) ?? [])
     .filter((t) => isVisibleTaskStatus(t.status))
     .map((t) => ({ task: t, schedule: getTaskSchedule(graph, t.task_id) }))
     .filter((t) => t.schedule.startDate && t.schedule.endDate)
     .sort((a, b) => a.schedule.startDate!.getTime() - b.schedule.startDate!.getTime());
 
-  for (const { task, schedule } of tasks) {
-    const urgency = computeUrgency(task, graph.projectsById, schedule.startDate, schedule.endDate, today);
-    rows.push({
-      kind: "task",
-      id: task.task_id,
-      label: task.description,
-      depth: depth + 1,
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
-      color: computeTaskRowColour(task.priority, urgency),
-      hoverLabel: `T: ${task.description} : [${buildProjectChain(graph, task.project_id)}]`,
-    });
-  }
-
   const subProjects = (graph.childProjectsByParent.get(projectId) ?? [])
     .filter((p) => isVisibleProjectPriority(p.priority))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  for (const sub of subProjects) {
-    collectRows(graph, sub.project_id, depth + 1, today, rows);
+  type ChildEntry =
+    | { kind: "task"; key: string; task: (typeof tasks)[number]["task"]; schedule: (typeof tasks)[number]["schedule"] }
+    | { kind: "project"; key: string; project: (typeof subProjects)[number] };
+
+  const children: ChildEntry[] = [
+    ...tasks.map((t): ChildEntry => ({ kind: "task", key: `task:${t.task.task_id}`, task: t.task, schedule: t.schedule })),
+    ...subProjects.map((p): ChildEntry => ({ kind: "project", key: `project:${p.project_id}`, project: p })),
+  ];
+  const childKey = `project:${projectId}`;
+  const orderedChildren = applyCustomOrder(children, (c) => c.key, customOrder?.[childKey]);
+
+  for (const child of orderedChildren) {
+    if (child.kind === "task") {
+      const { task, schedule } = child;
+      const urgency = computeUrgency(task, graph.projectsById, schedule.startDate, schedule.endDate, today);
+      rows.push({
+        kind: "task",
+        id: task.task_id,
+        label: task.description,
+        depth: depth + 1,
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+        color: computeTaskRowColour(task.priority, urgency),
+        hoverLabel: `T: ${task.description} : [${buildProjectChain(graph, task.project_id)}]`,
+        parentKey: childKey,
+      });
+    } else {
+      collectRows(graph, child.project.project_id, depth + 1, today, rows, childKey, customOrder);
+    }
   }
 }
 
@@ -208,17 +259,19 @@ export function buildGanttLayout(
   dependencies: DependencyRecord[],
   rootProjectId: number | null,
   today: Date = new Date(),
+  customOrder?: GanttCustomOrder,
 ): GanttLayout {
   const rows: RawRow[] = [];
 
   if (rootProjectId != null) {
-    collectRows(graph, rootProjectId, 0, today, rows);
+    collectRows(graph, rootProjectId, 0, today, rows, "root", customOrder);
   } else {
     const topLevelProjects = Array.from(graph.projectsById.values())
       .filter((p) => p.parent_project_id == null && isVisibleProjectPriority(p.priority))
       .sort((a, b) => a.name.localeCompare(b.name));
-    for (const project of topLevelProjects) {
-      collectRows(graph, project.project_id, 0, today, rows);
+    const orderedTopLevel = applyCustomOrder(topLevelProjects, (p) => `project:${p.project_id}`, customOrder?.root);
+    for (const project of orderedTopLevel) {
+      collectRows(graph, project.project_id, 0, today, rows, "root", customOrder);
     }
   }
 
@@ -247,6 +300,7 @@ export function buildGanttLayout(
       color: row.color,
       subtreeBottomY: null,
       hoverLabel: row.hoverLabel,
+      parentKey: row.parentKey,
     };
   });
 

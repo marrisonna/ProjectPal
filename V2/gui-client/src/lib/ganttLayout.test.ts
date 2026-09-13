@@ -76,6 +76,86 @@ describe("buildGanttLayout", () => {
     expect(layout.bars.map((b) => b.depth)).toEqual([0, 1, 1, 2]);
   });
 
+  it("tags each bar with the parentKey of its own sibling group ('root', or `project:<id>` for a direct child)", () => {
+    const root = makeProject({ project_id: 1, name: "Root" });
+    const child = makeProject({ project_id: 2, parent_project_id: 1, name: "Child" });
+    const rootTask = makeTask({ task_id: 1, project_id: 1, description: "Root task", effort_in_days: 2 });
+    const childTask = makeTask({ task_id: 2, project_id: 2, description: "Child task", effort_in_days: 2 });
+
+    const graph = buildScheduleGraph(
+      [rootTask, childTask],
+      [root, child],
+      [],
+      new Map([[1, 1], [2, 1]]),
+    );
+
+    const layout = buildGanttLayout(graph, [], null);
+
+    expect(layout.bars.map((b) => [`${b.kind}:${b.id}`, b.parentKey])).toEqual([
+      ["project:1", "root"],
+      ["task:1", "project:1"],
+      ["project:2", "project:1"],
+      ["task:2", "project:2"],
+    ]);
+  });
+
+  it("D1.4-27: a customOrder override reorders a Project's own Tasks/sub-Projects together, without changing hierarchy", () => {
+    const root = makeProject({ project_id: 1, name: "Root" });
+    const sub = makeProject({ project_id: 2, parent_project_id: 1, name: "Sub" });
+    // Two Tasks whose default (start-date) order would be 10 then 11 —
+    // the customOrder below asks for the sub-Project first, then task 11,
+    // then task 10: fully interleaved, not just "tasks then projects".
+    const earlyTask = makeTask({ task_id: 10, project_id: 1, description: "Early", effort_in_days: 1, start_relative_days_to_project: 0 });
+    const lateTask = makeTask({ task_id: 11, project_id: 1, description: "Late", effort_in_days: 1, start_relative_days_to_project: 5 });
+
+    const graph = buildScheduleGraph(
+      [earlyTask, lateTask],
+      [root, sub],
+      [],
+      new Map(),
+    );
+
+    const defaultLayout = buildGanttLayout(graph, [], 1);
+    expect(defaultLayout.bars.map((b) => `${b.kind}:${b.id}`)).toEqual([
+      "project:1",
+      "task:10",
+      "task:11",
+      "project:2",
+    ]);
+
+    const reordered = buildGanttLayout(graph, [], 1, new Date(), {
+      "project:1": ["project:2", "task:11", "task:10"],
+    });
+    expect(reordered.bars.map((b) => `${b.kind}:${b.id}`)).toEqual([
+      "project:1",
+      "project:2",
+      "task:11",
+      "task:10",
+    ]);
+  });
+
+  it("D1.4-27: a customOrder entry for a child not currently present is harmlessly ignored, and unlisted children keep their default relative order at the end", () => {
+    const root = makeProject({ project_id: 1, name: "Root" });
+    const taskA = makeTask({ task_id: 1, project_id: 1, description: "A", effort_in_days: 1, start_relative_days_to_project: 0 });
+    const taskB = makeTask({ task_id: 2, project_id: 1, description: "B", effort_in_days: 1, start_relative_days_to_project: 5 });
+    const taskC = makeTask({ task_id: 3, project_id: 1, description: "C", effort_in_days: 1, start_relative_days_to_project: 10 });
+
+    const graph = buildScheduleGraph([taskA, taskB, taskC], [root], [], new Map());
+
+    // Only task 3 is explicitly ordered (to the front); task:999 doesn't
+    // exist at all. Tasks 1 and 2 aren't mentioned, so they keep their
+    // default relative order (1 before 2), appended after task 3.
+    const layout = buildGanttLayout(graph, [], 1, new Date(), {
+      "project:1": ["task:999", "task:3"],
+    });
+    expect(layout.bars.map((b) => `${b.kind}:${b.id}`)).toEqual([
+      "project:1",
+      "task:3",
+      "task:1",
+      "task:2",
+    ]);
+  });
+
   it("excludes a Closed/Cancelled Task and a Cancelled/Closed-priority sub-Project", () => {
     const root = makeProject({ project_id: 1, name: "Root" });
     const cancelledSub = makeProject({ project_id: 2, parent_project_id: 1, name: "Dead sub", priority: "Cancelled" });
