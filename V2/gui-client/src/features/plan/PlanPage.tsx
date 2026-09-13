@@ -31,6 +31,17 @@ const EXTENT_LINE_COLOUR = "rgba(0,0,0,0.3)";
 const GRID_LINE_COLOUR = "rgba(0,0,0,0.07)";
 const WEEK_LINE_WIDTH = 1;
 const MONTH_LINE_WIDTH = 2;
+// "Boxed" mode (V1.2's own Project rendering, Libs/PlanDisplay/Project.cs
+// — a Project is a container its child Tasks/Projects are visually drawn
+// inside, not just a bar at its own row). The normal Project bar colour
+// (ganttLayout.ts's PROJECT_BAR_COLOUR, "#607d8b") is a low-saturation
+// blue-grey; washed out at low opacity it reads as plain grey rather than
+// as a colour. This uses a more saturated steel/denim blue instead — still
+// muted, not a bright/saturated colour — at 15% opacity, so nested
+// Projects — each painted over its parent's own box — read as
+// progressively darker through plain alpha compositing, with no
+// per-depth colour needed.
+const PROJECT_BOX_FILL = "rgba(52, 108, 158, 0.15)";
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -84,6 +95,10 @@ export function PlanPage() {
   const zoomYRef = useRef(zoomY);
   zoomXRef.current = zoomX;
   zoomYRef.current = zoomY;
+
+  // "Boxed" mode (see PROJECT_BOX_FILL above) — off by default, today's
+  // thin-bar-per-row rendering.
+  const [boxed, setBoxed] = useState(false);
 
   // The name shown in the read-only label below the zoom controls while
   // hovering a Task/Project bar — cleared the moment the mouse leaves it.
@@ -292,6 +307,16 @@ export function PlanPage() {
           Zoom Reset
         </DenseButton>
         <DenseButton onClick={() => scrollToToday(TODAY_BUTTON_FRACTION)}>Today</DenseButton>
+        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+          <Box
+            component="input"
+            type="checkbox"
+            checked={boxed}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setBoxed(event.target.checked)}
+            sx={{ m: 0 }}
+          />
+          <Typography variant="body2">Boxed</Typography>
+        </Box>
       </Box>
       {/* Date under the cursor (left, right-aligned, right edge 2em
           before the drawing area's own left edge) and the hovered
@@ -400,8 +425,16 @@ export function PlanPage() {
                 per request. On the SVG itself (the full scrollable
                 canvas), not the pane around it, so it covers the whole
                 chart area and scrolls with the content, not just
-                whatever's currently in the viewport. */}
-            <Box component="svg" width={chartWidth} height={chartHeight} sx={{ display: "block", bgcolor: "#f5fff7" }}>
+                whatever's currently in the viewport. Only when *not*
+                Boxed, though — stacking this green wash underneath the
+                boxes' own translucent bluish-grey fill is exactly what
+                made Boxed mode look muddy on first try: two different
+                hues layered as translucent washes, not simply "too much"
+                of one colour. Boxed mode's own nested boxes already
+                carry the same "how deep is this" visual job the canvas
+                tint exists for in the plain view, so there's nothing lost
+                by only using one or the other. */}
+            <Box component="svg" width={chartWidth} height={chartHeight} sx={{ display: "block", bgcolor: boxed ? "#fff" : "#f5fff7" }}>
               {/* Week (Monday) and month (1st) grid lines — drawn first,
                   so they sit behind everything else (the extent guides,
                   arrows, and bars all paint over them). */}
@@ -427,28 +460,31 @@ export function PlanPage() {
                   strokeWidth={MONTH_LINE_WIDTH}
                 />
               ))}
-              {layout.bars.map((bar) =>
-                bar.kind === "project" && bar.subtreeBottomY != null ? (
-                  <g key={`extent-${bar.id}`}>
-                    <line
-                      x1={bar.x * scaleX}
-                      y1={bar.y * scaleY + barHeight}
-                      x2={bar.x * scaleX}
-                      y2={bar.subtreeBottomY * scaleY}
-                      stroke={EXTENT_LINE_COLOUR}
-                      strokeWidth={1}
-                    />
-                    <line
-                      x1={(bar.x + bar.width) * scaleX}
-                      y1={bar.y * scaleY + barHeight}
-                      x2={(bar.x + bar.width) * scaleX}
-                      y2={bar.subtreeBottomY * scaleY}
-                      stroke={EXTENT_LINE_COLOUR}
-                      strokeWidth={1}
-                    />
-                  </g>
-                ) : null,
-              )}
+              {/* Redundant in Boxed mode — a box's own border already
+                  marks the same left/right edges these lines would. */}
+              {!boxed &&
+                layout.bars.map((bar) =>
+                  bar.kind === "project" && bar.subtreeBottomY != null ? (
+                    <g key={`extent-${bar.id}`}>
+                      <line
+                        x1={bar.x * scaleX}
+                        y1={bar.y * scaleY + barHeight}
+                        x2={bar.x * scaleX}
+                        y2={bar.subtreeBottomY * scaleY}
+                        stroke={EXTENT_LINE_COLOUR}
+                        strokeWidth={1}
+                      />
+                      <line
+                        x1={(bar.x + bar.width) * scaleX}
+                        y1={bar.y * scaleY + barHeight}
+                        x2={(bar.x + bar.width) * scaleX}
+                        y2={bar.subtreeBottomY * scaleY}
+                        stroke={EXTENT_LINE_COLOUR}
+                        strokeWidth={1}
+                      />
+                    </g>
+                  ) : null,
+                )}
               <line
                 x1={todayX}
                 y1={0}
@@ -482,6 +518,7 @@ export function PlanPage() {
                   scaleX={scaleX}
                   scaleY={scaleY}
                   barHeight={barHeight}
+                  boxed={boxed}
                   onHoverChange={setHoveredLabel}
                 />
               ))}
@@ -544,25 +581,41 @@ function GanttBarRect({
   scaleX,
   scaleY,
   barHeight,
+  boxed,
   onHoverChange,
 }: {
   bar: GanttBar;
   scaleX: number;
   scaleY: number;
   barHeight: number;
+  boxed: boolean;
   onHoverChange: (label: string) => void;
 }) {
   if (!bar.startDate || !bar.endDate) return null;
   const title = `${bar.label}\n${formatDdMmmYy(bar.startDate)} → ${formatDdMmmYy(bar.endDate)}`;
+  // Boxed mode (V1.2's own Project rendering): a Project's own rect grows
+  // downward to cover its whole subtree (falling back to its own row when
+  // it has no children — subtreeBottomY is null there — so it still
+  // reads as a normal-looking bar rather than collapsing to nothing) and
+  // switches to a translucent fill/thin border, rather than the solid
+  // colour every bar otherwise gets. This same rect keeps doing hover
+  // detection either way — in Boxed mode that now naturally means
+  // "anywhere in the box", not just the thin strip at the Project's own
+  // row, with no extra logic: layout.bars is already rendered in
+  // outer-to-inner order (collectRows' own preorder walk), so an inner
+  // Project's — or a Task's — rect always paints (and hover-hits) on top
+  // of whatever it's nested inside.
+  const isBoxedProject = boxed && bar.kind === "project";
+  const boxBottomBase = bar.subtreeBottomY ?? bar.y + BAR_HEIGHT;
   return (
     <rect
       x={bar.x * scaleX}
       y={bar.y * scaleY}
       width={bar.width * scaleX}
-      height={barHeight}
-      fill={bar.color}
-      stroke="rgba(0,0,0,0.3)"
-      strokeWidth={bar.kind === "project" ? 1.5 : 1}
+      height={isBoxedProject ? (boxBottomBase - bar.y) * scaleY : barHeight}
+      fill={isBoxedProject ? PROJECT_BOX_FILL : bar.color}
+      stroke={isBoxedProject ? EXTENT_LINE_COLOUR : "rgba(0,0,0,0.3)"}
+      strokeWidth={isBoxedProject ? 1 : bar.kind === "project" ? 1.5 : 1}
       style={{ cursor: bar.kind === "task" ? "pointer" : "default" }}
       onDoubleClick={bar.kind === "task" ? () => openItemWindow("tasks", bar.id) : undefined}
       onMouseEnter={() => onHoverChange(bar.hoverLabel)}
