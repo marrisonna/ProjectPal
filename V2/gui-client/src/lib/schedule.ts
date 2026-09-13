@@ -349,11 +349,13 @@ function priorityWeight(priority: string | null): number {
 // transition silently shifting the count by a day (§12.1's own two
 // day-count computations are plain `.Days` on a `DateTime` TimeSpan in
 // V1.2 — calendar days, not business days, per D1.5's own §4.3 callout).
-function calendarDayNumber(date: Date): number {
+// Exported for lib/ganttLayout.ts's own day-to-pixel positioning (D1.4-24)
+// — same DST-safe UTC day-numbering, reused rather than duplicated.
+export function calendarDayNumber(date: Date): number {
   return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
 }
 
-function calendarDaysBetween(start: Date, end: Date): number {
+export function calendarDaysBetween(start: Date, end: Date): number {
   return calendarDayNumber(end) - calendarDayNumber(start);
 }
 

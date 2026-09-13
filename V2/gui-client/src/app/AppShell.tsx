@@ -8,6 +8,7 @@ import Typography from "@mui/material/Typography";
 import { Link as RouterLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../theme/Logo";
+import { openListWindow } from "../lib/windowNav";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { person, logout } = useAuth();
@@ -27,6 +28,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </RouterLink>
             <Button color="inherit" component={RouterLink} to="/tasks">
               Tasks
+            </Button>
+            {/* Its own popped-out singleton window (D1.4-8), like Task
+                Detail — not in-place nav like "Tasks" above — matching
+                V1.2's own standalone Plan Display window
+                (UserInterfaceWindows.md §3.7). */}
+            <Button color="inherit" onClick={() => openListWindow("plan")}>
+              Plan
             </Button>
           </Box>
           {person?.is_organisation_admin && (

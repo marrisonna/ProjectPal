@@ -170,9 +170,9 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Purpose:** The standalone, full-window version of the Gantt/resource-loading chart — the same rendering `TaskWindow`'s Gantt tab uses embedded, built here as its own window scoped to one Project (or "Top Level Projects" if opened with none).
 
-**Displayed:** A read-only visualization: Task/Project/Component bars recursively laid out from the given Project (or from all top-level active projects and orphan tasks), colour-coded by resource and by priority/status, with a "today" marker line. Hovering a bar shows a tooltip; nothing here is a form field to edit directly.
+**Displayed:** A read-only visualization: Task/Project bars recursively laid out from the given Project (or from all top-level active projects), colour-coded by resource and by priority/status, with a "today" marker line. **Component bars are not part of this view** — corrected from an earlier pass of this document, which conflated it with `ComponentWindow`'s own separate embedded Gantt tab (§3.8): `Apps/ProjectPal/ProjectPal/GanttDisplayHelper.cs` has two entirely separate, parallel tree-builders, one walking `Project → SubProjects` (+ each Project's own `Tasks`) — used here and by `TaskWindow`'s embedded Gantt tab — and one walking `Component → SubComponents` (+ each Component's own `Tasks`, i.e. Tasks whose *Affected Component* is that Component) — used only by `ComponentWindow`'s own Gantt tab. A Component's own sub-tree never appears inside this, Project-scoped, view. Hovering a bar shows a tooltip; nothing here is a form field to edit directly.
 
-**Interactions:** Double-click a Task bar opens `TaskDetail`; double-click a Project bar opens `ProjectDetail`; double-click a Component bar opens `ComponentWindow`; Ctrl+double-click a Project bar opens another Plan Display scoped to that sub-project. Shift+dragging a Task or Project bar horizontally shifts its Start Date by the dragged number of business days (permission-gated, respects dependency constraints) — the one directly-editable interaction this view offers.
+**Interactions:** Double-click a Task bar opens `TaskDetail`; double-click a Project bar opens `ProjectDetail`; Ctrl+double-click a Project bar opens another Plan Display scoped to that sub-project. Shift+dragging a Task or Project bar horizontally shifts its Start Date by the dragged number of business days (permission-gated, respects dependency constraints) — the one directly-editable interaction this view offers.
 
 **Drag and Drop Behaviour:** (`Libs/PlanDisplay/Task.cs`, `Libs/PlanDisplay/Project.cs`) — this view uses two entirely separate drag gestures on the same bars, selected by which modifier key is held when the drag starts:
 - **Shift+drag** (a Task or Project bar): **not** a Windows drag-drop operation at all — a local mouse-move "rubber-band" gesture (`StartMove`/`FinishMove`) that, on release, shifts the bar's own Start Date by the number of business days dragged (`Event.DayShift`, handled in `GanttDisplayHelper.cs`). For a Task, the new date is floored at its dependency predecessors' latest end date unless the shift is a delay. This is a real, working, persisting feature.
@@ -180,7 +180,7 @@ A second, independent trigger path exists outside the menu structure entirely: t
 - A plain drag (no modifier key) does nothing.
 - This view is not itself a drop target for anything dragged in from elsewhere.
 
-**Navigation:** Reached via a singleton-per-project pattern from `ProjectDetail`'s "Gantt Display" toolbar button and via Ctrl+double-click drill-down from itself — modeless. Opens `TaskDetail`, `ProjectDetail`, `ComponentWindow`, and itself.
+**Navigation:** Reached via a singleton-per-project pattern from `ProjectDetail`'s "Gantt Display" toolbar button and via Ctrl+double-click drill-down from itself — modeless. Opens `TaskDetail`, `ProjectDetail`, and itself.
 
 **Status:** Live.
 
@@ -189,7 +189,7 @@ A second, independent trigger path exists outside the menu structure entirely: t
 
 **Purpose:** One Component's detail — its sub-component tree, attachments, and a Gantt view of its tasks. Opened with no Component, it's the top-level Component browser.
 
-**Displayed / editable:** Title (drag-drop target for reparenting), clickable Parent link, Owner (read-only, hidden at top level), a Task-visibility filter (None/Open/All, view-only), an embedded WPF tree of sub-components and their tasks (double-click a task opens `TaskDetail`), an Attachments grid (drag-drop upload, double-click to open, delete from grid), and an "add sub-component" button (permission-gated). A second tab holds a read-only Gantt chart of the component's tasks, built the same way as Plan Display.
+**Displayed / editable:** Title (drag-drop target for reparenting), clickable Parent link, Owner (read-only, hidden at top level), a Task-visibility filter (None/Open/All, view-only), an embedded WPF tree of sub-components and their tasks (double-click a task opens `TaskDetail`), an Attachments grid (drag-drop upload, double-click to open, delete from grid), and an "add sub-component" button (permission-gated). A second tab holds a read-only Gantt chart of the component's tasks, using the same bar-rendering classes as Plan Display (§3.7) but walking a separate `Component → SubComponents` tree (each Component's own Tasks, i.e. Tasks whose Affected Component is that Component) rather than Plan Display's `Project → SubProjects` tree — the two views never share a tree, only the rendering primitives.
 
 **Interactions:** Drag a component onto the title to reparent it; click the parent link to navigate up; toggle the task-visibility filter; add a child component; drag-drop files onto the attachments grid.
 

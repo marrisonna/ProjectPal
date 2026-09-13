@@ -6,6 +6,7 @@ import { AppShell } from "./app/AppShell";
 import { Dashboard } from "./app/Dashboard";
 import { TaskListPage } from "./features/tasks/TaskListPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
+import { PlanPage } from "./features/plan/PlanPage";
 
 function AuthenticatedLayout() {
   return (
@@ -40,6 +41,8 @@ export default function App() {
           </Route>
           <Route element={<BareAuthenticatedLayout />}>
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+            <Route path="/plan" element={<PlanPage />} />
+            <Route path="/plan/:projectId" element={<PlanPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
