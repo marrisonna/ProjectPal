@@ -79,8 +79,8 @@ interface BarTooltip {
   x: number;
   y: number;
 }
-const TOOLTIP_OFFSET_X = 15;
-const TOOLTIP_OFFSET_Y = 15;
+const TOOLTIP_OFFSET_X = 20;
+const TOOLTIP_OFFSET_Y = 10;
 
 // Manual row reorder (D1.4-27) — local-only, never written to the server:
 // the user can drag a Task/Project row up or down among its own siblings
@@ -978,7 +978,7 @@ export function PlanPage() {
             position: "fixed",
             left: barTooltip.x + TOOLTIP_OFFSET_X,
             top: barTooltip.y + TOOLTIP_OFFSET_Y,
-            bgcolor: "#ffffe1",
+            bgcolor: "#ffffff",
             border: "1px solid rgba(0,0,0,0.4)",
             borderRadius: "2px",
             px: "4px",
