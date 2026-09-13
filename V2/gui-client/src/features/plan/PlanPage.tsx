@@ -225,8 +225,20 @@ export function PlanPage() {
   const effectiveLabelColumnWidth = showNames ? labelColumnWidth : 0;
   const labelResizeRef = useRef<{ startClientX: number; startWidth: number } | null>(null);
 
+  // Shared across every drag-like interaction on this page (row reorder,
+  // label-column resize, right-click-drag pan) — read by the tooltip
+  // handlers below to suppress a tooltip popping up mid-drag, which would
+  // otherwise clutter the view over whatever's currently under the
+  // cursor while something else is already being dragged. A ref, not
+  // state: nothing here needs a re-render on its own, only to gate
+  // whether a *later* setBarTooltip/setLabelTooltip call goes ahead.
+  const isDraggingRef = useRef(false);
+
   function handleLabelResizeMouseDown(event: { clientX: number }) {
     labelResizeRef.current = { startClientX: event.clientX, startWidth: labelColumnWidth };
+    isDraggingRef.current = true;
+    setBarTooltip(null);
+    setLabelTooltip(null);
     function handleMouseMove(moveEvent: MouseEvent) {
       const drag = labelResizeRef.current;
       if (!drag) return;
@@ -235,6 +247,7 @@ export function PlanPage() {
     }
     function handleMouseUp() {
       labelResizeRef.current = null;
+      isDraggingRef.current = false;
       setLabelColumnWidth((currentWidth) => {
         if (currentWidth <= LABEL_COLUMN_COLLAPSE_THRESHOLD) {
           setShowNames(false);
@@ -302,6 +315,9 @@ export function PlanPage() {
     const maxY = Math.max(...siblingScreenTops) + effectiveRowHeight;
 
     rowDragRef.current = { bar, siblings, minY, maxY };
+    isDraggingRef.current = true;
+    setBarTooltip(null);
+    setLabelTooltip(null);
     setDragLabel(bar.label);
     setDragPosition({ x: event.clientX, y: Math.min(maxY, Math.max(minY, event.clientY)) });
 
@@ -313,6 +329,7 @@ export function PlanPage() {
     function handleMouseUp(upEvent: MouseEvent) {
       const drag = rowDragRef.current;
       rowDragRef.current = null;
+      isDraggingRef.current = false;
       setDragLabel("");
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -585,6 +602,9 @@ export function PlanPage() {
         startScrollLeft: hScrollArea.scrollLeft,
         startScrollTop: drawingArea.scrollTop,
       };
+      isDraggingRef.current = true;
+      setBarTooltip(null);
+      setLabelTooltip(null);
       hScrollArea.style.cursor = "grabbing";
     }
     function handleMouseMove(event: MouseEvent) {
@@ -595,6 +615,7 @@ export function PlanPage() {
     function handleMouseUp() {
       if (!pan) return;
       pan = null;
+      isDraggingRef.current = false;
       hScrollArea.style.cursor = "";
     }
     function handleContextMenu(event: MouseEvent) {
@@ -863,7 +884,7 @@ export function PlanPage() {
                               setHoveredLabel(bar.hoverLabel);
                             }}
                             onMouseMove={(event) => {
-                              if (truncatedLabelKeys.has(key)) {
+                              if (truncatedLabelKeys.has(key) && !isDraggingRef.current) {
                                 setLabelTooltip({ text: bar.label, x: event.clientX, y: event.clientY });
                               }
                             }}
@@ -1067,7 +1088,13 @@ export function PlanPage() {
                   barHeight={barHeight}
                   boxed={boxed}
                   onHoverChange={setHoveredLabel}
-                  onTooltipChange={setBarTooltip}
+                  onTooltipChange={(tooltip) => {
+                    // Always allow clearing (tooltip === null, e.g. the
+                    // mouse left the bar); only suppress showing a *new*
+                    // tooltip while some other drag (row reorder,
+                    // right-click pan) is in progress.
+                    if (tooltip === null || !isDraggingRef.current) setBarTooltip(tooltip);
+                  }}
                 />
               ))}
             </Box>
