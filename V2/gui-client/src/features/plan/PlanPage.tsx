@@ -900,7 +900,18 @@ export function PlanPage() {
                               else labelTextRefs.current.delete(key);
                             }}
                             x={8 + bar.depth * 14}
-                            y={bar.y * scaleY + barHeight + 1}
+                            // Vertically centred within this row's own
+                            // band (ROW_HEIGHT*scaleY tall, matching the
+                            // hover highlight/hit-rect above) via
+                            // dominantBaseline="central", which uses the
+                            // browser's own font metrics to centre the
+                            // glyphs around this y — rather than
+                            // `barHeight`, a hand-picked baseline offset
+                            // tied to the *bar's* own height, which left
+                            // the text sitting near the row's top edge,
+                            // not centred in it.
+                            y={bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2}
+                            dominantBaseline="central"
                             fontSize={fontSize}
                             fontWeight={bar.kind === "project" ? 700 : 400}
                             style={{ pointerEvents: "none" }}
