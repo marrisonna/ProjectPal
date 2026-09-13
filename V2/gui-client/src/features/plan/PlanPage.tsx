@@ -319,10 +319,19 @@ export function PlanPage() {
   const [hoveredDate, setHoveredDate] = useState("");
 
   function handleDrawingAreaMouseMove(event: { clientX: number }) {
-    const drawingArea = drawingAreaRef.current;
     const hScrollArea = hScrollAreaRef.current;
-    if (!drawingArea || !hScrollArea || !layout?.minDate) return;
-    const rect = drawingArea.getBoundingClientRect();
+    if (!hScrollArea || !layout?.minDate) return;
+    // The reference point for "how far across the visible viewport is the
+    // cursor" must come from hScrollAreaRef's own rect, not
+    // drawingAreaRef's — drawingAreaRef (D1.4-26) is now a chartWidth-wide
+    // *child* of hScrollAreaRef that itself shifts left as the user
+    // scrolls horizontally, so its own getBoundingClientRect().left moves
+    // with scrollLeft instead of staying fixed, double-counting the
+    // scroll offset already added below. hScrollAreaRef is the actual
+    // overflow-x: auto owner, so its own rect stays put regardless of its
+    // internal scroll position — the correct "viewport" to measure from
+    // (same reasoning already applied in applyZoomX/scrollToToday).
+    const rect = hScrollArea.getBoundingClientRect();
     const contentX = Math.max(0, hScrollArea.scrollLeft + (event.clientX - rect.left));
     const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomXRef.current / 100);
     const dayOffset = Math.floor(contentX / effectivePixelsPerDay);
