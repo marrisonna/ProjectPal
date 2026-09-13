@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildScheduleGraph } from "./schedule";
-import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, computeGridLines } from "./ganttLayout";
+import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, compressedDayOffset, computeGridLines } from "./ganttLayout";
 import type { DependencyRecord, ProjectRecord, TaskRecord } from "../api/types";
 
 function makeTask(overrides: Partial<TaskRecord> & { task_id: number; project_id: number }): TaskRecord {
@@ -372,5 +372,80 @@ describe("computeGridLines", () => {
 
     // Only the Mondays at day offset 0 and 7 fit within a 10-day range.
     expect(weekLineXs).toEqual([0, 7 * PIXELS_PER_DAY]);
+  });
+});
+
+describe("compressedDayOffset (D1.4-35 'Weekends' unchecked)", () => {
+  const mon = new Date(2026, 0, 5); // a Monday
+  const tue = new Date(2026, 0, 6);
+  const fri = new Date(2026, 0, 9);
+  const sat = new Date(2026, 0, 10);
+  const sun = new Date(2026, 0, 11);
+  const nextMon = new Date(2026, 0, 12);
+  const nextTue = new Date(2026, 0, 13);
+
+  it("counts only weekdays, same-day is zero", () => {
+    expect(compressedDayOffset(mon, mon)).toBe(0);
+    expect(compressedDayOffset(mon, tue)).toBe(1);
+    expect(compressedDayOffset(mon, fri)).toBe(4);
+  });
+
+  it("a Saturday or Sunday `to` lands at the exact same offset as the following Monday — a start clamps to the beginning of Monday for free", () => {
+    expect(compressedDayOffset(mon, sat)).toBe(5);
+    expect(compressedDayOffset(mon, sun)).toBe(5);
+    expect(compressedDayOffset(mon, nextMon)).toBe(5);
+  });
+
+  it("continues correctly past the weekend it just clamped through", () => {
+    expect(compressedDayOffset(mon, nextTue)).toBe(6);
+  });
+
+  it("a Saturday or Sunday `to` is exactly one unit past Friday's own — the width of Friday's own compressed day-slot, i.e. exactly 'the end of Friday', with no special-casing needed", () => {
+    expect(compressedDayOffset(mon, sat)).toBe(compressedDayOffset(mon, fri) + 1);
+    expect(compressedDayOffset(mon, sun)).toBe(compressedDayOffset(mon, fri) + 1);
+  });
+});
+
+describe("computeGridLines with excludeWeekends", () => {
+  it("places consecutive Monday week-lines 5 units apart, not 7", () => {
+    const minDate = new Date(2026, 0, 5); // a Monday
+    expect(minDate.getDay()).toBe(1);
+
+    const { weekLineXs } = computeGridLines(minDate, 12 * PIXELS_PER_DAY, true);
+
+    // 5-Jan, 12-Jan, 19-Jan (real calendar Mondays) land at compressed
+    // offsets 0, 5, 10 — not the 0, 7, 14 a calendar-day mapping would give.
+    expect(weekLineXs).toEqual([0, 5, 10].map((d) => d * PIXELS_PER_DAY));
+  });
+
+  it("matches the un-excluded (7-apart) spacing when excludeWeekends is false", () => {
+    const minDate = new Date(2026, 0, 5);
+    const { weekLineXs } = computeGridLines(minDate, 15 * PIXELS_PER_DAY, false);
+    expect(weekLineXs).toEqual([0, 7, 14].map((d) => d * PIXELS_PER_DAY));
+  });
+});
+
+describe("buildGanttLayout with excludeWeekends (D1.4-35)", () => {
+  it("compresses a bar's x position, skipping the width a weekend would otherwise take up", () => {
+    // Project A (no children — a bare bar, but still contributes minDate)
+    // starts the Monday that anchors the whole chart's minDate. Project B
+    // starts the *following* Monday (7 calendar days later, crossing one
+    // full weekend) with one child task so it has a real end date too.
+    const projectA = makeProject({ project_id: 1, name: "A", start_date: "2026-01-05" });
+    const projectB = makeProject({ project_id: 2, name: "B", start_date: "2026-01-12" });
+    const taskB = makeTask({ task_id: 1, project_id: 2, description: "B task", effort_in_days: 1, start_relative_days_to_project: 0 });
+
+    const graph = buildScheduleGraph([taskB], [projectA, projectB], [], new Map());
+
+    const withWeekends = buildGanttLayout(graph, [], null, new Date(), undefined, false);
+    const projectBBarWith = withWeekends.bars.find((b) => b.kind === "project" && b.id === 2)!;
+    // 7 real calendar days between the two Mondays.
+    expect(projectBBarWith.x).toBe(7 * PIXELS_PER_DAY);
+
+    const withoutWeekends = buildGanttLayout(graph, [], null, new Date(), undefined, true);
+    const projectBBarWithout = withoutWeekends.bars.find((b) => b.kind === "project" && b.id === 2)!;
+    // Only 5 weekdays between them once the weekend in between is
+    // excluded entirely from the mapping.
+    expect(projectBBarWithout.x).toBe(5 * PIXELS_PER_DAY);
   });
 });

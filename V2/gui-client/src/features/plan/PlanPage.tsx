@@ -151,11 +151,18 @@ export function PlanPage() {
     }
   }, [person]);
 
+  // "Weekends" (D1.4-35) — unchecked by default: Saturdays/Sundays are
+  // excluded from the chart's own day-to-pixel mapping entirely (5 units
+  // between consecutive weekly gridlines, not 7), and a bar starting or
+  // finishing on a weekend renders as if it started at the beginning of
+  // Monday, or finished at the end of the preceding Friday.
+  const [weekends, setWeekends] = useState(false);
+
   const layout = useMemo(() => {
     if (!projects || !tasks || !dependencies) return null;
     const graph = buildScheduleGraph(tasks, projects, dependencies, resourceCountByTaskId);
-    return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder);
-  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder]);
+    return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder, !weekends);
+  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder, weekends]);
 
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
@@ -676,7 +683,7 @@ export function PlanPage() {
     layout.todayX,
   ) + CHART_RIGHT_PADDING;
   const chartHeightBase = Math.max(ROW_HEIGHT, layout.rowCount * ROW_HEIGHT);
-  const gridLines = computeGridLines(layout.minDate, chartWidthBase);
+  const gridLines = computeGridLines(layout.minDate, chartWidthBase, !weekends);
 
   const scaleX = zoomX / 100;
   const scaleY = zoomY / 100;
@@ -740,6 +747,16 @@ export function PlanPage() {
             sx={{ m: 0 }}
           />
           <Typography variant="body2">Boxed</Typography>
+        </Box>
+        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+          <Box
+            component="input"
+            type="checkbox"
+            checked={weekends}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setWeekends(event.target.checked)}
+            sx={{ m: 0 }}
+          />
+          <Typography variant="body2">Weekends</Typography>
         </Box>
       </Box>
       {/* Date under the cursor (left, right-aligned, right edge 2em

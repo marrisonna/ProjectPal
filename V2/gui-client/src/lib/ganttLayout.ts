@@ -97,6 +97,36 @@ function applyCustomOrder<T>(items: T[], keyOf: (item: T) => string, order: stri
     .map((entry) => entry.item);
 }
 
+/**
+ * Number of weekdays (Mon–Fri) in the half-open range [from, to) — the
+ * "Weekends" checkbox's own day-to-pixel mapping when unchecked (D1.4-35):
+ * each weekday still contributes one PIXELS_PER_DAY-wide unit, but a
+ * Saturday/Sunday contributes none at all, so between any two Mondays
+ * there are only 5 units of width, not 7.
+ *
+ * This one formula also produces the exact start/end clamping the
+ * feature asks for, with no separate clamping step: since a Saturday and
+ * the Sunday right after it contain no weekdays at all, and neither does
+ * the gap between them and the *following* Monday, `to` being any of
+ * Sat/Sun/next-Monday all yield the *same* result — i.e. a bar
+ * "starting" on a Saturday or Sunday already lands at exactly the same
+ * offset a Monday start would (drawn as if it starts at the beginning of
+ * Monday), and a bar "ending" on a Saturday or Sunday already lands at
+ * exactly the offset the *preceding* Friday's end would (drawn as if it
+ * ends at the end of Friday) — both are just this same function applied
+ * to `from`/`to` as given, unmodified.
+ */
+export function compressedDayOffset(from: Date, to: Date): number {
+  let count = 0;
+  let cursor = from;
+  while (cursor.getTime() < to.getTime()) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cursor = addCalendarDays(cursor, 1);
+  }
+  return count;
+}
+
 export interface GanttArrow {
   x1: number;
   y1: number;
@@ -260,7 +290,13 @@ export function buildGanttLayout(
   rootProjectId: number | null,
   today: Date = new Date(),
   customOrder?: GanttCustomOrder,
+  excludeWeekends = false,
 ): GanttLayout {
+  // The one place this whole layout's day-to-pixel mapping is chosen —
+  // every x/width/todayX below goes through this, so the "Weekends"
+  // checkbox (D1.4-35) is a single switch here, not a parallel code path.
+  const dayOffset = (from: Date, to: Date) =>
+    excludeWeekends ? compressedDayOffset(from, to) : calendarDaysBetween(from, to);
   const rows: RawRow[] = [];
 
   if (rootProjectId != null) {
@@ -281,11 +317,16 @@ export function buildGanttLayout(
   }
 
   const bars: GanttBar[] = rows.map((row, index) => {
-    const x = minDate && row.startDate ? calendarDaysBetween(minDate, row.startDate) * PIXELS_PER_DAY : 0;
-    const width =
-      row.startDate && row.endDate
-        ? Math.max(1, calendarDaysBetween(row.startDate, row.endDate)) * PIXELS_PER_DAY
-        : 0;
+    const x = minDate && row.startDate ? dayOffset(minDate, row.startDate) * PIXELS_PER_DAY : 0;
+    // Both ends measured from the same minDate reference, then
+    // subtracted, rather than compressedDayOffset(startDate, endDate)
+    // directly — `from` being itself a weekend in that direct form
+    // doesn't clamp the same way `to` does (the clamping falls out of
+    // `to` being compared against a *weekday* reference point), so
+    // anchoring both ends to minDate (already a fixed, consistent
+    // reference for the whole chart) sidesteps that asymmetry entirely.
+    const endX = minDate && row.endDate ? dayOffset(minDate, row.endDate) * PIXELS_PER_DAY : x;
+    const width = row.startDate && row.endDate ? Math.max(1, endX - x) : 0;
     return {
       kind: row.kind,
       id: row.id,
@@ -354,7 +395,7 @@ export function buildGanttLayout(
     });
   }
 
-  const todayX = minDate ? calendarDaysBetween(minDate, today) * PIXELS_PER_DAY : 0;
+  const todayX = minDate ? dayOffset(minDate, today) * PIXELS_PER_DAY : 0;
 
   return { bars, arrows, rowCount: rows.length, minDate, todayX };
 }
@@ -389,20 +430,31 @@ export interface GridLines {
  * local-time semantics (schedule.ts) — not UTC, which would disagree
  * with `addCalendarDays` by a day right around a DST transition.
  */
-export function computeGridLines(minDate: Date | null, chartWidthBase: number): GridLines {
+export function computeGridLines(minDate: Date | null, chartWidthBase: number, excludeWeekends = false): GridLines {
   if (!minDate) return { weekLineXs: [], monthLineXs: [], monthMarkers: [] };
-  const totalDays = Math.ceil(chartWidthBase / PIXELS_PER_DAY);
+  const totalUnits = Math.ceil(chartWidthBase / PIXELS_PER_DAY);
   const weekLineXs: number[] = [];
   const monthLineXs: number[] = [];
   const monthMarkers: MonthMarker[] = [];
-  for (let dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
-    const date = addCalendarDays(minDate, dayOffset);
-    const x = dayOffset * PIXELS_PER_DAY;
-    if (date.getDay() === 1) weekLineXs.push(x);
+  // Walks real calendar days (so Monday/1st-of-month are still found by
+  // their true dates), but positions each one by its own *compressed*
+  // offset when weekends are excluded — `unit` only advances on a
+  // weekday then, so consecutive Mondays end up 5 units apart, not 7.
+  // Loops on `unit`, not the calendar day count, since excluding
+  // weekends means more calendar days are needed to fill the same
+  // pixel width.
+  let unit = 0;
+  for (let calendarDayOffset = 0; unit <= totalUnits; calendarDayOffset++) {
+    const date = addCalendarDays(minDate, calendarDayOffset);
+    const dow = date.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const x = unit * PIXELS_PER_DAY;
+    if (dow === 1) weekLineXs.push(x);
     if (date.getDate() === 1) {
       monthLineXs.push(x);
       monthMarkers.push({ x, label: formatMonthMarker(date) });
     }
+    if (!(excludeWeekends && isWeekend)) unit++;
   }
   return { weekLineXs, monthLineXs, monthMarkers };
 }
