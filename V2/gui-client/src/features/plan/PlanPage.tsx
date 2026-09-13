@@ -377,10 +377,45 @@ export function PlanPage() {
 
   // The name shown in the read-only label below the zoom controls while
   // hovering a Task/Project bar — cleared the moment the mouse leaves it.
+  // Also set while hovering a row in the label column (D1.4-32) — the
+  // same control either way, since it's the same underlying bar.
   const [hoveredLabel, setHoveredLabel] = useState("");
   // Custom bar-hover tooltip (D1.4-28) — see BarTooltip above for why this
   // replaced a plain SVG <title>.
   const [barTooltip, setBarTooltip] = useState<BarTooltip | null>(null);
+  // The row currently under the cursor in the label column (D1.4-32) —
+  // drawn with a dotted border so the user can see which row would
+  // actually be dragged from wherever the cursor currently is (the whole
+  // point of D1.4-31's full-row hit target, made visible).
+  const [hoveredLabelBar, setHoveredLabelBar] = useState<GanttBar | null>(null);
+  // The label-column tooltip (D1.4-32) — same floating-box mechanism as
+  // BarTooltip (a native <title> can't be repositioned, D1.4-28), shown
+  // only for a row whose own text is actually clipped by the column's
+  // current width (measured below), not for every row.
+  const [labelTooltip, setLabelTooltip] = useState<BarTooltip | null>(null);
+  // Which rows' own <text> is wider than the space available for it
+  // (`labelColumnWidth` minus its own depth-indent) — recomputed via
+  // getComputedTextLength() on the real rendered <text> nodes (SVG has no
+  // text-overflow: ellipsis equivalent to detect this from CSS alone),
+  // keyed the same way as everywhere else (`${kind}:${id}`).
+  const [truncatedLabelKeys, setTruncatedLabelKeys] = useState<Set<string>>(new Set());
+  const labelTextRefs = useRef<Map<string, SVGTextElement>>(new Map());
+  useLayoutEffect(() => {
+    if (!layout) return;
+    const truncated = new Set<string>();
+    for (const bar of layout.bars) {
+      const key = `${bar.kind}:${bar.id}`;
+      const el = labelTextRefs.current.get(key);
+      if (!el) continue;
+      const availableWidth = labelColumnWidth - (8 + bar.depth * 14) - 4;
+      if (el.getComputedTextLength() > availableWidth) truncated.add(key);
+    }
+    setTruncatedLabelKeys(truncated);
+    // zoomY, not the later-computed `fontSize` (unavailable this early in
+    // the component — every hook here has to run before this component's
+    // own early-return loading guard) — same value driving it either way.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, labelColumnWidth, zoomY]);
   // The date under the cursor, tracked continuously across the whole
   // drawing area (not just while over a bar) — a plain `onMouseMove`
   // suffices here (unlike the wheel handler above, nothing needs
@@ -791,42 +826,87 @@ export function PlanPage() {
                     // around labels the per-row hit-rects below cover),
                     // rather than flickering between this and the
                     // browser's default cursor as the mouse crosses in
-                    // and out of individual <text> elements.
-                    cursor: "grab",
+                    // and out of individual <text> elements. Plain
+                    // "default" (the ordinary arrow), not "grab" — the
+                    // dotted hover-highlight (D1.4-32) is what shows a row
+                    // is draggable here, not the cursor shape.
+                    cursor: "default",
                     userSelect: "none",
                   }}
                 >
                   <Box component="svg" width={labelColumnWidth} height={chartHeight} sx={{ display: "block" }}>
-                    {layout.bars.map((bar) => (
-                      <g key={`label-${bar.kind}-${bar.id}`}>
-                        {/* Invisible, full-width hit target spanning this
-                            row's entire height — without it, only the
-                            actual text glyphs are draggable, so the gaps
-                            around/between labels (short text, indentation,
-                            trailing space) are dead zones a drag can't
-                            start from. `fill="transparent"` (not "none")
-                            is what makes an otherwise-invisible rect still
-                            hit-testable. */}
-                        <rect
-                          x={0}
-                          y={bar.y * scaleY}
-                          width={labelColumnWidth}
-                          height={ROW_HEIGHT * scaleY}
-                          fill="transparent"
-                          onMouseDown={(event) => handleRowMouseDown(bar, event)}
-                          onDoubleClick={() => handleRowDoubleClick(bar)}
-                        />
-                        <text
-                          x={8 + bar.depth * 14}
-                          y={bar.y * scaleY + barHeight + 1}
-                          fontSize={fontSize}
-                          fontWeight={bar.kind === "project" ? 700 : 400}
-                          style={{ pointerEvents: "none" }}
-                        >
-                          {bar.label}
-                        </text>
-                      </g>
-                    ))}
+                    {layout.bars.map((bar) => {
+                      const key = `${bar.kind}:${bar.id}`;
+                      return (
+                        <g key={key}>
+                          {/* Invisible, full-width hit target spanning this
+                              row's entire height — without it, only the
+                              actual text glyphs are draggable, so the gaps
+                              around/between labels (short text, indentation,
+                              trailing space) are dead zones a drag can't
+                              start from. `fill="transparent"` (not "none")
+                              is what makes an otherwise-invisible rect still
+                              hit-testable. Also drives the hover-highlight,
+                              the shared name control, and this row's own
+                              tooltip (D1.4-32) — all just reflect whatever
+                              row is currently under the cursor here. */}
+                          <rect
+                            x={0}
+                            y={bar.y * scaleY}
+                            width={labelColumnWidth}
+                            height={ROW_HEIGHT * scaleY}
+                            fill="transparent"
+                            onMouseDown={(event) => handleRowMouseDown(bar, event)}
+                            onDoubleClick={() => handleRowDoubleClick(bar)}
+                            onMouseEnter={() => {
+                              setHoveredLabelBar(bar);
+                              setHoveredLabel(bar.hoverLabel);
+                            }}
+                            onMouseMove={(event) => {
+                              if (truncatedLabelKeys.has(key)) {
+                                setLabelTooltip({ text: bar.label, x: event.clientX, y: event.clientY });
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              setHoveredLabelBar(null);
+                              setHoveredLabel("");
+                              setLabelTooltip(null);
+                            }}
+                          />
+                          <text
+                            ref={(el) => {
+                              if (el) labelTextRefs.current.set(key, el);
+                              else labelTextRefs.current.delete(key);
+                            }}
+                            x={8 + bar.depth * 14}
+                            y={bar.y * scaleY + barHeight + 1}
+                            fontSize={fontSize}
+                            fontWeight={bar.kind === "project" ? 700 : 400}
+                            style={{ pointerEvents: "none" }}
+                          >
+                            {bar.label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                    {/* Dotted-border highlight (D1.4-32) around whichever
+                        row is currently under the cursor — makes the
+                        full-row hit target above (D1.4-31) visible: the
+                        row this outlines is exactly the row a drag would
+                        pick up from here. */}
+                    {hoveredLabelBar && (
+                      <rect
+                        x={1}
+                        y={hoveredLabelBar.y * scaleY + 1}
+                        width={labelColumnWidth - 2}
+                        height={ROW_HEIGHT * scaleY - 2}
+                        fill="none"
+                        stroke="rgba(0,0,0,0.6)"
+                        strokeWidth={1}
+                        strokeDasharray="2,2"
+                        style={{ pointerEvents: "none" }}
+                      />
+                    )}
                   </Box>
                 </Box>
                 <Box
@@ -1076,6 +1156,32 @@ export function PlanPage() {
           }}
         >
           {barTooltip.text}
+        </Box>
+      )}
+      {/* Label-column tooltip (D1.4-32) — same floating-box mechanism as
+          the bar tooltip above, shown only for a row whose own text is
+          actually clipped by the column's current width
+          (truncatedLabelKeys), with the label's own full, untruncated
+          text (identical to what the label list itself would show at
+          full width). */}
+      {labelTooltip && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: labelTooltip.x + TOOLTIP_OFFSET_X,
+            top: labelTooltip.y + TOOLTIP_OFFSET_Y,
+            bgcolor: "#ffffff",
+            border: "1px solid rgba(0,0,0,0.4)",
+            borderRadius: "2px",
+            px: "4px",
+            py: "2px",
+            fontSize: DENSE_FONT_SIZE,
+            pointerEvents: "none",
+            zIndex: 1300,
+            whiteSpace: "pre",
+          }}
+        >
+          {labelTooltip.text}
         </Box>
       )}
     </Box>
