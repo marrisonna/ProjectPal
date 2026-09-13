@@ -16,7 +16,13 @@ import { addCalendarDays, buildScheduleGraph, formatDdMmmYy } from "../../lib/sc
 import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, computeGridLines, type GanttBar } from "../../lib/ganttLayout";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 
-const LABEL_COLUMN_WIDTH = 220;
+const DEFAULT_LABEL_COLUMN_WIDTH = 220;
+const MIN_LABEL_COLUMN_WIDTH = 0;
+const MAX_LABEL_COLUMN_WIDTH = 600;
+// Dragged narrower than this and released ("completely contracted") turns
+// "Show Names" off entirely, rather than leaving an unusably thin column.
+const LABEL_COLUMN_COLLAPSE_THRESHOLD = 24;
+const RESIZE_HANDLE_WIDTH = 6;
 const CHART_RIGHT_PADDING = 40;
 const BASE_FONT_SIZE = 11;
 const MIN_ZOOM = 10;
@@ -45,6 +51,10 @@ const PROJECT_BOX_FILL = "rgba(52, 108, 158, 0.15)";
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+function clampLabelColumnWidth(value: number): number {
+  return Math.min(MAX_LABEL_COLUMN_WIDTH, Math.max(MIN_LABEL_COLUMN_WIDTH, value));
 }
 
 // D1.4-24: the standalone Plan Display's own singleton window (matching
@@ -112,6 +122,42 @@ export function PlanPage() {
   // "Boxed" mode (see PROJECT_BOX_FILL above) — off by default, today's
   // thin-bar-per-row rendering.
   const [boxed, setBoxed] = useState(false);
+
+  // "Show Names": the label column's own width is user-resizable by
+  // dragging the handle between it and the drawing area (mousedown/move/up
+  // below); dragging it all the way down to (near) zero and releasing
+  // turns "Show Names" off entirely, same as unchecking it, rather than
+  // leaving an unusable sliver. Re-checking it always comes back at the
+  // one fixed default width — there's no "remembered" width to restore,
+  // by design (the user asked for exactly this behaviour).
+  const [showNames, setShowNames] = useState(true);
+  const [labelColumnWidth, setLabelColumnWidth] = useState(DEFAULT_LABEL_COLUMN_WIDTH);
+  const effectiveLabelColumnWidth = showNames ? labelColumnWidth : 0;
+  const labelResizeRef = useRef<{ startClientX: number; startWidth: number } | null>(null);
+
+  function handleLabelResizeMouseDown(event: { clientX: number }) {
+    labelResizeRef.current = { startClientX: event.clientX, startWidth: labelColumnWidth };
+    function handleMouseMove(moveEvent: MouseEvent) {
+      const drag = labelResizeRef.current;
+      if (!drag) return;
+      const newWidth = clampLabelColumnWidth(drag.startWidth + (moveEvent.clientX - drag.startClientX));
+      setLabelColumnWidth(newWidth);
+    }
+    function handleMouseUp() {
+      labelResizeRef.current = null;
+      setLabelColumnWidth((currentWidth) => {
+        if (currentWidth <= LABEL_COLUMN_COLLAPSE_THRESHOLD) {
+          setShowNames(false);
+          return DEFAULT_LABEL_COLUMN_WIDTH;
+        }
+        return currentWidth;
+      });
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }
 
   // The name shown in the read-only label below the zoom controls while
   // hovering a Task/Project bar — cleared the moment the mouse leaves it.
@@ -324,6 +370,23 @@ export function PlanPage() {
           <Box
             component="input"
             type="checkbox"
+            checked={showNames}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              const checked = event.target.checked;
+              setShowNames(checked);
+              // Re-checking always comes back at the fixed default width,
+              // never whatever width it happened to be dragged to before
+              // being unchecked — there's nothing to "restore" here.
+              if (checked) setLabelColumnWidth(DEFAULT_LABEL_COLUMN_WIDTH);
+            }}
+            sx={{ m: 0 }}
+          />
+          <Typography variant="body2">Show Names</Typography>
+        </Box>
+        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+          <Box
+            component="input"
+            type="checkbox"
             checked={boxed}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setBoxed(event.target.checked)}
             sx={{ m: 0 }}
@@ -338,11 +401,12 @@ export function PlanPage() {
           whose own left edge lines up with the drawing area's left edge
           below (not the row-label column to its left) — the date
           control's width plus the 2em gap after it together add up to
-          the same total offset (that column's width plus the Gantt
-          area's own 1px outer left border; box-sizing: border-box
-          already folds the label pane's own right border into its 220px
-          width, confirmed against the rendered layout — a second +1 for
-          that border double-counts it). */}
+          the same total offset (that column's width, box-sizing:
+          border-box already folding in its own right border; plus the
+          resize handle's own width when the label column is shown at
+          all; plus the Gantt area's own 1px outer left border). Tracks
+          the label column's own resizable width, not a fixed constant —
+          see `effectiveLabelColumnWidth` above. */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 1, flexShrink: 0 }}>
         <Box
           component="input"
@@ -350,7 +414,7 @@ export function PlanPage() {
           readOnly
           value={hoveredDate}
           sx={{
-            width: `calc(${LABEL_COLUMN_WIDTH + 1}px - 2em)`,
+            width: `calc(${effectiveLabelColumnWidth + (showNames ? RESIZE_HANDLE_WIDTH : 0) + 1}px - 2em)`,
             flexShrink: 0,
             textAlign: "right",
             fontSize: DENSE_FONT_SIZE,
@@ -415,25 +479,39 @@ export function PlanPage() {
         // instead of growing to its content's height) — the panes below
         // then simply take `height: "100%"` of that.
         <Box ref={ganttAreaRef} sx={{ display: "flex", flexGrow: 1, minHeight: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}>
-          <Box
-            ref={labelAreaRef}
-            onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
-            sx={{ flexShrink: 0, width: LABEL_COLUMN_WIDTH, height: "100%", overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
-          >
-            <Box component="svg" width={LABEL_COLUMN_WIDTH} height={chartHeight} sx={{ display: "block" }}>
-              {layout.bars.map((bar) => (
-                <text
-                  key={`label-${bar.kind}-${bar.id}`}
-                  x={8 + bar.depth * 14}
-                  y={bar.y * scaleY + barHeight + 1}
-                  fontSize={fontSize}
-                  fontWeight={bar.kind === "project" ? 700 : 400}
-                >
-                  {bar.label}
-                </text>
-              ))}
-            </Box>
-          </Box>
+          {showNames && (
+            <>
+              <Box
+                ref={labelAreaRef}
+                onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
+                sx={{ flexShrink: 0, width: labelColumnWidth, height: "100%", overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
+              >
+                <Box component="svg" width={labelColumnWidth} height={chartHeight} sx={{ display: "block" }}>
+                  {layout.bars.map((bar) => (
+                    <text
+                      key={`label-${bar.kind}-${bar.id}`}
+                      x={8 + bar.depth * 14}
+                      y={bar.y * scaleY + barHeight + 1}
+                      fontSize={fontSize}
+                      fontWeight={bar.kind === "project" ? 700 : 400}
+                    >
+                      {bar.label}
+                    </text>
+                  ))}
+                </Box>
+              </Box>
+              <Box
+                onMouseDown={handleLabelResizeMouseDown}
+                sx={{
+                  flexShrink: 0,
+                  width: `${RESIZE_HANDLE_WIDTH}px`,
+                  cursor: "col-resize",
+                  bgcolor: "rgba(0,0,0,0.04)",
+                  "&:hover": { bgcolor: "rgba(0,0,0,0.15)" },
+                }}
+              />
+            </>
+          )}
           <Box
             ref={drawingAreaRef}
             onScroll={() => syncScrollTop(drawingAreaRef.current!, labelAreaRef.current)}
