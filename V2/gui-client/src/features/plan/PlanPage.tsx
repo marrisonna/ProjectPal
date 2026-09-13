@@ -685,6 +685,14 @@ export function PlanPage() {
   const barHeight = BAR_HEIGHT * scaleY;
   const fontSize = BASE_FONT_SIZE * scaleY;
   const todayX = layout.todayX * scaleX;
+  // How far down from its own row's top a bar is drawn — centres the bar
+  // (still BAR_HEIGHT tall) within the full ROW_HEIGHT row band, matching
+  // the label text's own vertical centring in that same band (labels are
+  // centred on the row, not the bar, so the bar has to move to match it,
+  // not the other way around). Only applies to an ordinary bar — a
+  // Boxed-mode Project's own box (GanttBarRect's isBoxedProject) spans
+  // multiple rows and stays top-aligned to its own row, unaffected.
+  const barVerticalOffset = ((ROW_HEIGHT - BAR_HEIGHT) / 2) * scaleY;
 
   return (
     <Box sx={{ p: 1, height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
@@ -1047,17 +1055,17 @@ export function PlanPage() {
                     <g key={`extent-${bar.id}`}>
                       <line
                         x1={bar.x * scaleX}
-                        y1={bar.y * scaleY + barHeight}
+                        y1={bar.y * scaleY + barVerticalOffset + barHeight}
                         x2={bar.x * scaleX}
-                        y2={bar.subtreeBottomY * scaleY}
+                        y2={bar.subtreeBottomY * scaleY + barVerticalOffset}
                         stroke={EXTENT_LINE_COLOUR}
                         strokeWidth={1}
                       />
                       <line
                         x1={(bar.x + bar.width) * scaleX}
-                        y1={bar.y * scaleY + barHeight}
+                        y1={bar.y * scaleY + barVerticalOffset + barHeight}
                         x2={(bar.x + bar.width) * scaleX}
-                        y2={bar.subtreeBottomY * scaleY}
+                        y2={bar.subtreeBottomY * scaleY + barVerticalOffset}
                         stroke={EXTENT_LINE_COLOUR}
                         strokeWidth={1}
                       />
@@ -1077,9 +1085,9 @@ export function PlanPage() {
                 <line
                   key={`arrow-${index}`}
                   x1={arrow.x1 * scaleX}
-                  y1={arrow.y1 * scaleY}
+                  y1={arrow.y1 * scaleY + barVerticalOffset}
                   x2={arrow.x2 * scaleX}
-                  y2={arrow.y2 * scaleY}
+                  y2={arrow.y2 * scaleY + barVerticalOffset}
                   stroke="rgba(0,0,0,0.4)"
                   strokeWidth={1}
                   markerEnd="url(#gantt-arrow-head)"
@@ -1097,6 +1105,7 @@ export function PlanPage() {
                   scaleX={scaleX}
                   scaleY={scaleY}
                   barHeight={barHeight}
+                  barVerticalOffset={barVerticalOffset}
                   boxed={boxed}
                   onHoverChange={setHoveredLabel}
                   onTooltipChange={(tooltip) => {
@@ -1277,6 +1286,7 @@ function GanttBarRect({
   scaleX,
   scaleY,
   barHeight,
+  barVerticalOffset,
   boxed,
   onHoverChange,
   onTooltipChange,
@@ -1285,6 +1295,7 @@ function GanttBarRect({
   scaleX: number;
   scaleY: number;
   barHeight: number;
+  barVerticalOffset: number;
   boxed: boolean;
   onHoverChange: (label: string) => void;
   onTooltipChange: (tooltip: BarTooltip | null) => void;
@@ -1308,7 +1319,7 @@ function GanttBarRect({
   return (
     <rect
       x={bar.x * scaleX}
-      y={bar.y * scaleY}
+      y={bar.y * scaleY + (isBoxedProject ? 0 : barVerticalOffset)}
       width={bar.width * scaleX}
       height={isBoxedProject ? (boxBottomBase - bar.y) * scaleY : barHeight}
       fill={isBoxedProject ? PROJECT_BOX_FILL : bar.color}
