@@ -127,6 +127,36 @@ export function compressedDayOffset(from: Date, to: Date): number {
   return count;
 }
 
+/**
+ * Inverse of `compressedDayOffset` — the date reached after `units`
+ * compressed (weekday-only) day-units have elapsed from `from`. Needed to
+ * convert a pixel position back into a real date when weekends are
+ * excluded (a cursor's own hovered date; keeping a chosen date anchored
+ * at a fixed screen position — e.g. 25% from the left — across the
+ * "Weekends" checkbox being toggled, D1.4-36).
+ *
+ * `compressedDayOffset`'s own forward mapping is many-to-one at a weekend
+ * boundary (a Saturday, the Sunday after it, and the following Monday
+ * all produce the same offset, by design — see that function's own
+ * comment), so this inverse necessarily picks one canonical answer for
+ * such an offset: the next real (weekday) date reached, i.e. the
+ * following Monday. That's the right choice here — the compressed
+ * timeline has no pixel space of its own for a weekend at all, so the
+ * offset numerically "landing on" one doesn't correspond to a visible
+ * position; the Monday immediately after is the nearest date that
+ * actually occupies real, visible width there.
+ */
+export function dateAtCompressedOffset(from: Date, units: number): Date {
+  let count = 0;
+  let cursor = from;
+  while (count < units) {
+    cursor = addCalendarDays(cursor, 1);
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return cursor;
+}
+
 export interface GanttArrow {
   x1: number;
   y1: number;

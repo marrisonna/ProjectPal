@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildScheduleGraph } from "./schedule";
-import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, compressedDayOffset, computeGridLines } from "./ganttLayout";
+import { BAR_HEIGHT, PIXELS_PER_DAY, ROW_HEIGHT, buildGanttLayout, compressedDayOffset, computeGridLines, dateAtCompressedOffset } from "./ganttLayout";
 import type { DependencyRecord, ProjectRecord, TaskRecord } from "../api/types";
 
 function makeTask(overrides: Partial<TaskRecord> & { task_id: number; project_id: number }): TaskRecord {
@@ -403,6 +403,22 @@ describe("compressedDayOffset (D1.4-35 'Weekends' unchecked)", () => {
   it("a Saturday or Sunday `to` is exactly one unit past Friday's own — the width of Friday's own compressed day-slot, i.e. exactly 'the end of Friday', with no special-casing needed", () => {
     expect(compressedDayOffset(mon, sat)).toBe(compressedDayOffset(mon, fri) + 1);
     expect(compressedDayOffset(mon, sun)).toBe(compressedDayOffset(mon, fri) + 1);
+  });
+
+  describe("dateAtCompressedOffset (its own inverse, D1.4-36)", () => {
+    it("round-trips a weekday offset back to the exact same weekday", () => {
+      expect(dateAtCompressedOffset(mon, 0)).toEqual(mon);
+      expect(dateAtCompressedOffset(mon, 1)).toEqual(tue);
+      expect(dateAtCompressedOffset(mon, 4)).toEqual(fri);
+    });
+
+    it("an offset that only a weekend forward-maps to (many-to-one) inverts to the following Monday — the nearest date that actually occupies real width there", () => {
+      expect(dateAtCompressedOffset(mon, 5)).toEqual(nextMon);
+    });
+
+    it("continues correctly past that same boundary", () => {
+      expect(dateAtCompressedOffset(mon, 6)).toEqual(nextTue);
+    });
   });
 });
 

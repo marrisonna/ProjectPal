@@ -12,13 +12,15 @@ import {
   useProjects,
   useTasks,
 } from "../../api/hooks";
-import { addCalendarDays, buildScheduleGraph, formatDdMmmYy } from "../../lib/schedule";
+import { addCalendarDays, buildScheduleGraph, calendarDaysBetween, formatDdMmmYy } from "../../lib/schedule";
 import {
   BAR_HEIGHT,
   PIXELS_PER_DAY,
   ROW_HEIGHT,
   buildGanttLayout,
+  compressedDayOffset,
   computeGridLines,
+  dateAtCompressedOffset,
   type GanttBar,
   type GanttCustomOrder,
 } from "../../lib/ganttLayout";
@@ -464,7 +466,14 @@ export function PlanPage() {
     const contentX = Math.max(0, hScrollArea.scrollLeft + (event.clientX - rect.left));
     const effectivePixelsPerDay = PIXELS_PER_DAY * (zoomXRef.current / 100);
     const dayOffset = Math.floor(contentX / effectivePixelsPerDay);
-    setHoveredDate(formatDdMmmYy(addCalendarDays(layout.minDate, dayOffset)));
+    // Must invert whichever mapping the chart is actually using (D1.4-35)
+    // — with weekends excluded, a raw calendar-day add here would read a
+    // date well past where the cursor actually is (it doesn't know to
+    // skip the invisible weekend gaps compressed out of the display).
+    const hoveredDateValue = weekends
+      ? addCalendarDays(layout.minDate, dayOffset)
+      : dateAtCompressedOffset(layout.minDate, dayOffset);
+    setHoveredDate(formatDdMmmYy(hoveredDateValue));
   }
 
   // Applying a new zoom must keep one particular point still under the
@@ -652,6 +661,48 @@ export function PlanPage() {
     );
   }
 
+  // Toggling "Weekends" (D1.4-35) changes the chart's own day-to-pixel
+  // mapping, which would otherwise make the visible content jump — the
+  // same date no longer sits at the same x. Keeps whatever date is
+  // currently at the same fraction from the left the "Today" button
+  // itself uses (D1.4-36) fixed at that same screen position: read it
+  // under the *old* mapping before the checkbox's own state changes,
+  // then re-scroll to put that same date back at that same fraction
+  // once the new layout (new minDate-relative offsets, same minDate
+  // itself — unaffected by this flag) has actually rendered.
+  const pendingWeekendsAnchorDateRef = useRef<Date | null>(null);
+
+  function handleWeekendsChange(newWeekends: boolean) {
+    const hScrollArea = hScrollAreaRef.current;
+    if (hScrollArea && layout?.minDate) {
+      const anchorContentXScaled = hScrollArea.scrollLeft + hScrollArea.clientWidth * TODAY_BUTTON_FRACTION;
+      const anchorContentXBase = anchorContentXScaled / (zoomX / 100);
+      const dayOffsetBase = Math.floor(anchorContentXBase / PIXELS_PER_DAY);
+      const oldExcludeWeekends = !weekends; // still the pre-toggle value here
+      pendingWeekendsAnchorDateRef.current = oldExcludeWeekends
+        ? dateAtCompressedOffset(layout.minDate, dayOffsetBase)
+        : addCalendarDays(layout.minDate, dayOffsetBase);
+    }
+    setWeekends(newWeekends);
+  }
+
+  useLayoutEffect(() => {
+    const anchorDate = pendingWeekendsAnchorDateRef.current;
+    const hScrollArea = hScrollAreaRef.current;
+    if (!anchorDate || !hScrollArea || !layout?.minDate) return;
+    const newExcludeWeekends = !weekends;
+    const newDayOffsetBase = newExcludeWeekends
+      ? compressedDayOffset(layout.minDate, anchorDate)
+      : calendarDaysBetween(layout.minDate, anchorDate);
+    const newXScaled = newDayOffsetBase * PIXELS_PER_DAY * (zoomX / 100);
+    const maxScrollLeft = Math.max(0, hScrollArea.scrollWidth - hScrollArea.clientWidth);
+    hScrollArea.scrollLeft = Math.min(
+      maxScrollLeft,
+      Math.max(0, newXScaled - hScrollArea.clientWidth * TODAY_BUTTON_FRACTION),
+    );
+    pendingWeekendsAnchorDateRef.current = null;
+  }, [weekends]);
+
   // Real seed data spans years (old, un-shifted legacy dates alongside
   // dates auto-computed far into the future as "today" drifts past the
   // seed data's own anchor point — Phase 5's own documented "further
@@ -665,9 +716,24 @@ export function PlanPage() {
   // instead — the same positioning the "Today" button below applies —
   // since that's the one reference point every row is positioned
   // relative to.
+  //
+  // Only for the *first* layout of a given Plan-view scope, though — not
+  // every time `layout` itself recomputes for some other reason (a
+  // "Weekends" toggle, D1.4-36, or a manual row reorder both rebuild
+  // `layout` too). `hasAutoScrolledRef` tracks that, reset only when
+  // `projectId` itself changes (a real navigation to a different scope);
+  // without this guard, this effect — a plain `useEffect`, which runs
+  // *after* D1.4-36's own `useLayoutEffect` restoring a chosen scroll
+  // position — would immediately clobber that restore back to "today"
+  // on every single toggle.
+  const hasAutoScrolledRef = useRef(false);
   useEffect(() => {
-    if (!layout) return;
+    hasAutoScrolledRef.current = false;
+  }, [projectId]);
+  useEffect(() => {
+    if (!layout || hasAutoScrolledRef.current) return;
     scrollToToday(TODAY_BUTTON_FRACTION);
+    hasAutoScrolledRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
 
@@ -753,7 +819,7 @@ export function PlanPage() {
             component="input"
             type="checkbox"
             checked={weekends}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setWeekends(event.target.checked)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => handleWeekendsChange(event.target.checked)}
             sx={{ m: 0 }}
           />
           <Typography variant="body2">Weekends</Typography>
