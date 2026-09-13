@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
 import { DenseButton } from "../../components/DenseField";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
+import { useAuth } from "../../auth/AuthContext";
 import {
   useAllDependencies,
   useAllTaskResources,
@@ -57,10 +58,23 @@ export function PlanPage() {
   const projectId = projectIdParam ? Number(projectIdParam) : null;
   useSingletonWindowIdentity(projectId != null ? `plan-${projectId}` : "plan-list");
 
-  const { data: projects, isLoading: projectsLoading } = useProjects();
+  const { person } = useAuth();
+  const { data: allProjects, isLoading: projectsLoading } = useProjects();
   const { data: tasks, isLoading: tasksLoading } = useTasks();
   const { data: dependencies, isLoading: dependenciesLoading } = useAllDependencies();
   const { data: allTaskResources } = useAllTaskResources();
+
+  // Only show Projects on a Team the caller actually belongs to (any role)
+  // — matches every other screen's own read scope, rather than exposing
+  // every Team's Projects to everyone.
+  const memberTeamIds = useMemo(
+    () => new Set((person?.team_roles ?? []).map((tr) => tr.team_id)),
+    [person],
+  );
+  const projects = useMemo(
+    () => allProjects?.filter((p) => memberTeamIds.has(p.team_id)),
+    [allProjects, memberTeamIds],
+  );
 
   const resourceCountByTaskId = useMemo(() => {
     const map = new Map<number, number>();
