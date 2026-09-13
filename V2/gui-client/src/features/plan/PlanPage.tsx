@@ -780,22 +780,52 @@ export function PlanPage() {
                 <Box
                   ref={labelAreaRef}
                   onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
-                  sx={{ height: `calc(100% - ${labelPaneReservedBottom}px)`, overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
+                  sx={{
+                    height: `calc(100% - ${labelPaneReservedBottom}px)`,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    borderRight: "1px solid rgba(0,0,0,0.12)",
+                    // One cursor for the whole pane, not just the text
+                    // glyphs — set once here so it applies uniformly
+                    // everywhere inside (including the gaps between/
+                    // around labels the per-row hit-rects below cover),
+                    // rather than flickering between this and the
+                    // browser's default cursor as the mouse crosses in
+                    // and out of individual <text> elements.
+                    cursor: "grab",
+                    userSelect: "none",
+                  }}
                 >
                   <Box component="svg" width={labelColumnWidth} height={chartHeight} sx={{ display: "block" }}>
                     {layout.bars.map((bar) => (
-                      <text
-                        key={`label-${bar.kind}-${bar.id}`}
-                        x={8 + bar.depth * 14}
-                        y={bar.y * scaleY + barHeight + 1}
-                        fontSize={fontSize}
-                        fontWeight={bar.kind === "project" ? 700 : 400}
-                        style={{ cursor: "grab", userSelect: "none" }}
-                        onMouseDown={(event) => handleRowMouseDown(bar, event)}
-                        onDoubleClick={() => handleRowDoubleClick(bar)}
-                      >
-                        {bar.label}
-                      </text>
+                      <g key={`label-${bar.kind}-${bar.id}`}>
+                        {/* Invisible, full-width hit target spanning this
+                            row's entire height — without it, only the
+                            actual text glyphs are draggable, so the gaps
+                            around/between labels (short text, indentation,
+                            trailing space) are dead zones a drag can't
+                            start from. `fill="transparent"` (not "none")
+                            is what makes an otherwise-invisible rect still
+                            hit-testable. */}
+                        <rect
+                          x={0}
+                          y={bar.y * scaleY}
+                          width={labelColumnWidth}
+                          height={ROW_HEIGHT * scaleY}
+                          fill="transparent"
+                          onMouseDown={(event) => handleRowMouseDown(bar, event)}
+                          onDoubleClick={() => handleRowDoubleClick(bar)}
+                        />
+                        <text
+                          x={8 + bar.depth * 14}
+                          y={bar.y * scaleY + barHeight + 1}
+                          fontSize={fontSize}
+                          fontWeight={bar.kind === "project" ? 700 : 400}
+                          style={{ pointerEvents: "none" }}
+                        >
+                          {bar.label}
+                        </text>
+                      </g>
                     ))}
                   </Box>
                 </Box>
