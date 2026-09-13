@@ -260,20 +260,55 @@ export function PlanPage() {
   interface RowDrag {
     bar: GanttBar;
     siblings: GanttBar[]; // this bar's own sibling group, in current order
+    minY: number; // on-screen bounds (viewport coords) the drag label may
+    maxY: number; // occupy — this sibling group's own topmost/bottommost extent
   }
   const rowDragRef = useRef<RowDrag | null>(null);
   const [dragLabel, setDragLabel] = useState("");
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
-  function handleRowMouseDown(bar: GanttBar, event: { clientX: number; clientY: number }) {
-    if (!layout) return;
+  function handleRowMouseDown(
+    bar: GanttBar,
+    event: { clientX: number; clientY: number; preventDefault: () => void },
+  ) {
+    if (!layout || !labelAreaRef.current) return;
+    // Suppress the browser's own native text-selection drag — without
+    // this, dragging over the label SVG's <text> rows selects their text
+    // (a highlighted background) the same way dragging over any other
+    // text on the page would, which then persists after the drop and can
+    // itself get picked up as a *native* text drag if the user starts
+    // dragging again from inside the still-selected region (the multiple
+    // selected labels becoming the browser's own drag-ghost content,
+    // fighting with this custom overlay).
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+
     const siblings = layout.bars.filter((b) => b.parentKey === bar.parentKey).sort((a, b) => a.y - b.y);
-    rowDragRef.current = { bar, siblings };
+
+    // The vertical range the floating drag label is allowed to occupy on
+    // screen — this sibling group's own topmost row to its own bottommost
+    // row's bottom edge, in the label pane's *current* screen position
+    // (scroll-adjusted; siblings don't move during the drag, so this is
+    // computed once here rather than on every mousemove). Constrains the
+    // floating label to only ever show a position it could legitimately
+    // be dropped at, rather than following the raw cursor anywhere on
+    // the page.
+    const rect = labelAreaRef.current.getBoundingClientRect();
+    const scrollTop = labelAreaRef.current.scrollTop;
+    const effectiveScaleY = zoomYRef.current / 100;
+    const effectiveRowHeight = ROW_HEIGHT * effectiveScaleY;
+    const siblingScreenTops = siblings.map((s) => rect.top + s.y * effectiveScaleY - scrollTop);
+    const minY = Math.min(...siblingScreenTops);
+    const maxY = Math.max(...siblingScreenTops) + effectiveRowHeight;
+
+    rowDragRef.current = { bar, siblings, minY, maxY };
     setDragLabel(bar.label);
-    setDragPosition({ x: event.clientX, y: event.clientY });
+    setDragPosition({ x: event.clientX, y: Math.min(maxY, Math.max(minY, event.clientY)) });
 
     function handleMouseMove(moveEvent: MouseEvent) {
-      setDragPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
+      const drag = rowDragRef.current;
+      const clampedY = drag ? Math.min(drag.maxY, Math.max(drag.minY, moveEvent.clientY)) : moveEvent.clientY;
+      setDragPosition({ x: moveEvent.clientX, y: clampedY });
     }
     function handleMouseUp(upEvent: MouseEvent) {
       const drag = rowDragRef.current;
@@ -291,9 +326,14 @@ export function PlanPage() {
       // dragged row's own parent's set of children, which is exactly what
       // "can't be dragged beyond the bounds of the parent project" means
       // here — not a clamp bolted on afterwards, but a direct consequence
-      // of only ever comparing against this one sibling group.
+      // of only ever comparing against this one sibling group. The
+      // cursor's own Y is clamped to the same [minY, maxY] the floating
+      // label was visually constrained to, so the drop always matches
+      // what the user was actually shown, even if the real cursor moved
+      // further than that.
       const rect = labelAreaRef.current.getBoundingClientRect();
-      const contentY = labelAreaRef.current.scrollTop + (upEvent.clientY - rect.top);
+      const clampedClientY = Math.min(drag.maxY, Math.max(drag.minY, upEvent.clientY));
+      const contentY = labelAreaRef.current.scrollTop + (clampedClientY - rect.top);
       const effectiveRowHeight = ROW_HEIGHT * (zoomYRef.current / 100);
       const effectiveScaleY = zoomYRef.current / 100;
 
@@ -695,7 +735,7 @@ export function PlanPage() {
                         y={bar.y * scaleY + barHeight + 1}
                         fontSize={fontSize}
                         fontWeight={bar.kind === "project" ? 700 : 400}
-                        style={{ cursor: "grab" }}
+                        style={{ cursor: "grab", userSelect: "none" }}
                         onMouseDown={(event) => handleRowMouseDown(bar, event)}
                         onDoubleClick={() => handleRowDoubleClick(bar)}
                       >
