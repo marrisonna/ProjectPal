@@ -28,6 +28,7 @@
 7. [Testing](#testing)
    - 7.1 [Automated Testing](#automated-testing)
    - 7.2 [Manual Testing](#manual-testing)
+   - 7.3 [User Documentation](#user-documentation)
 8. [Definition of Success](#definition-of-success)
 9. [Open Questions (Phase-Specific)](#open-questions)
 10. [Decisions (Phase-Specific)](#decisions)
@@ -363,6 +364,11 @@ Open <http://localhost:5173>. The dev server proxies `/api/*` to the REST API on
 **14. Confirm the Gantt / Plan View (`D1.4-24`).** From the app bar's "Plan" button (opens its own singleton window, `D1.4-8`), confirm a "Top Level Projects" view renders: Project rows (flat blue-grey bars) each followed by their own Tasks (Urgency-coloured bars, same colouring as All Tasks/Task Detail), a dashed red "today" line, and arrows between Tasks/Projects that have a Dependency between them. Double-click a Task bar and confirm it opens that Task's own Task Detail window (`openItemWindow`, same mechanism as All Tasks' row double-click). Navigate to `/plan/<a real top-level project id>` directly and confirm the view scopes to just that Project's own subtree (fewer bars, heading shows the Project's name instead of "Top Level Projects"). A Closed/Cancelled Task, or a Cancelled/Closed-priority Project, should not appear at all.
 
 **Not yet testable:** the resource-loading swimlane and colour-mode toggle (deferred within Stage 3, §6.3), and the remaining Stage 4 screens aren't built yet.
+
+<a id="user-documentation"></a>
+### 7.3 User Documentation
+
+Every screen this phase builds also needs its own end-user-facing document under `V2/UserDocumentation/`, once that screen is real (or, once its document exists, updated when the screen is amended) — see `Claude/Guidelines/UserDocumentationGuidelines.md` for the full rules on what goes in that directory, how each GUI document is structured, and the ongoing obligation (checked before each major commit, per that document's §6) to keep them in sync with the actual, current behaviour of the app. This note exists so that obligation stays visible from this phase's own tracking document, not only from the Guidelines document itself — `AllTasks.md`, `TaskDetail.md`, `PlanView.md`, and one per further screen this phase adds, all belong there as each lands.
 
 <a id="definition-of-success"></a>
 ## 8. Definition of Success
