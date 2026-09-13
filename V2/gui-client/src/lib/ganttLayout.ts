@@ -1,6 +1,7 @@
 import type { DependencyRecord } from "../api/types";
 import {
   addCalendarDays,
+  calendarDayNumber,
   calendarDaysBetween,
   computeTaskRowColour,
   computeUrgency,
@@ -117,9 +118,23 @@ function applyCustomOrder<T>(items: T[], keyOf: (item: T) => string, order: stri
  * to `from`/`to` as given, unmodified.
  */
 export function compressedDayOffset(from: Date, to: Date): number {
+  // Compares whole calendar days (via calendarDayNumber, the same
+  // normalisation calendarDaysBetween already relies on), not raw
+  // timestamps — a real, once-live bug: a computed schedule date can
+  // carry a non-midnight time-of-day component (seen in production: a
+  // date-only string like "2023-09-12" parses as UTC midnight, which is
+  // 01:00 local during British Summer Time; repeated addBusinessDays
+  // calls preserve whatever time-of-day a date starts with, so that
+  // stray hour rides along all the way to the final result). A raw
+  // `cursor.getTime() < to.getTime()` comparison would then count `to`'s
+  // own day as one extra iteration whenever `to` sits even a minute past
+  // local midnight, drawing every bar exactly one compressed day late —
+  // reproduced against real seed data (D1.4-38) and invisible in
+  // hand-built tests, which only ever used exact-midnight dates.
+  const toDayNumber = calendarDayNumber(to);
   let count = 0;
   let cursor = from;
-  while (cursor.getTime() < to.getTime()) {
+  while (calendarDayNumber(cursor) < toDayNumber) {
     const dow = cursor.getDay();
     if (dow !== 0 && dow !== 6) count++;
     cursor = addCalendarDays(cursor, 1);

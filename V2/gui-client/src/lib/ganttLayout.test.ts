@@ -405,6 +405,21 @@ describe("compressedDayOffset (D1.4-35 'Weekends' unchecked)", () => {
     expect(compressedDayOffset(mon, sun)).toBe(compressedDayOffset(mon, fri) + 1);
   });
 
+  it("D1.4-38: ignores a stray non-midnight time-of-day on `to`, the same way calendarDaysBetween already does — a once-live bug drew every bar exactly one compressed day late", () => {
+    // A real schedule date can carry a non-midnight time component (seen
+    // in production: a date-only string like "2023-09-12" parses as UTC
+    // midnight, which is 01:00 local during British Summer Time; that
+    // stray hour then rides along through however many addBusinessDays
+    // calls follow). A raw `cursor.getTime() < to.getTime()` comparison
+    // would count `to`'s own day as one extra iteration whenever `to`
+    // sits even a minute past local midnight.
+    const friAtTwoAm = new Date(2026, 0, 9, 2, 0, 0);
+    expect(compressedDayOffset(mon, friAtTwoAm)).toBe(compressedDayOffset(mon, fri));
+
+    const nextTuesdayAtNoon = new Date(2026, 0, 13, 12, 0, 0);
+    expect(compressedDayOffset(mon, nextTuesdayAtNoon)).toBe(compressedDayOffset(mon, nextTue));
+  });
+
   describe("dateAtCompressedOffset (its own inverse, D1.4-36)", () => {
     it("round-trips a weekday offset back to the exact same weekday", () => {
       expect(dateAtCompressedOffset(mon, 0)).toEqual(mon);
