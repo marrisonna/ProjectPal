@@ -34,8 +34,14 @@ const RESIZE_HANDLE_WIDTH = 6;
 // Height reserved at the bottom of the drawing area's own scrollable
 // content for the month-marker footer (D1.4-26) — kept a fixed size, not
 // scaled by vertical zoom, since it's positioned along the date axis
-// (horizontal), not the row axis zoomY otherwise scales.
-const MONTH_FOOTER_HEIGHT = 20;
+// (horizontal), not the row axis zoomY otherwise scales. Also the floor
+// on the label column's own reserved bottom strip (labelPaneReservedBottom,
+// D1.4-29) that the "Memorise order" button sits in — tall enough on its
+// own to comfortably fit that button even in the rare case where the
+// chart is narrow enough not to need its own horizontal scrollbar at all
+// (labelPaneReservedBottom otherwise adds that scrollbar's own measured
+// height on top of this).
+const MONTH_FOOTER_HEIGHT = 26;
 const CHART_RIGHT_PADDING = 40;
 const BASE_FONT_SIZE = 11;
 const MIN_ZOOM = 10;
@@ -162,6 +168,30 @@ export function PlanPage() {
   // `position: sticky` footer attempt).
   const hScrollAreaRef = useRef<HTMLDivElement>(null);
   const ganttAreaRef = useRef<HTMLDivElement>(null);
+
+  // The label column has no horizontal scrollbar of its own (its content
+  // never overflows sideways), but hScrollAreaRef's own native one — plus
+  // the month-footer row above it — eats into how much of the *drawing*
+  // pane's own height is actually available for bars. Left unaccounted
+  // for, the label list could show rows further down than the chart has
+  // room to draw their own bars for (hidden behind the footer/scrollbar).
+  // The month-footer's height is a known constant (MONTH_FOOTER_HEIGHT),
+  // but a native scrollbar's own height isn't something CSS can express a
+  // fixed value for (it varies by browser/OS, and only actually appears
+  // once the chart is wide enough to need one) — measured at runtime
+  // instead, via ResizeObserver so it stays correct as the chart's own
+  // width changes (zoom, window resize) toggles the scrollbar on/off.
+  const [hScrollbarHeight, setHScrollbarHeight] = useState(0);
+  useEffect(() => {
+    const el = hScrollAreaRef.current;
+    if (!el) return;
+    const measure = () => setHScrollbarHeight(el.offsetHeight - el.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [layout]);
+  const labelPaneReservedBottom = MONTH_FOOTER_HEIGHT + hScrollbarHeight;
 
   // Zoom (D1.4-24 follow-up): the layout this page renders from
   // (lib/ganttLayout.ts) is always computed at a fixed 100%-baseline —
@@ -640,26 +670,51 @@ export function PlanPage() {
         <Box ref={ganttAreaRef} sx={{ display: "flex", flexGrow: 1, minHeight: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}>
           {showNames && (
             <>
-              <Box
-                ref={labelAreaRef}
-                onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
-                sx={{ flexShrink: 0, width: labelColumnWidth, height: "100%", overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
-              >
-                <Box component="svg" width={labelColumnWidth} height={chartHeight} sx={{ display: "block" }}>
-                  {layout.bars.map((bar) => (
-                    <text
-                      key={`label-${bar.kind}-${bar.id}`}
-                      x={8 + bar.depth * 14}
-                      y={bar.y * scaleY + barHeight + 1}
-                      fontSize={fontSize}
-                      fontWeight={bar.kind === "project" ? 700 : 400}
-                      style={{ cursor: "grab" }}
-                      onMouseDown={(event) => handleRowMouseDown(bar, event)}
-                      onDoubleClick={() => handleRowDoubleClick(bar)}
-                    >
-                      {bar.label}
-                    </text>
-                  ))}
+              {/* The label column's own outer box is a flex column, not
+                  just the scrollable pane directly — reserving
+                  `labelPaneReservedBottom` at the bottom (matching the
+                  drawing pane's own month-footer + native scrollbar,
+                  neither of which the label column has of its own) so
+                  the two panes' visible rows line up: without this, the
+                  label list could scroll to show rows further down than
+                  the chart has room left to draw their own bars for. The
+                  "Memorise order" button lives in that reserved strip,
+                  rather than in a separate row below the whole Gantt
+                  area — freeing that space for the chart itself. */}
+              <Box sx={{ flexShrink: 0, width: labelColumnWidth, height: "100%", display: "flex", flexDirection: "column" }}>
+                <Box
+                  ref={labelAreaRef}
+                  onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
+                  sx={{ height: `calc(100% - ${labelPaneReservedBottom}px)`, overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
+                >
+                  <Box component="svg" width={labelColumnWidth} height={chartHeight} sx={{ display: "block" }}>
+                    {layout.bars.map((bar) => (
+                      <text
+                        key={`label-${bar.kind}-${bar.id}`}
+                        x={8 + bar.depth * 14}
+                        y={bar.y * scaleY + barHeight + 1}
+                        fontSize={fontSize}
+                        fontWeight={bar.kind === "project" ? 700 : 400}
+                        style={{ cursor: "grab" }}
+                        onMouseDown={(event) => handleRowMouseDown(bar, event)}
+                        onDoubleClick={() => handleRowDoubleClick(bar)}
+                      >
+                        {bar.label}
+                      </text>
+                    ))}
+                  </Box>
+                </Box>
+                <Box
+                  sx={{
+                    height: labelPaneReservedBottom,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    borderRight: "1px solid rgba(0,0,0,0.12)",
+                    px: "4px",
+                  }}
+                >
+                  {layout.bars.length > 0 && <DenseButton onClick={handleMemoriseOrder}>Memorise order</DenseButton>}
                 </Box>
               </Box>
               <Box
@@ -845,13 +900,6 @@ export function PlanPage() {
                 </Box>
               </Box>
             </Box>
-          </Box>
-        </Box>
-      )}
-      {showNames && layout.bars.length > 0 && (
-        <Box sx={{ display: "flex", mt: 1, flexShrink: 0 }}>
-          <Box sx={{ width: labelColumnWidth, flexShrink: 0 }}>
-            <DenseButton onClick={handleMemoriseOrder}>Memorise order</DenseButton>
           </Box>
         </Box>
       )}
