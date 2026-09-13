@@ -18,7 +18,6 @@ import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav"
 
 const LABEL_COLUMN_WIDTH = 220;
 const CHART_RIGHT_PADDING = 40;
-const PANE_HEIGHT = "70vh";
 const BASE_FONT_SIZE = 11;
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 1000;
@@ -302,11 +301,11 @@ export function PlanPage() {
   const todayX = layout.todayX * scaleX;
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
+    <Box sx={{ p: 1, height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+      <Typography variant="subtitle1" sx={{ mb: 1, flexShrink: 0 }}>
         {rootProjectName ?? "Top Level Projects"}
       </Typography>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexShrink: 0 }}>
         <Typography variant="body2">Zoom:</Typography>
         <Typography variant="body2">H</Typography>
         <ZoomPercentInput value={zoomX} onCommit={applyZoomX} />
@@ -344,7 +343,7 @@ export function PlanPage() {
           already folds the label pane's own right border into its 220px
           width, confirmed against the rendered layout — a second +1 for
           that border double-counts it). */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: 1, flexShrink: 0 }}>
         <Box
           component="input"
           type="text"
@@ -397,19 +396,29 @@ export function PlanPage() {
         // also rejected: the drawing area's own horizontal scrollbar then
         // sits at the bottom of its full ~8000px content height, not the
         // bottom of what's actually visible — invisible until scrolled
-        // all the way down. Instead: both panes get the *same fixed*
-        // height (`PANE_HEIGHT`) and scroll independently — the label
-        // column vertically only, the drawing area both ways — with
-        // their vertical scroll positions mirrored via `syncScrollTop` so
-        // rows stay aligned. This keeps the drawing area's own horizontal
-        // scrollbar pinned to the bottom of the visible pane, regardless
-        // of vertical scroll position, while graphics still can never
-        // reach the label column, since it's a genuinely separate box.
-        <Box ref={ganttAreaRef} sx={{ display: "flex", border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}>
+        // all the way down. Instead: both panes get the *same* height and
+        // scroll independently — the label column vertically only, the
+        // drawing area both ways — with their vertical scroll positions
+        // mirrored via `syncScrollTop` so rows stay aligned. That shared
+        // height used to be a fixed `70vh`, which didn't actually track
+        // the window: growing/shrinking the window changes the header's
+        // own (roughly constant-px) height while `vh` scales with the
+        // *whole* window, so the gap between the two grew or shrank with
+        // it — at small window heights the panes' fixed 70vh could exceed
+        // the space actually left below the header, overflowing the page
+        // and pushing the drawing area's own horizontal scrollbar off the
+        // bottom of the screen behind a page-level vertical scrollbar.
+        // Fixed by making the outer page a flex column pinned to `100vh`
+        // (`flexShrink: 0` on the title/controls rows above), and letting
+        // this row fill whatever's actually left (`flexGrow: 1`,
+        // `minHeight: 0` — required so a flex child can shrink to fit
+        // instead of growing to its content's height) — the panes below
+        // then simply take `height: "100%"` of that.
+        <Box ref={ganttAreaRef} sx={{ display: "flex", flexGrow: 1, minHeight: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}>
           <Box
             ref={labelAreaRef}
             onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
-            sx={{ flexShrink: 0, width: LABEL_COLUMN_WIDTH, height: PANE_HEIGHT, overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
+            sx={{ flexShrink: 0, width: LABEL_COLUMN_WIDTH, height: "100%", overflowY: "auto", overflowX: "hidden", borderRight: "1px solid rgba(0,0,0,0.12)" }}
           >
             <Box component="svg" width={LABEL_COLUMN_WIDTH} height={chartHeight} sx={{ display: "block" }}>
               {layout.bars.map((bar) => (
@@ -430,7 +439,7 @@ export function PlanPage() {
             onScroll={() => syncScrollTop(drawingAreaRef.current!, labelAreaRef.current)}
             onMouseMove={handleDrawingAreaMouseMove}
             onMouseLeave={() => setHoveredDate("")}
-            sx={{ flexGrow: 1, height: PANE_HEIGHT, overflow: "auto" }}
+            sx={{ flexGrow: 1, height: "100%", overflow: "auto" }}
           >
             {/* V1.2's own Gantt background (Libs/PlanDisplay/Project.cs's
                 `OuterBrush`, ARGB(64,200,255,210) painted behind each
