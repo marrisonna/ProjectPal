@@ -277,6 +277,20 @@ export function PlanPage() {
     localStorage.setItem(ganttOrderStorageKey(person.person_id), JSON.stringify(customOrder));
   }
 
+  // Double-clicking a row's own label opens its related GUI (mirrors the
+  // existing double-click on a Task's own bar, GanttBarRect below). A
+  // Task always has a real Task Detail window to open; a Project doesn't
+  // have an equivalent Project Detail window yet (not built — no "/
+  // projects/:id" route exists in App.tsx), so this opens the Plan view
+  // scoped to that Project instead (`/plan/<id>`, the same singleton
+  // window `PlanPage` itself already opens via `openItemWindow("plan",
+  // id)` — D1.4-24's own plan for this exact case) — the closest thing to
+  // "that Project's own GUI" that actually exists today.
+  function handleRowDoubleClick(bar: GanttBar) {
+    if (bar.kind === "task") openItemWindow("tasks", bar.id);
+    else openItemWindow("plan", bar.id);
+  }
+
   // The name shown in the read-only label below the zoom controls while
   // hovering a Task/Project bar — cleared the moment the mouse leaves it.
   const [hoveredLabel, setHoveredLabel] = useState("");
@@ -615,6 +629,7 @@ export function PlanPage() {
                       fontWeight={bar.kind === "project" ? 700 : 400}
                       style={{ cursor: "grab" }}
                       onMouseDown={(event) => handleRowMouseDown(bar, event)}
+                      onDoubleClick={() => handleRowDoubleClick(bar)}
                     >
                       {bar.label}
                     </text>
