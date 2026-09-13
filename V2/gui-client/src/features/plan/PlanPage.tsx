@@ -523,6 +523,61 @@ export function PlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
 
+  // Right-click-drag panning (D1.4-30): holding the right mouse button
+  // down over the Gantt graphic area (hScrollAreaRef — the chart and its
+  // month-footer, not the label column) and moving the mouse scrolls the
+  // chart on both axes at once, exactly as if the scrollbars themselves
+  // had been dragged — no zoom change, so "the date/task under the
+  // cursor stays the same" falls straight out of a plain scroll-position
+  // delta (unlike zoom, nothing here needs the anchor-preserving math
+  // applyZoomX/applyZoomY use to keep a point fixed across a *scale*
+  // change). The browser's own context menu is suppressed on this
+  // element — right-click here pans instead, and there's nothing on this
+  // canvas a context menu would usefully act on anyway.
+  useEffect(() => {
+    const hScrollArea = hScrollAreaRef.current;
+    const drawingArea = drawingAreaRef.current;
+    if (!hScrollArea || !drawingArea) return;
+
+    let pan: { startClientX: number; startClientY: number; startScrollLeft: number; startScrollTop: number } | null = null;
+
+    function handleMouseDown(event: MouseEvent) {
+      if (event.button !== 2) return;
+      event.preventDefault();
+      pan = {
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startScrollLeft: hScrollArea.scrollLeft,
+        startScrollTop: drawingArea.scrollTop,
+      };
+      hScrollArea.style.cursor = "grabbing";
+    }
+    function handleMouseMove(event: MouseEvent) {
+      if (!pan) return;
+      hScrollArea.scrollLeft = pan.startScrollLeft - (event.clientX - pan.startClientX);
+      drawingArea.scrollTop = pan.startScrollTop - (event.clientY - pan.startClientY);
+    }
+    function handleMouseUp() {
+      if (!pan) return;
+      pan = null;
+      hScrollArea.style.cursor = "";
+    }
+    function handleContextMenu(event: MouseEvent) {
+      event.preventDefault();
+    }
+
+    hScrollArea.addEventListener("mousedown", handleMouseDown);
+    hScrollArea.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      hScrollArea.removeEventListener("mousedown", handleMouseDown);
+      hScrollArea.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [layout]);
+
   function scrollToToday(fraction: number) {
     const hScrollArea = hScrollAreaRef.current;
     if (!hScrollArea || !layout) return;
