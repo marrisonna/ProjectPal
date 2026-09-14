@@ -13,7 +13,13 @@ from fastapi.responses import JSONResponse
 
 
 def _error(message: str, status_code: int) -> JSONResponse:
-    return JSONResponse(status_code=status_code, content={"error": message})
+    # {"detail": ...} — the same shape FastAPI's own HTTPException produces
+    # for every other error in this codebase, not a second, different shape
+    # (4_GuiClient/Plan.md D1.4-44) — gui-client's formatApiError only ever
+    # reads `.detail`, so a `{"error": ...}` body here used to fall through
+    # to its generic fallback text instead of this handler's own, more
+    # specific message.
+    return JSONResponse(status_code=status_code, content={"detail": message})
 
 
 def _clean_raise_message(exc: psycopg.errors.RaiseException) -> str:

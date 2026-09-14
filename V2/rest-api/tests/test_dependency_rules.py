@@ -9,7 +9,7 @@ def test_dependency_cycle_is_rejected(api, alice_token):
         headers=auth(alice_token),
     )
     assert resp.status_code == 409
-    assert "cycle" in resp.json()["error"].lower()
+    assert "cycle" in resp.json()["detail"].lower()
     assert "psycopg" not in resp.text.lower()
 
 
