@@ -29,6 +29,32 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
  *   server-push channel instead, since BroadcastChannel never crosses
  *   devices).
  *
+ * `updateEverywhere` alone still waits for the mutation's own PATCH to
+ * resolve before anyone hears about the change — invisible in the window
+ * that made the edit (DataGrid applies the new value to its own row
+ * immediately, before `processRowUpdate`'s promise settles) but very
+ * visible everywhere else, since D1.4-54's broadcast only fires from
+ * `onSuccess`. `beginOptimisticUpdate` (D1.4-55) closes that gap: called
+ * from a mutation's own `onMutate`, *before* the network request is even
+ * sent, it broadcasts a *guessed* new record (the last-known value overlaid
+ * with the fields being changed) immediately, so every window updates in
+ * lockstep with the originating one regardless of how long the PATCH
+ * itself actually takes on the wire — the whole point, given a real
+ * network's PATCH latency is both slower and far less predictable than
+ * anything seen against the local Docker-hosted API (`TaskGridPlan.md` §9,
+ * item 4). The guess is then reconciled once the real response arrives:
+ * `onSuccess` calls `updateEverywhere` again with the server's own
+ * authoritative value (corrects the guess if the server computed or
+ * normalised something), and `onError` calls it with the pre-edit snapshot
+ * `beginOptimisticUpdate` returned, rolling the guess back out to every
+ * window, not just the one that made the edit. For the — normally brief —
+ * time between the guess and its confirmation, every open window shows a
+ * value the server hasn't actually confirmed yet; if the mutation then
+ * fails, every window briefly shows the wrong value before flipping back.
+ * This is standard optimistic-UI behaviour (the same trade every
+ * spreadsheet/Trello-style app makes), not a new class of risk, but is a
+ * genuine behaviour change from before this existed, worth stating plainly.
+ *
  * Neither style causes a visible flash in the other windows: applying new
  * data (however it arrived) only replaces what a subscribed `useQuery`
  * already had — React's own rendering only patches the DOM nodes whose
@@ -112,6 +138,49 @@ export function updateEverywhere<T extends object>(
     idField,
     data: record,
   } satisfies LiveSyncMessage);
+}
+
+/**
+ * Call from a mutation's own `onMutate(variables)`, before its `mutationFn`
+ * fires (D1.4-55). Cancels any in-flight fetch for the single-record query
+ * first, so a refetch that was already on its way can't land after this and
+ * clobber the guess with stale pre-edit data; reads whatever's currently
+ * cached (checking the single-record entry, then falling back to the
+ * matching row of the bulk list — TaskGrid's own edits usually only have
+ * the row cached via the list, never having fetched the record on its own)
+ * and, if found, immediately applies + broadcasts a guessed record (those
+ * fields overlaid with `patch`) via `updateEverywhere`. Returns the
+ * pre-edit snapshot so the caller's own `onError` can hand it straight back
+ * to `updateEverywhere` to roll the guess back out to every window if the
+ * mutation ultimately fails. No snapshot (nothing cached anywhere for this
+ * id) means nothing to guess from or roll back to — the caller's `onSuccess`
+ * still broadcasts the real value once it arrives, same as before this
+ * existed, just without the head start.
+ */
+export async function beginOptimisticUpdate<T extends object>(
+  queryClient: QueryClient,
+  itemQueryKey: QueryKey,
+  listQueryKey: QueryKey,
+  idField: keyof T & string,
+  id: unknown,
+  patch: Record<string, unknown>,
+): Promise<{ snapshot: T | undefined }> {
+  await Promise.all([
+    queryClient.cancelQueries({ queryKey: itemQueryKey }),
+    queryClient.cancelQueries({ queryKey: listQueryKey }),
+  ]);
+  const current =
+    queryClient.getQueryData<T>(itemQueryKey) ??
+    queryClient
+      .getQueryData<Record<string, unknown>[]>(listQueryKey)
+      ?.find((item) => item[idField] === id) as T | undefined;
+  if (current) {
+    updateEverywhere(queryClient, itemQueryKey, listQueryKey, idField, {
+      ...current,
+      ...patch,
+    } as T);
+  }
+  return { snapshot: current };
 }
 
 /** Call once, at startup, in every window (main.tsx). */

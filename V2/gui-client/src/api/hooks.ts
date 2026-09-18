@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import { invalidateEverywhere, updateEverywhere } from "../lib/liveSync";
+import { beginOptimisticUpdate, invalidateEverywhere, updateEverywhere } from "../lib/liveSync";
 import type {
   AttachmentRecord,
   ComponentRecord,
@@ -67,11 +67,25 @@ export function useUpdateProject(projectId: number) {
           body,
         }),
       ),
-    // Fast path (D1.4-54): the response is this Project's own fresh value —
-    // applied directly into every open window's cache (this window's own
-    // ["projects", projectId] and ["projects"] included), no re-fetch
-    // anywhere, rather than merely invalidating and making every window
-    // (including this one) ask the server for it again.
+    // Optimistic fast path (D1.4-54/55): broadcast a guessed new value
+    // *before* the PATCH even fires, so every window updates in lockstep
+    // with this one regardless of how long the request itself takes —
+    // reconciled with the real value on success, rolled back everywhere on
+    // failure. See lib/liveSync.ts's own top-of-file comment.
+    onMutate: (body) =>
+      beginOptimisticUpdate<ProjectRecord>(
+        queryClient,
+        ["projects", projectId],
+        ["projects"],
+        "project_id",
+        projectId,
+        body,
+      ),
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) {
+        updateEverywhere(queryClient, ["projects", projectId], ["projects"], "project_id", context.snapshot);
+      }
+    },
     onSuccess: (data) => {
       updateEverywhere(queryClient, ["projects", projectId], ["projects"], "project_id", data);
     },
@@ -166,7 +180,14 @@ export function useUpdateTask(taskId: number) {
           body,
         }),
       ),
-    // Fast path (D1.4-54) — see useUpdateProject's identical comment.
+    // Optimistic fast path (D1.4-54/55) — see useUpdateProject's identical comment.
+    onMutate: (body) =>
+      beginOptimisticUpdate<TaskRecord>(queryClient, ["tasks", taskId], ["tasks"], "task_id", taskId, body),
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) {
+        updateEverywhere(queryClient, ["tasks", taskId], ["tasks"], "task_id", context.snapshot);
+      }
+    },
     onSuccess: (data) => {
       updateEverywhere(queryClient, ["tasks", taskId], ["tasks"], "task_id", data);
     },
@@ -199,11 +220,20 @@ export function useUpdateTaskField() {
           body,
         }),
       ),
-    // Fast path (D1.4-54): the response is this Task's own fresh value —
-    // this is the mechanism behind TaskGrid's own immediate per-cell save
-    // (§4.9) actually reaching an already-open Task Detail window (or any
-    // other open TaskGrid) without a second network round trip, since the
-    // response is already sitting right here.
+    // Optimistic fast path (D1.4-54/55): this is the mechanism behind
+    // TaskGrid's own immediate per-cell save (§4.9) reaching an
+    // already-open Task Detail window (or any other open TaskGrid) the
+    // instant the value is picked, not once the PATCH itself resolves —
+    // see lib/liveSync.ts's own top-of-file comment for the full mechanism
+    // and the one real trade-off (a brief unconfirmed value everywhere if
+    // the edit is ultimately rejected).
+    onMutate: ({ taskId, body }) =>
+      beginOptimisticUpdate<TaskRecord>(queryClient, ["tasks", taskId], ["tasks"], "task_id", taskId, body),
+    onError: (_err, vars, context) => {
+      if (context?.snapshot) {
+        updateEverywhere(queryClient, ["tasks", vars.taskId], ["tasks"], "task_id", context.snapshot);
+      }
+    },
     onSuccess: (data, vars) => {
       updateEverywhere(queryClient, ["tasks", vars.taskId], ["tasks"], "task_id", data);
     },
