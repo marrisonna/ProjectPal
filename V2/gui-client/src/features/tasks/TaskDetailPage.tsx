@@ -113,29 +113,61 @@ export function TaskDetailPage() {
   // against the query's own assignedResources at Save time to work out
   // which assign/unassign calls actually need to happen.
   const [resourceIds, setResourceIds] = useState<Set<number> | null>(null);
-  const [dirty, setDirty] = useState(false);
+  // Which `form` fields this window has itself started editing since the
+  // last load/Save — not a single whole-form boolean, so an *external*
+  // change (e.g. a TaskGrid edit to this same Task from another window,
+  // delivered here via D-Win-5 live sync) can be merged into every field
+  // the user hasn't touched, below, without clobbering a field they have.
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
+  const dirtyFieldsRef = useRef<Set<string>>(dirtyFields);
+  useEffect(() => {
+    dirtyFieldsRef.current = dirtyFields;
+  }, [dirtyFields]);
+  // Resources has no per-field granularity to merge (it's a single staged
+  // Set, not individual form fields) — a plain touched flag, same as
+  // before, is enough since nothing outside this window's own Save can
+  // change resource assignment (TaskGrid doesn't edit Resources).
+  const [resourcesTouched, setResourcesTouched] = useState(false);
+  const dirty = dirtyFields.size > 0 || resourcesTouched;
   const [saveError, setSaveError] = useState<string | null>(null);
   // Shared tab strip for the low-frequency sub-panels, each labelled with a
   // count (§3.11) — only one is ever visible, matching V1.2's Remarks/
   // Attachments/Links tabs.
   const [subTab, setSubTab] = useState(0);
 
-  // Reset the edit form (and staged Resources) when this task's own id
-  // changes (first load, or navigating to a different task) — deliberately
-  // *not* on every `task`/`assignedResources` change, since a cross-window
-  // live refresh (D-Win-5) re-fetches these same queries in the background
-  // whenever anything invalidates them, and resetting on every one of those
-  // would silently overwrite in-progress, unsaved edits in this window with
-  // whatever the server has right now.
+  // Fully reset the edit form (and staged Resources) when this task's own
+  // id changes (first load, or navigating to a different task).
   const loadedTaskIdRef = useRef<number | null>(null);
   useEffect(() => {
     if (task && assignedResources && loadedTaskIdRef.current !== task.task_id) {
       setForm({ ...task });
       setResourceIds(new Set(assignedResources.map((r) => r.person_id)));
-      setDirty(false);
+      setDirtyFields(new Set());
+      setResourcesTouched(false);
       loadedTaskIdRef.current = task.task_id;
     }
   }, [task, assignedResources]);
+
+  // Same Task, but the query itself refetched with new data — most notably,
+  // another window editing a cell on this same Task via TaskGrid, delivered
+  // here through the D-Win-5 live-sync mechanism (TaskGridPlan.md §4.9).
+  // Merge the fresh value into every field this window hasn't itself
+  // started editing, so an outside change becomes visible immediately
+  // without clobbering an in-progress, unsaved edit here (D-Win-8) — a
+  // plain "reset the whole form on every refetch" would show outside
+  // changes too, but at the cost of silently discarding whatever the user
+  // was themselves mid-way through typing.
+  useEffect(() => {
+    if (!task || loadedTaskIdRef.current !== task.task_id) return;
+    setForm((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(task)) {
+        if (!dirtyFieldsRef.current.has(key)) next[key] = value;
+      }
+      return next;
+    });
+  }, [task]);
 
   // Live off the form, not the fetched task, so this stays in sync while
   // the Description field (in the header, below) is being edited.
@@ -153,7 +185,7 @@ export function TaskDetailPage() {
   }
   function setField(name: string, value: unknown) {
     setForm((prev) => ({ ...prev!, [name]: value }));
-    setDirty(true);
+    setDirtyFields((prev) => new Set(prev).add(name));
   }
 
   async function handleSave() {
@@ -171,7 +203,8 @@ export function TaskDetailPage() {
       for (const personId of originalIds) {
         if (!resourceIds!.has(personId)) await unassignResource.mutateAsync(personId);
       }
-      setDirty(false);
+      setDirtyFields(new Set());
+      setResourcesTouched(false);
     } catch (err) {
       setSaveError(
         `Save failed — ${formatApiError(err, "check required fields and try again.")}`,
@@ -713,7 +746,7 @@ export function TaskDetailPage() {
                         else next.delete(person.person_id);
                         return next;
                       });
-                      setDirty(true);
+                      setResourcesTouched(true);
                     }}
                   />
                   <Box
