@@ -811,20 +811,23 @@ export function TaskGrid({
         getRowId={(row) => row.task_id}
         columns={columns}
         // Single click, not the DataGrid default of double click, starts
-        // editing a governed cell the current user can edit — a plain
-        // double-click on an editable cell used to both enter edit mode
-        // *and* (via the row-level double-click handler this replaces)
-        // open the Task's own Task Detail window at the same time, which
-        // is what the single-click switch below is for: onCellDoubleClick
-        // only opens Task Detail for a cell that ISN'T already handled by
-        // a single click here.
+        // editing a governed cell the current user can edit — this alone
+        // is what makes a single click sufficient; double-click keeps its
+        // own, unconditional job of opening Task Detail (below), exactly
+        // as it does for every other, non-editable cell/column. The two
+        // are independent gestures reaching independent handlers, not one
+        // suppressing the other: double-clicking an editable cell starts
+        // an edit (from the first click) *and* opens Task Detail (from
+        // the double-click itself) — matching how every other column's
+        // double-click has always worked, rather than special-casing
+        // editable columns to swallow it.
         onCellClick={(params) => {
           if (!isEditableCell(params.row, params.field)) return;
           if (apiRef.current.getCellMode(params.id, params.field) === "edit") return;
           apiRef.current.startCellEditMode({ id: params.id, field: params.field });
         }}
         onCellDoubleClick={(params) => {
-          if (isEditableCell(params.row, params.field)) return;
+          if (params.field === "__delete") return;
           openTask(params.row);
         }}
         rowHeight={DENSE_ROW_HEIGHT}
