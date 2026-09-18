@@ -179,6 +179,43 @@ export function useReparentTask(taskId: number) {
   };
 }
 
+// A generic sibling to useUpdateTask above, not a replacement for it (Task
+// Detail keeps using the fixed-id version) — TaskGrid.tsx's own per-cell
+// immediate save (TaskGridPlan.md §4.9/D1.4-49) edits a different row on
+// every call, so the target task_id has to be supplied per call rather than
+// fixed when the hook is created, the same shape useDeleteProject() already
+// uses for the same reason.
+export function useUpdateTaskField() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ taskId, body }: { taskId: number; body: Record<string, unknown> }) =>
+      unwrap<TaskRecord>(
+        await apiClient.PATCH("/task/{task_id}", {
+          params: { path: { task_id: taskId } },
+          body,
+        }),
+      ),
+    onSuccess: (_data, vars) => {
+      invalidateEverywhere(queryClient, ["tasks", vars.taskId]);
+      invalidateEverywhere(queryClient, ["tasks"]);
+    },
+  });
+}
+
+// D1.4-53 — a single shared instance for both TaskGrid's own per-row trash
+// icon and TaskDetailPage.tsx's header Delete button, the target task_id
+// supplied at call time, the same shape useDeleteProject() already uses.
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: number) =>
+      unwrap<void>(
+        await apiClient.DELETE("/task/{task_id}", { params: { path: { task_id: taskId } } }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["tasks"]),
+  });
+}
+
 // --- Task resources (task_resource) -----------------------------------------
 
 export function useTaskResources(taskId: number) {

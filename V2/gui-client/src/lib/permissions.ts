@@ -1,4 +1,5 @@
 import type { WhoAmI } from "../api/client";
+import { TASK_STATUSES } from "../api/types";
 
 const ROLE_RANK: Record<string, number> = {
   ReadOnlyUser: 0,
@@ -60,4 +61,62 @@ export function canEditOwnedRecord(
   if (!person || teamId == null) return false;
   if (isTeamLead(person, teamId)) return true;
   return ownerPersonId === person.person_id && hasRoleAtLeast(person, teamId, "NormalUser");
+}
+
+/**
+ * TaskGrid's/Task Detail's shared, centralised field-permission rule
+ * (TaskGridPlan.md §4.3, D1.4-48/51/52) — "what's editable" is never
+ * decided per embedding window, only here, so a user's experience of what
+ * they can edit is identical everywhere a governed Task field appears.
+ */
+export type EditableTaskField =
+  | "status"
+  | "tentative_resource_assignment"
+  | "priority"
+  | "owner_person_id"
+  | "effort_in_days"
+  | "percentage_allocation"
+  | "task_type"
+  | "requestor_person_id"
+  | "detailed_description";
+
+// Fields a Task's own assigned Resource may edit even when they don't own
+// it and aren't a Team Lead — V1.2's own third tier (GUITask.cs's
+// NormalUserEditableColumns), confirmed as wanted behaviour, not legacy
+// cruft (D1.4-52).
+const RESOURCE_EDITABLE_FIELDS: readonly EditableTaskField[] = ["status", "detailed_description"];
+
+export function canEditTaskField(
+  person: WhoAmI | null,
+  teamId: number | null | undefined,
+  ownerPersonId: number | null | undefined,
+  isAssignedResource: boolean,
+  field: EditableTaskField,
+): boolean {
+  // Owner reassignment, and toggling Tentative Resource Assignment, are
+  // both reserved for LeadUser+ specifically, not just "the record's own
+  // owner" — matching V1.2's own real precedent exactly, not an
+  // independently-invented rule (D1.4-51: V1.2's `GUITaskColumns.
+  // ColumnIsReadOnly` restricts both of these columns identically, to
+  // SuperUser/PowerUser only — V2's TeamLeadUser/LeadUser).
+  if (field === "owner_person_id" || field === "tentative_resource_assignment") {
+    return hasRoleAtLeast(person, teamId, "LeadUser");
+  }
+  if (canEditOwnedRecord(person, teamId, ownerPersonId)) return true;
+  // Tier 3 (D1.4-52): not the owner, not a Team Lead, but assigned to the
+  // Task as a Resource — Status and Detailed Description only.
+  return isAssignedResource && RESOURCE_EDITABLE_FIELDS.includes(field);
+}
+
+// V1.2's own further restriction on top of the above (GUITaskColumns.
+// AdjustComboEditor, D1.4-52): tier 3's own Status edit can move a Task
+// along, but can't close it out — Closed/Cancelled stay off the menu
+// unless the editor has full (owner-or-TeamLeadUser) rights.
+export function editableTaskStatusValues(
+  person: WhoAmI | null,
+  teamId: number | null | undefined,
+  ownerPersonId: number | null | undefined,
+): readonly string[] {
+  if (canEditOwnedRecord(person, teamId, ownerPersonId)) return TASK_STATUSES;
+  return TASK_STATUSES.filter((s) => s !== "Closed" && s !== "Cancelled");
 }

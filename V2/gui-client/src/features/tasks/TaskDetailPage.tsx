@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -20,6 +20,7 @@ import {
   useAssignResource,
   useAttachments,
   useComponents,
+  useDeleteTask,
   useDependencies,
   usePeople,
   usePersonRoles,
@@ -31,12 +32,12 @@ import {
   useUnassignResource,
   useUpdateTask,
 } from "../../api/hooks";
-import { PRIORITY_LEVELS, TASK_STATUSES, TASK_TYPES } from "../../api/types";
+import { PRIORITY_LEVELS, TASK_TYPES } from "../../api/types";
 import { openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
-import { canEditOwnedRecord } from "../../lib/permissions";
+import { canEditOwnedRecord, canEditTaskField, editableTaskStatusValues } from "../../lib/permissions";
 import { personDisplayName } from "../../lib/people";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -76,8 +77,9 @@ const TABS = ["DEPENDENCIES", "ATTACHMENTS", "REMARKS"] as const;
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const id = Number(taskId);
+  const navigate = useNavigate();
   const { person } = useAuth();
-  // See TaskListPage.tsx's own call for why this is needed even though
+  // See AllTaskOrigPage.tsx's own call for why this is needed even though
   // this page is currently only ever reached via a window already named
   // at creation (openItemWindow) — this closes the same gap for any
   // future in-place link to a Task, and its own cleanup-on-navigate-away
@@ -103,6 +105,7 @@ export function TaskDetailPage() {
   const updateTask = useUpdateTask(id);
   const assignResource = useAssignResource(id);
   const unassignResource = useUnassignResource(id);
+  const deleteTask = useDeleteTask();
 
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
   // Staged, not written on click (D-Win-8): the set of person_ids the
@@ -176,6 +179,28 @@ export function TaskDetailPage() {
     }
   }
 
+  // Same permission (and the same rationale for reading it) as Project
+  // Detail's own Delete button (ProjectDetailPlan.md §4.8/D1.4-53) —
+  // confirmed to already match V1.2's own Task-delete rule exactly, no
+  // separate delete-specific check needed.
+  async function handleDeleteTask() {
+    if (!task || !window.confirm(`Delete Task "${task.description}"? This cannot be undone.`)) {
+      return;
+    }
+    setSaveError(null);
+    try {
+      await deleteTask.mutateAsync(task.task_id);
+      // This window has nothing left to show once its own Task is gone —
+      // a popped-out Task Detail window (openItemWindow, the normal way
+      // this page is reached) closes itself; if that's refused (this
+      // happens to be the main, non-popup window), fall back to All Tasks.
+      window.close();
+      navigate("/tasks");
+    } catch (err) {
+      setSaveError(`Delete failed — ${formatApiError(err, "please try again.")}`);
+    }
+  }
+
   const teamProject = projects?.find((p) => p.project_id === field("project_id"));
   // Mirrors rest-api's require_owner_or_team_lead exactly (see
   // lib/permissions.ts) — decided against the Task's *original* owner
@@ -183,6 +208,16 @@ export function TaskDetailPage() {
   // actually check against on save regardless of a pending, unsaved
   // reassignment in this form.
   const canEdit = canEditOwnedRecord(person, teamProject?.team_id, task?.owner_person_id);
+  // Whether the signed-in Person is an assigned Resource on this Task, per
+  // the query's own last-known assignment (assignedResources), not the
+  // staged/unsaved `resourceIds` — same "decide against what the server
+  // will actually check" reasoning as `canEdit` above (lib/permissions.ts's
+  // canEditTaskField's own `isAssignedResource` is caller-supplied for
+  // exactly this reason, TaskGridPlan.md §4.3).
+  const isAssignedResource = !!person && !!assignedResources?.some((r) => r.person_id === person.person_id);
+  const canEditField = (fieldName: Parameters<typeof canEditTaskField>[4]) =>
+    canEditTaskField(person, teamProject?.team_id, task?.owner_person_id, isAssignedResource, fieldName);
+  const canDelete = canEdit;
   const teamComponents = components?.filter((c) => c.team_id === teamProject?.team_id) ?? [];
   // Project/Component tree pickers (D-Win-9): scoped to the Task's own
   // Team, same as Component's flat list always was — a Task can only move
@@ -396,7 +431,7 @@ export function TaskDetailPage() {
             <Box
               component="select"
               value={(field("owner_person_id") as number | "") ?? ""}
-              disabled={!canEdit}
+              disabled={!canEditField("owner_person_id")}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
                 setField("owner_person_id", event.target.value === "" ? null : Number(event.target.value))
               }
@@ -418,7 +453,7 @@ export function TaskDetailPage() {
             </Box>
           </Box>
           {/* Real, computed client-side (D1.2-2/D1.5-1) — the same
-              computeUrgency TaskListPage.tsx's Urgency column uses.
+              computeUrgency AllTaskOrigPage.tsx's Urgency column uses.
               Background is V1.2's own row colour (KeyConcepts.md §12.2's
               "Applying it to a Task's row colour", D1.5-5): white when not
               urgent, fading to light red as Urgency climbs past 100, or a
@@ -442,6 +477,11 @@ export function TaskDetailPage() {
             </Box>
           </Box>
           <DenseButton onClick={() => openListWindow("tasks")}>All Tasks</DenseButton>
+          {canDelete && (
+            <DenseButton onClick={handleDeleteTask} disabled={deleteTask.isPending}>
+              Delete
+            </DenseButton>
+          )}
           {canEdit && (
             <DenseButton
               variant="filled"
@@ -498,13 +538,15 @@ export function TaskDetailPage() {
                 width={108}
                 value={field("status") as string}
                 onChange={(v) => setField("status", v)}
-                readOnly={!canEdit}
+                readOnly={!canEditField("status")}
               >
-                {TASK_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {editableTaskStatusValues(person, teamProject?.team_id, task?.owner_person_id).map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ),
+                )}
               </FieldSelect>
               <FieldSelect
                 label="Task Type"
@@ -694,7 +736,7 @@ export function TaskDetailPage() {
             label="Detailed Description"
             value={(field("detailed_description") as string) ?? ""}
             onChange={(v) => setField("detailed_description", v)}
-            readOnly={!canEdit}
+            readOnly={!canEditField("detailed_description")}
           />
         </Box>
 

@@ -35,7 +35,7 @@ export function FieldLabel({ children }: { children: ReactNode }) {
 // FieldSelect/FieldInput/FieldTextArea/DateField, e.g. the caller lacks
 // edit permission on this record). One shared colour so "can't edit this"
 // looks the same everywhere it applies.
-const READONLY_BG = "rgba(0,0,0,0.06)";
+export const READONLY_BG = "rgba(0,0,0,0.06)";
 
 function FieldShell({
   label,
