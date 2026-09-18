@@ -68,6 +68,12 @@ interface FilterConfig {
   sortType: FilterSortType;
 }
 
+// The fixed comparison baseline for the new TaskGrid-based AllTaskPage.tsx
+// (TaskGridPlan.md §5.1, D1.4-50) — renamed from TaskListPage.tsx with no
+// behavioural change at all, reachable at /tasks-orig until the user
+// confirms AllTaskPage.tsx is equivalent, at which point this whole file,
+// its route, and the temporary nav-bar button are deleted (§5.4).
+//
 // V1.2's own Task List column set and order, unchanged, from
 // V1.2/Apps/ProjectPal/ProjectPal/Tasks/GUITaskColumns.cs's ColumnNames —
 // the one column dropped is Private ("Prvt"), since the Private/Visibility
@@ -75,13 +81,13 @@ interface FilterConfig {
 // Urgency isn't computed yet (Stage 3, D1.2-2) — shown as a fixed 100 for
 // every row so the column, and its position in this order, can be
 // previewed now rather than waiting for the real calculation.
-export function TaskListPage() {
-  useDocumentTitle("All Tasks");
-  // Claims the "tasks-list" identity for whichever window this page is
+export function AllTaskOrigPage() {
+  useDocumentTitle("All Tasks (orig)");
+  // Claims the "tasks-orig-list" identity for whichever window this page is
   // rendered in — including the main app window, reached here by a plain
   // in-place nav click, not window.open — so openListWindow() elsewhere
   // can find and focus it instead of opening a duplicate (D-Win-4/10).
-  useSingletonWindowIdentity("tasks-list");
+  useSingletonWindowIdentity("tasks-orig-list");
   const { person } = useAuth();
   const { data: tasks, isLoading } = useTasks();
   const { data: projects } = useProjects();
