@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import { invalidateEverywhere } from "../lib/liveSync";
+import { invalidateEverywhere, updateEverywhere } from "../lib/liveSync";
 import type {
   AttachmentRecord,
   ComponentRecord,
@@ -67,9 +67,13 @@ export function useUpdateProject(projectId: number) {
           body,
         }),
       ),
-    onSuccess: () => {
-      invalidateEverywhere(queryClient, ["projects", projectId]);
-      invalidateEverywhere(queryClient, ["projects"]);
+    // Fast path (D1.4-54): the response is this Project's own fresh value —
+    // applied directly into every open window's cache (this window's own
+    // ["projects", projectId] and ["projects"] included), no re-fetch
+    // anywhere, rather than merely invalidating and making every window
+    // (including this one) ask the server for it again.
+    onSuccess: (data) => {
+      updateEverywhere(queryClient, ["projects", projectId], ["projects"], "project_id", data);
     },
   });
 }
@@ -162,9 +166,9 @@ export function useUpdateTask(taskId: number) {
           body,
         }),
       ),
-    onSuccess: () => {
-      invalidateEverywhere(queryClient, ["tasks", taskId]);
-      invalidateEverywhere(queryClient, ["tasks"]);
+    // Fast path (D1.4-54) — see useUpdateProject's identical comment.
+    onSuccess: (data) => {
+      updateEverywhere(queryClient, ["tasks", taskId], ["tasks"], "task_id", data);
     },
   });
 }
@@ -195,9 +199,13 @@ export function useUpdateTaskField() {
           body,
         }),
       ),
-    onSuccess: (_data, vars) => {
-      invalidateEverywhere(queryClient, ["tasks", vars.taskId]);
-      invalidateEverywhere(queryClient, ["tasks"]);
+    // Fast path (D1.4-54): the response is this Task's own fresh value —
+    // this is the mechanism behind TaskGrid's own immediate per-cell save
+    // (§4.9) actually reaching an already-open Task Detail window (or any
+    // other open TaskGrid) without a second network round trip, since the
+    // response is already sitting right here.
+    onSuccess: (data, vars) => {
+      updateEverywhere(queryClient, ["tasks", vars.taskId], ["tasks"], "task_id", data);
     },
   });
 }
