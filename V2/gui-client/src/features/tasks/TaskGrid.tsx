@@ -2,9 +2,14 @@ import { useMemo, useState } from "react";
 import {
   DataGrid,
   GridActionsCellItem,
+  useGridApiContext,
+  useGridApiRef,
   type GridCellParams,
   type GridColDef,
+  type GridRenderEditCellParams,
   type GridRowParams,
+  type GridSingleSelectColDef,
+  type ValueOptions,
 } from "@mui/x-data-grid";
 import Box from "@mui/material/Box";
 import Snackbar from "@mui/material/Snackbar";
@@ -167,6 +172,79 @@ function byId<T extends Record<K, number>, K extends string>(
   return map;
 }
 
+function optionValue(option: ValueOptions): string | number | null {
+  return typeof option === "object" ? option.value : option;
+}
+function optionLabel(option: ValueOptions): string {
+  return typeof option === "object" ? option.label : String(option);
+}
+
+// A plain native <select>, not MUI's own Select/Menu — the same "native
+// controls, sized explicitly" convention DenseField.tsx already established
+// for this whole app (Q1.4-17), and for the same reason here: MUI's own
+// singleSelect edit cell (GridEditSingleSelectCell) renders its dropdown
+// through a themed Popper portalled straight onto <body>, entirely outside
+// TaskGrid's own DOM subtree — so its font size falls back to the ambient
+// MUI theme default (16px/body1) rather than inheriting the grid's own
+// dense font, however the grid's own sx is set. A native <select> has no
+// such portal: the browser always renders its dropdown using the trigger
+// element's own computed font, so setting fontSize here is guaranteed to
+// apply to the closed cell, the open dropdown, and every option in it.
+//
+// Also commits immediately on selection (setEditCellValue then
+// stopCellEditMode together, not left to a later blur) — MUI's own default
+// only calls setEditCellValue on change and waits for the cell to lose
+// focus to actually commit, which is what made a value picked here not
+// show up in an already-open Task Detail window until the user clicked
+// elsewhere in the grid first.
+function DenseSingleSelectEditCell(props: GridRenderEditCellParams<TaskRecord>) {
+  const { id, field, value, colDef, row } = props;
+  const apiRef = useGridApiContext();
+  // colDef here is the grid's own runtime GridStateColDef, which doesn't
+  // carry the singleSelect-specific valueOptions in its type even though
+  // it's present at runtime (this cell only ever renders for a column that
+  // set type: "singleSelect") — cast to the real declared shape rather than
+  // widen the whole function to `any`.
+  const singleSelectColDef = colDef as unknown as GridSingleSelectColDef<TaskRecord>;
+  const options: ValueOptions[] =
+    typeof singleSelectColDef.valueOptions === "function"
+      ? singleSelectColDef.valueOptions({ id, row, field })
+      : (singleSelectColDef.valueOptions ?? []);
+
+  return (
+    <select
+      autoFocus
+      value={value == null ? "" : String(value)}
+      style={{
+        width: "100%",
+        height: "100%",
+        fontSize: DENSE_FONT_SIZE,
+        fontFamily: "inherit",
+        border: "none",
+        outline: "none",
+        background: "transparent",
+        padding: "0 5px",
+      }}
+      onChange={async (event) => {
+        const raw = event.target.value;
+        const matched = options.find((o) => String(optionValue(o) ?? "") === raw);
+        const newValue = matched ? optionValue(matched) : raw;
+        await apiRef.current.setEditCellValue({ id, field, value: newValue });
+        apiRef.current.stopCellEditMode({ id, field });
+      }}
+    >
+      {options.map((option) => {
+        const v = optionValue(option);
+        return (
+          <option key={String(v)} value={v == null ? "" : String(v)}>
+            {optionLabel(option)}
+          </option>
+        );
+      })}
+    </select>
+  );
+}
+
 export function TaskGrid({
   tasks,
   projects,
@@ -187,6 +265,7 @@ export function TaskGrid({
   const updateTaskField = useUpdateTaskField();
   const deleteTask = useDeleteTask();
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
+  const apiRef = useGridApiRef();
 
   const [filterState, setFilterState] = useState<Record<string, ColumnFilterState>>(
     () => initialFilterState ?? {},
@@ -428,6 +507,7 @@ export function TaskGrid({
           type: "singleSelect",
           valueOptions: ({ row }) =>
             row ? [...editableTaskStatusValues(person, projectTeamId(row), row.owner_person_id)] : [],
+          renderEditCell: DenseSingleSelectEditCell,
         },
         (row) => [row.status ?? ""],
         "string",
@@ -487,6 +567,7 @@ export function TaskGrid({
           width: 90,
           type: "singleSelect",
           valueOptions: [...PRIORITY_LEVELS],
+          renderEditCell: DenseSingleSelectEditCell,
         },
         (row) => [row.priority ?? ""],
         "string",
@@ -555,6 +636,7 @@ export function TaskGrid({
               })),
             ];
           },
+          renderEditCell: DenseSingleSelectEditCell,
         },
         (row) => [personName(row.owner_person_id, projectsById.get(row.project_id))],
         "string",
@@ -575,6 +657,7 @@ export function TaskGrid({
               label: personDisplayName(p.person_id, row ? projectTeamId(row) : undefined, people, personRoles),
             })),
           ],
+          renderEditCell: DenseSingleSelectEditCell,
         },
         (row) => [personName(row.requestor_person_id, projectsById.get(row.project_id))],
         "string",
@@ -635,7 +718,14 @@ export function TaskGrid({
     ),
     task_type: governed(
       withFilter(
-        { field: "task_type", headerName: "Task Type", width: 130, type: "singleSelect", valueOptions: [...TASK_TYPES] },
+        {
+          field: "task_type",
+          headerName: "Task Type",
+          width: 130,
+          type: "singleSelect",
+          valueOptions: [...TASK_TYPES],
+          renderEditCell: DenseSingleSelectEditCell,
+        },
         (row) => [row.task_type ?? ""],
         "string",
       ),
@@ -704,15 +794,39 @@ export function TaskGrid({
 
   const filteredTasks = tasks.filter((row) => passesAllFilters(row));
 
+  function isEditableCell(row: TaskRecord, field: string): boolean {
+    return GOVERNED_FIELDS.has(field as EditableTaskField) && canEditCell(row, field as EditableTaskField);
+  }
+
+  function openTask(row: TaskRecord) {
+    if (onRowDoubleClick) onRowDoubleClick(row);
+    else openItemWindow("tasks", row.task_id);
+  }
+
   return (
     <Box sx={{ height: 600 }}>
       <DataGrid<TaskRecord>
+        apiRef={apiRef}
         rows={filteredTasks}
         getRowId={(row) => row.task_id}
         columns={columns}
-        onRowDoubleClick={(params) =>
-          onRowDoubleClick ? onRowDoubleClick(params.row) : openItemWindow("tasks", params.id)
-        }
+        // Single click, not the DataGrid default of double click, starts
+        // editing a governed cell the current user can edit — a plain
+        // double-click on an editable cell used to both enter edit mode
+        // *and* (via the row-level double-click handler this replaces)
+        // open the Task's own Task Detail window at the same time, which
+        // is what the single-click switch below is for: onCellDoubleClick
+        // only opens Task Detail for a cell that ISN'T already handled by
+        // a single click here.
+        onCellClick={(params) => {
+          if (!isEditableCell(params.row, params.field)) return;
+          if (apiRef.current.getCellMode(params.id, params.field) === "edit") return;
+          apiRef.current.startCellEditMode({ id: params.id, field: params.field });
+        }}
+        onCellDoubleClick={(params) => {
+          if (isEditableCell(params.row, params.field)) return;
+          openTask(params.row);
+        }}
         rowHeight={DENSE_ROW_HEIGHT}
         columnHeaderHeight={HEADER_HEIGHT}
         disableColumnMenu
