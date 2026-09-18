@@ -26,6 +26,72 @@ export function useProjects() {
   });
 }
 
+// --- Projects (CRUD, Plan.md D1.4-39.../ProjectDetailPlan.md §5.1) ---------
+
+// projectId is nullable so ProjectDetailPage.tsx's own "no Project" (Top
+// Level Projects) mode can call this unconditionally, per the Rules of
+// Hooks, without actually fetching anything in that mode.
+export function useProject(projectId: number | null) {
+  return useQuery({
+    queryKey: ["projects", projectId],
+    enabled: projectId != null,
+    queryFn: async () =>
+      unwrap<ProjectRecord>(
+        await apiClient.GET("/project/{project_id}", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+}
+
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: CreateProjectRequest has required fields (team_id, name)
+    // a loosely-typed Record<string, unknown> can't structurally satisfy —
+    // same cast useCreateLinkAttachment/useCreateFileAttachment already use
+    // for the same reason (a FormData body there, instead).
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<ProjectRecord>(await apiClient.POST("/project", { body: body as never })),
+    onSuccess: () => invalidateEverywhere(queryClient, ["projects"]),
+  });
+}
+
+export function useUpdateProject(projectId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<ProjectRecord>(
+        await apiClient.PATCH("/project/{project_id}", {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: () => {
+      invalidateEverywhere(queryClient, ["projects", projectId]);
+      invalidateEverywhere(queryClient, ["projects"]);
+    },
+  });
+}
+
+// No fixed id, unlike useUpdateProject — a single instance is shared for
+// both the header's own Delete button and every sub-Project row's own
+// trash icon (ProjectDetailPlan.md §4.4/§4.8), each supplying whichever
+// project_id it's actually deleting at call time, the same shape
+// useDeleteDependency already uses for the same reason.
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (projectId: number) =>
+      unwrap<void>(
+        await apiClient.DELETE("/project/{project_id}", {
+          params: { path: { project_id: projectId } },
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["projects"]),
+  });
+}
+
 export function useComponents() {
   return useQuery({
     queryKey: ["components"],
@@ -69,6 +135,20 @@ export function useTask(taskId: number) {
       unwrap<TaskRecord>(
         await apiClient.GET("/task/{task_id}", { params: { path: { task_id: taskId } } }),
       ),
+  });
+}
+
+// ProjectDetailPlan.md §4.7's "Add Task" dialog — the first caller of this;
+// no prior GUI entry point created a Task at all.
+export function useCreateTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: CreateTaskRequest has required fields a loosely-typed
+    // Record<string, unknown> can't structurally satisfy — see
+    // useCreateProject's identical cast, just above.
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<TaskRecord>(await apiClient.POST("/task", { body: body as never })),
+    onSuccess: () => invalidateEverywhere(queryClient, ["tasks"]),
   });
 }
 
@@ -203,12 +283,18 @@ export function useCreateRemark(owner: RemarkOwner) {
 
 // --- Dependencies ------------------------------------------------------------
 
-export function useDependencies(taskId: number) {
+// Either side of a Dependency can be a Task or a Project (never a
+// Component — KeyConcepts.md's Dependency entry), so this is narrower than
+// RemarkOwner (which also allows component_id) rather than reusing it.
+export type DependencyOwner = { task_id: number } | { project_id: number };
+
+export function useDependencies(owner: DependencyOwner) {
+  const key = Object.entries(owner)[0];
   return useQuery({
-    queryKey: ["dependencies", "task", taskId],
+    queryKey: ["dependencies", ...key],
     queryFn: async () =>
       unwrap<DependencyRecord[]>(
-        await apiClient.GET("/dependency", { params: { query: { task_id: taskId } } }),
+        await apiClient.GET("/dependency", { params: { query: owner as Record<string, number> } }),
       ),
   });
 }
@@ -230,11 +316,15 @@ export function useAllDependencies() {
 // already covers it) — kept as a parameter so this still reads, at the
 // call site, as "create a dependency for this task", not a bare mutation
 // with no obvious connection to one.
-export function useCreateDependency(_taskId: number) {
+export function useCreateDependency(_taskId?: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { pre_task_id?: number; post_task_id?: number }) =>
-      unwrap<DependencyRecord>(await apiClient.POST("/dependency", { body })),
+    mutationFn: async (body: {
+      pre_task_id?: number;
+      pre_project_id?: number;
+      post_task_id?: number;
+      post_project_id?: number;
+    }) => unwrap<DependencyRecord>(await apiClient.POST("/dependency", { body })),
     // Invalidating the bare ["dependencies"] key also covers the more
     // specific ["dependencies", "task", taskId] queries (React Query's
     // invalidateQueries matches by key prefix by default) — one call
@@ -243,7 +333,7 @@ export function useCreateDependency(_taskId: number) {
   });
 }
 
-export function useDeleteDependency(_taskId: number) {
+export function useDeleteDependency(_taskId?: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (dependencyId: number) =>

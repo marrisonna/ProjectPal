@@ -311,6 +311,51 @@ export function getProjectSchedule(graph: ScheduleGraph, projectId: number): Com
 }
 
 /**
+ * V1.2's `Project.IsActive` (`V1.2/Libs/DBProjectPal/DBProjectPal/
+ * Project.cs`) — a computed property, never a stored column (unlike
+ * `Person.IsActive`, a real stored flag): a Project is active if its own
+ * Priority isn't Cancelled/Closed, *and* it has at least one direct Task
+ * that isn't Closed/Cancelled, *or* at least one sub-Project that is
+ * itself active (recursively — an active grandchild makes every ancestor
+ * above it active too). `4_GuiClient/Plan.md` `D1.4-41`'s own investigation
+ * found this ported faithfully, replacing the Priority-only stand-in
+ * `lib/ganttLayout.ts`'s `isVisibleProjectPriority` currently uses there
+ * (that switch-over itself is deferred to Stage 6, per the same decision —
+ * this function is written now only for `ProjectDetailPage.tsx`'s own use).
+ *
+ * Two deliberate deltas from the V1.2 source: no `Status.HasValue` check
+ * (V2's `TaskRecord.status` is never null, unlike V1.2's nullable Status —
+ * every Task is considered, matching `isVisibleTaskStatus`'s own identical
+ * exclusion list), and a `visited` cycle guard on the sub-Project
+ * recursion, which V1.2's own version doesn't have (the same guard already
+ * applied elsewhere in this codebase when porting a parent-chain walk,
+ * e.g. `ancestorPriorityChain` below — protects against a malformed
+ * `parent_project_id` chain looping forever).
+ */
+export function isProjectActive(
+  graph: ScheduleGraph,
+  projectId: number,
+  visited: Set<number> = new Set(),
+): boolean {
+  if (visited.has(projectId)) return false;
+  visited.add(projectId);
+
+  const project = graph.projectsById.get(projectId);
+  if (!project) return false;
+  if (project.priority === "Cancelled" || project.priority === "Closed") return false;
+
+  for (const task of graph.childTasksByProject.get(projectId) ?? []) {
+    if (task.status !== "Closed" && task.status !== "Cancelled") return true;
+  }
+
+  for (const childProject of graph.childProjectsByParent.get(projectId) ?? []) {
+    if (isProjectActive(graph, childProject.project_id, visited)) return true;
+  }
+
+  return false;
+}
+
+/**
  * Urgency (`Requirements/KeyConcepts.md` §12.1, `V1.2/Apps/ProjectPal/
  * ProjectPal/Tasks/GUITask.cs`'s `Urgency` getter) — ported exactly,
  * constants included, per 5_UrgencyCalculation/Plan.md's D1.5-1 (verified
@@ -338,7 +383,10 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 // A missing/unrecognised Priority is always treated as Med (3) — both for
 // a Task's own Priority and every ancestor Project's, matching V1.2's
 // `Priority.HasValue` check (Task) and `?? PriorityValue._3_Med` (Project).
-function priorityWeight(priority: string | null): number {
+// Exported for features/projects/ProjectTaskTree.tsx's own sibling-Project
+// ordering (highest Priority first, then alphabetically) — the same
+// Priority-to-number mapping Urgency already uses, not a second one.
+export function priorityWeight(priority: string | null): number {
   if (priority == null) return 3;
   return PRIORITY_WEIGHT[priority] ?? 3;
 }

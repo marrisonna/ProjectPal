@@ -6,6 +6,7 @@ import { AppShell } from "./app/AppShell";
 import { TaskListPage } from "./features/tasks/TaskListPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
+import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
 
 function AuthenticatedLayout() {
   return (
@@ -45,6 +46,12 @@ export default function App() {
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
             <Route path="/plan" element={<PlanPage />} />
             <Route path="/plan/:projectId" element={<PlanPage />} />
+            {/* No separate Project List route yet (ProjectDetailPlan.md §1
+                scopes that out) — /projects with no id is ProjectDetailPage's
+                own "Top Level Projects" browsing mode instead, the same
+                dual-purpose /plan already has for PlanPage. */}
+            <Route path="/projects" element={<ProjectDetailPage />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

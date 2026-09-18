@@ -91,7 +91,7 @@ export function TaskDetailPage() {
   const { data: personRoles } = usePersonRoles();
   const { data: assignedResources } = useTaskResources(id);
   const { data: allTasks } = useTasks();
-  const { data: dependencies } = useDependencies(id);
+  const { data: dependencies } = useDependencies({ task_id: id });
   // Bulk, unfiltered — the recursive Start/End date evaluator
   // (lib/schedule.ts's buildScheduleGraph, D1.5-2/§4.7) needs every
   // Dependency and every Task's real assigned-Resource count to resolve a
@@ -755,7 +755,7 @@ export function TaskDetailPage() {
             })}
           </Box>
           <Box sx={{ p: "10px 12px" }}>
-            {subTab === 0 && <DependenciesPanel taskId={id} hideHeading />}
+            {subTab === 0 && <DependenciesPanel owner={{ task_id: id }} hideHeading />}
             {subTab === 1 && <AttachmentsPanel owner={{ task_id: id }} hideHeading />}
             {subTab === 2 && (
               <RemarksPanel owner={{ task_id: id }} hideHeading teamId={teamProject?.team_id} />

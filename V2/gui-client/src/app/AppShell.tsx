@@ -36,6 +36,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button color="inherit" onClick={() => openListWindow("plan")}>
               Plan
             </Button>
+            {/* Its own popped-out singleton window (D1.4-8), like Plan —
+                opens ProjectDetailPage in its "Top Level Projects" mode
+                (no Project List grid exists yet, ProjectDetailPlan.md §1). */}
+            <Button color="inherit" onClick={() => openListWindow("projects")}>
+              Projects
+            </Button>
           </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />

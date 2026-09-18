@@ -19,52 +19,89 @@ import {
   useCreateDependency,
   useDeleteDependency,
   useDependencies,
+  useProjects,
   useTasks,
+  type DependencyOwner,
 } from "../../api/hooks";
+import type { DependencyRecord } from "../../api/types";
+import { formatApiError } from "../../lib/apiErrors";
 import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
+
+// Either side of a Dependency can be a Task or a Project (KeyConcepts.md's
+// Dependency entry) — one option list combining both, for the "Add
+// Dependency" search dialog (ProjectDetailPlan.md §5.2, generalising this
+// panel beyond its original Task-only shape).
+interface DependencyOption {
+  kind: "task" | "project";
+  id: number;
+  label: string;
+}
 
 // D1.4-4: an explicit "Add Dependency" search-and-pick dialog, replacing
 // V1.2's drag-between-two-listboxes interaction for Level 1.
 export function DependenciesPanel({
-  taskId,
+  owner,
   hideHeading = false,
 }: {
-  taskId: number;
+  owner: DependencyOwner;
   hideHeading?: boolean;
 }) {
-  const { data: dependencies } = useDependencies(taskId);
+  const { data: dependencies } = useDependencies(owner);
   const { data: tasks } = useTasks();
-  const createDependency = useCreateDependency(taskId);
-  const deleteDependency = useDeleteDependency(taskId);
+  const { data: projects } = useProjects();
+  const createDependency = useCreateDependency();
+  const deleteDependency = useDeleteDependency();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [direction, setDirection] = useState<"predecessor" | "successor">("predecessor");
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedOption, setSelectedOption] = useState<DependencyOption | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   // D1.4-10: which list (if either) a cross-window Ctrl-drag is currently
   // hovering, for the drop-target highlight below.
   const [dragOverZone, setDragOverZone] = useState<"predecessor" | "successor" | null>(null);
 
-  const predecessors = dependencies?.filter((d) => d.post_task_id === taskId) ?? [];
-  const successors = dependencies?.filter((d) => d.pre_task_id === taskId) ?? [];
+  const ownerTaskId = "task_id" in owner ? owner.task_id : null;
+  const ownerProjectId = "project_id" in owner ? owner.project_id : null;
+
+  function isThisOwner(taskId: number | null, projectId: number | null): boolean {
+    return (
+      (ownerTaskId != null && taskId === ownerTaskId) ||
+      (ownerProjectId != null && projectId === ownerProjectId)
+    );
+  }
+
+  const predecessors = dependencies?.filter((d) => isThisOwner(d.post_task_id, d.post_project_id)) ?? [];
+  const successors = dependencies?.filter((d) => isThisOwner(d.pre_task_id, d.pre_project_id)) ?? [];
 
   function isDraggedTask(event: DragEvent): boolean {
     return event.dataTransfer.types.includes(TASK_DRAG_MIME_TYPE);
   }
 
   // D1.4-10 spike: dropping a dragged Task onto "Depends upon" makes it a
-  // predecessor of this Task; onto "Dependants" makes it a successor —
+  // predecessor of this owner; onto "Dependants" makes it a successor —
   // same two mutation shapes handleAdd already uses for the explicit "Add
   // Dependency" dialog (D1.4-7), just triggered by a drop instead of a
-  // dialog submit. Dropping a Task onto its own Task Detail window is
-  // ignored, mirroring V1.2's own `if (preTask == postTask) return;` guard.
+  // dialog submit. Dropping a Task onto its own window does nothing,
+  // mirroring V1.2's own `if (preTask == postTask) return;` guard. Only a
+  // Task can be dragged in today (Project Detail isn't a drag source yet —
+  // deferred to Stage 5, Plan.md D1.4-40), but this owner-generic body
+  // works unchanged once it is.
   function handleDropOnZone(event: DragEvent, zone: "predecessor" | "successor") {
     event.preventDefault();
     setDragOverZone(null);
     const draggedTaskId = Number(event.dataTransfer.getData(TASK_DRAG_MIME_TYPE));
-    if (!draggedTaskId || draggedTaskId === taskId) return;
+    if (!draggedTaskId || (ownerTaskId != null && draggedTaskId === ownerTaskId)) return;
+    const ownerField = ownerTaskId != null ? "task" : "project";
+    const ownerId = ownerTaskId ?? ownerProjectId!;
     if (zone === "predecessor") {
-      createDependency.mutateAsync({ pre_task_id: draggedTaskId, post_task_id: taskId });
+      createDependency.mutateAsync({
+        pre_task_id: draggedTaskId,
+        [`post_${ownerField}_id`]: ownerId,
+      });
     } else {
-      createDependency.mutateAsync({ pre_task_id: taskId, post_task_id: draggedTaskId });
+      createDependency.mutateAsync({
+        [`pre_${ownerField}_id`]: ownerId,
+        post_task_id: draggedTaskId,
+      });
     }
   }
 
@@ -74,20 +111,58 @@ export function DependenciesPanel({
       : {};
   }
 
-  function taskDescription(id: number | null) {
-    if (id === null) return "(a Project)";
-    return tasks?.find((t) => t.task_id === id)?.description ?? `Task #${id}`;
+  function otherSideLabel(dep: DependencyRecord, side: "pre" | "post"): string {
+    const taskId = side === "pre" ? dep.pre_task_id : dep.post_task_id;
+    const projectId = side === "pre" ? dep.pre_project_id : dep.post_project_id;
+    if (taskId != null) return tasks?.find((t) => t.task_id === taskId)?.description ?? `Task #${taskId}`;
+    if (projectId != null) {
+      const name = projects?.find((p) => p.project_id === projectId)?.name;
+      return `Project — ${name ?? `#${projectId}`}`;
+    }
+    return "(unknown)";
   }
 
+  const options: DependencyOption[] = [
+    ...(tasks ?? [])
+      .filter((t) => !(ownerTaskId != null && t.task_id === ownerTaskId))
+      .map((t): DependencyOption => ({ kind: "task", id: t.task_id, label: `Task #${t.task_id} — ${t.description}` })),
+    ...(projects ?? [])
+      .filter((p) => !(ownerProjectId != null && p.project_id === ownerProjectId))
+      .map((p): DependencyOption => ({ kind: "project", id: p.project_id, label: `Project — ${p.name}` })),
+  ];
+
   async function handleAdd() {
-    if (selectedTaskId === null) return;
-    if (direction === "predecessor") {
-      await createDependency.mutateAsync({ pre_task_id: selectedTaskId, post_task_id: taskId });
-    } else {
-      await createDependency.mutateAsync({ pre_task_id: taskId, post_task_id: selectedTaskId });
+    if (!selectedOption) return;
+    setAddError(null);
+    const ownerField = ownerTaskId != null ? "task" : "project";
+    const ownerId = ownerTaskId ?? ownerProjectId!;
+    const otherField = selectedOption.kind;
+    try {
+      if (direction === "predecessor") {
+        // The selected item is the predecessor (pre); this owner is the successor (post).
+        await createDependency.mutateAsync({
+          [`pre_${otherField}_id`]: selectedOption.id,
+          [`post_${ownerField}_id`]: ownerId,
+        });
+      } else {
+        // This owner is the predecessor (pre); the selected item is the successor (post).
+        await createDependency.mutateAsync({
+          [`pre_${ownerField}_id`]: ownerId,
+          [`post_${otherField}_id`]: selectedOption.id,
+        });
+      }
+      setDialogOpen(false);
+      setSelectedOption(null);
+    } catch (err) {
+      // Found missing entirely while verifying ProjectDetailPlan.md's own
+      // generalisation of this panel: creating a Dependency requires being
+      // owner-or-TeamLeadUser on *both* sides (dependencies.py's
+      // create_dependency) — a real, common rejection (e.g. picking a Task
+      // on a Team the caller has no standing on) that silently vanished as
+      // an unhandled promise rejection before this, leaving the dialog
+      // just sitting there with no visible feedback.
+      setAddError(formatApiError(err, "please try again."));
     }
-    setDialogOpen(false);
-    setSelectedTaskId(null);
   }
 
   return (
@@ -129,7 +204,7 @@ export function DependenciesPanel({
               </IconButton>
             }
           >
-            <ListItemText primary={taskDescription(dep.pre_task_id)} />
+            <ListItemText primary={otherSideLabel(dep, "pre")} />
           </ListItem>
         ))}
         {predecessors.length === 0 && (
@@ -169,7 +244,7 @@ export function DependenciesPanel({
               </IconButton>
             }
           >
-            <ListItemText primary={taskDescription(dep.post_task_id)} />
+            <ListItemText primary={otherSideLabel(dep, "post")} />
           </ListItem>
         ))}
         {successors.length === 0 && (
@@ -179,7 +254,15 @@ export function DependenciesPanel({
         )}
       </List>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+          setAddError(null);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Add Dependency</DialogTitle>
         <DialogContent>
           <ToggleButtonGroup
@@ -193,15 +276,31 @@ export function DependenciesPanel({
             <ToggleButton value="successor">Is depended upon by</ToggleButton>
           </ToggleButtonGroup>
           <Autocomplete
-            options={tasks?.filter((t) => t.task_id !== taskId) ?? []}
-            getOptionLabel={(task) => `#${task.task_id} — ${task.description}`}
-            onChange={(_event, value) => setSelectedTaskId(value?.task_id ?? null)}
-            renderInput={(params) => <TextField {...params} label="Task" autoFocus />}
+            options={options}
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(a, b) => a.kind === b.kind && a.id === b.id}
+            onChange={(_event, value) => {
+              setSelectedOption(value);
+              setAddError(null);
+            }}
+            renderInput={(params) => <TextField {...params} label="Task or Project" autoFocus />}
           />
+          {addError && (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+              {addError}
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAdd} disabled={selectedTaskId === null}>
+          <Button
+            onClick={() => {
+              setDialogOpen(false);
+              setAddError(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleAdd} disabled={!selectedOption || createDependency.isPending}>
             Add
           </Button>
         </DialogActions>

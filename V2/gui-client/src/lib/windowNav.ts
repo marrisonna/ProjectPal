@@ -149,13 +149,24 @@ export function openNamedWindow(path: string, windowName: string, features?: str
 // that 700 still felt tight.
 const TASK_DETAIL_WINDOW_FEATURES = "width=728,height=800";
 
+// ProjectDetailPage.tsx's own card is a similar width to Task Detail's, but
+// its embedded sub-Project/Task tree (ProjectDetailPlan.md §4.4) needs more
+// vertical room to actually be useful than Task Detail's flat field layout
+// does — same width, taller default height.
+const PROJECT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
+
+function windowFeaturesFor(entityType: string): string | undefined {
+  if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
+  if (entityType === "projects") return PROJECT_DETAIL_WINDOW_FEATURES;
+  return undefined;
+}
+
 /** One singleton window per (entityType, entityId) — see openNamedWindow. */
 export function openItemWindow(entityType: string, entityId: string | number): void {
-  const features = entityType === "tasks" ? TASK_DETAIL_WINDOW_FEATURES : undefined;
-  openNamedWindow(`/${entityType}/${entityId}`, `${entityType}-${entityId}`, features);
+  openNamedWindow(`/${entityType}/${entityId}`, `${entityType}-${entityId}`, windowFeaturesFor(entityType));
 }
 
 /** One singleton window for a whole list view (e.g. "tasks" -> "All Tasks"). */
 export function openListWindow(entityType: string): void {
-  openNamedWindow(`/${entityType}`, `${entityType}-list`);
+  openNamedWindow(`/${entityType}`, `${entityType}-list`, windowFeaturesFor(entityType));
 }

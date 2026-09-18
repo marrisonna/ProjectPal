@@ -31,6 +31,7 @@
    - [All Tasks](#all-tasks-glossary)
    - [Plan View (Gantt View)](#plan-view-glossary)
    - [Task Detail](#task-detail-glossary)
+   - [Project Detail](#project-detail-glossary)
 
 This glossary explains the terms you'll come across while using ProjectPal. It stays focused on what these things mean and why they matter to you as a user — not on how ProjectPal is built. Where a term is central to one particular screen, this glossary gives you the short version and points you to that screen's own document for the full picture.
 
@@ -175,3 +176,8 @@ A visual timeline showing Projects and their Tasks, laid out against real dates,
 ### Task Detail
 
 The screen showing everything about one Task — its fields, its Resources, and its Dependencies/Attachments/Remarks — opened by double-clicking that Task in All Tasks or Plan View. See `TaskDetailView.md` for the full guide.
+
+<a id="project-detail-glossary"></a>
+### Project Detail
+
+The screen showing everything about one Project — its own fields, and a browsable tree of its sub-Projects and Tasks — opened by clicking that Project's name anywhere in ProjectPal, or from the **Projects** button's own top-level browser. See `ProjectDetailView.md` for the full guide.
