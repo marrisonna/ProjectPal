@@ -861,6 +861,13 @@ export function TaskGrid({
         columnHeaderHeight={HEADER_HEIGHT}
         disableColumnMenu
         disableColumnFilter
+        // Row *selection* (a separate concept from cell focus, and one
+        // TaskGrid has no use for — no checkbox column, no bulk row
+        // actions) is what was painting a flat grey over a clicked row's
+        // own urgency colour. The focused cell's own black border comes
+        // from cell focus, not row selection, so disabling this leaves
+        // that border exactly as it was.
+        disableRowSelectionOnClick
         showColumnVerticalBorder
         showCellVerticalBorder
         processRowUpdate={processRowUpdate}
