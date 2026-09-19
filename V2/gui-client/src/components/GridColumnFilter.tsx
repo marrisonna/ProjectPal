@@ -215,18 +215,20 @@ export function FilterableHeader({
    * `withFilter` for why this is a number, not "100%". */
   columnWidth: number;
   /**
-   * Whether the filter box + button beneath the label are actually usable
+   * Whether the filter box + button beneath the label are actually shown
    * right now ("Show Filter"/"Hide filter", TaskGrid.tsx's own right-click
-   * menu, D1.4-56). Deliberately `visibility: hidden` + `pointerEvents:
-   * none` here, not conditionally rendered/removed: the label row above
-   * must stay pixel-identical (same font weight, same position) whether
-   * this is showing or not — confirmed as a real, reported bug when an
-   * earlier version fell back to DataGrid's own default header renderer
-   * instead, which centred its single line differently and used a lighter
-   * font weight, both changing the label's own appearance depending on
-   * this flag. Keeping the same element always present, just invisible,
-   * guarantees the label's own layout box is computed identically either
-   * way.
+   * menu, D1.4-56). `false` omits that row entirely, freeing the vertical
+   * space it used to occupy for data rows instead — TaskGrid.tsx's own
+   * `columnHeaderHeight` shrinks to match whenever this is `false` for
+   * every column, so hiding the filter genuinely reclaims screen space
+   * rather than leaving it blank underneath the label (the original ask
+   * for hiding this at all). The *label* above it is a separate, always
+   * identically-styled element either way (still `fontWeight: 700`, same
+   * padding) — confirmed as a real, reported bug when an earlier version
+   * instead swapped to DataGrid's own default header renderer while
+   * hidden, which centred its single line differently and used a lighter
+   * font weight, changing the label's own appearance depending on this
+   * flag; that swap is gone, only this row's own presence changes now.
    */
   filterRowVisible?: boolean;
 }) {
@@ -271,6 +273,7 @@ export function FilterableHeader({
       >
         {label}
       </Box>
+      {filterRowVisible && (
       <Box
         ref={rowRef}
         sx={{
@@ -278,8 +281,6 @@ export function FilterableHeader({
           gap: 0,
           height: 20,
           width: columnWidth,
-          visibility: filterRowVisible ? "visible" : "hidden",
-          pointerEvents: filterRowVisible ? "auto" : "none",
         }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
@@ -329,6 +330,7 @@ export function FilterableHeader({
           <FilterListIcon sx={{ fontSize: 13 }} />
         </Box>
       </Box>
+      )}
       {open && popoverProps && (
         <FilterChecklistPopover
           options={popoverProps.options}

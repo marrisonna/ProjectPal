@@ -62,6 +62,11 @@ import {
 // these exact pixel values, and why `density="compact"` is never used.
 const DENSE_ROW_HEIGHT = 22;
 const HEADER_HEIGHT = 48;
+// With the filter row hidden (D1.4-56's "Show Filter"/"Hide filter" toggle),
+// the header only needs to fit FilterableHeader's own label line — freeing
+// the rest of HEADER_HEIGHT back to data rows is the whole point of hiding
+// it, not leaving it as blank space under the label.
+const HEADER_HEIGHT_NO_FILTER_ROW = 24;
 
 // The full column catalog (TaskGridPlan.md §4.2) — identical set, order,
 // and value-getters to today's All Tasks. A window's own `columns` prop
@@ -940,7 +945,7 @@ export function TaskGrid({
           openTask(params.row);
         }}
         rowHeight={DENSE_ROW_HEIGHT}
-        columnHeaderHeight={HEADER_HEIGHT}
+        columnHeaderHeight={filterVisible ? HEADER_HEIGHT : HEADER_HEIGHT_NO_FILTER_ROW}
         disableColumnMenu
         disableColumnFilter
         // Row *selection* (a separate concept from cell focus, and one
