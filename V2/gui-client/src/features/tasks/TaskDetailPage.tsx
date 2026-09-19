@@ -284,6 +284,23 @@ export function TaskDetailPage() {
       .map((pr) => pr.person_id),
   );
   const resourceCandidates = activePeople.filter((p) => teamResourcePersonIds.has(p.person_id));
+  // A Task can end up assigned to someone who's no longer a valid Resource
+  // candidate at all (no longer an active team Resource — e.g. removed
+  // from the Team since being assigned, the reported case) — that person
+  // must still show up here, checked, so a Lead User can actually see and
+  // remove them; without this they were invisible in the checklist
+  // entirely, with no way to unassign them from this screen. Only widens
+  // the *Resources* checklist, not `resourceCandidates` itself, so the
+  // Owner dropdown (sortedOwnerPeople, below) keeps its own stricter
+  // "genuine current Resource" candidate set unaffected — reassigning
+  // Owner *to* someone in this situation was never the ask. Once
+  // unassigned here, they stop appearing (correctly) since they're still
+  // not a real candidate — this only ever surfaces someone who's
+  // *currently* checked, never offers them as a fresh pick.
+  const staleAssignedPeople = (people ?? []).filter(
+    (p) => resourceIds.has(p.person_id) && !resourceCandidates.some((c) => c.person_id === p.person_id),
+  );
+  const resourceListCandidates = [...resourceCandidates, ...staleAssignedPeople];
   function byDisplayName(a: { person_id: number }, b: { person_id: number }) {
     return personDisplayName(a.person_id, teamProject?.team_id, people, personRoles).localeCompare(
       personDisplayName(b.person_id, teamProject?.team_id, people, personRoles),
@@ -296,7 +313,7 @@ export function TaskDetailPage() {
   // Sorted and displayed by each Person's Team-scoped display name
   // (D1.4-21: nickname if this Team set one, else their plain name),
   // matching what's actually shown.
-  const sortedResourcePeople = [...resourceCandidates].sort((a, b) => {
+  const sortedResourcePeople = [...resourceListCandidates].sort((a, b) => {
     const aAssigned = resourceIds.has(a.person_id);
     const bAssigned = resourceIds.has(b.person_id);
     if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
