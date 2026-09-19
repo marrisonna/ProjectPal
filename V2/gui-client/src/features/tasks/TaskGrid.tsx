@@ -14,7 +14,12 @@ import {
 import Box from "@mui/material/Box";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CheckIcon from "@mui/icons-material/Check";
 import { useDeleteTask, useUpdateTaskField } from "../../api/hooks";
 import {
   PRIORITY_LEVELS,
@@ -290,6 +295,13 @@ export function TaskGrid({
   const [filterState, setFilterState] = useState<Record<string, ColumnFilterState>>(
     () => initialFilterState ?? {},
   );
+  // `showFilters` is only the *initial* value (§4.6) — V1.2's own real
+  // GridControl (Requirements/UserInterfaceWindows.md §3.20) lets the user
+  // toggle the filter row's visibility themselves at runtime, via the same
+  // right-click menu this reproduces (D1.4-56), independent of whatever an
+  // embedding window configured it to start as.
+  const [filterVisible, setFilterVisible] = useState(showFilters);
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
 
   function setContains(field: string, contains: string) {
     setFilterState((prev) => ({
@@ -433,8 +445,13 @@ export function TaskGrid({
   // columns array (and so this object) is already fully built.
   const filterConfigs: Record<string, FilterConfig> = {};
 
+  // V1.2's own ApplyFiltersToRows applies every filter's current value
+  // regardless of whether the filter row itself is visible right now
+  // (`m_filterIsVisible` gates only the row's own layout/visibility,
+  // Requirements/UserInterfaceWindows.md §3.20) — hiding the boxes never
+  // silently drops whatever was already typed into them. Matched here:
+  // filtering is driven by `filterState` alone, never by `filterVisible`.
   function passesAllFilters(row: TaskRecord, excludeField?: string): boolean {
-    if (!showFilters) return true;
     for (const field of Object.keys(filterConfigs)) {
       if (field === excludeField) continue;
       const config = filterConfigs[field];
@@ -460,8 +477,11 @@ export function TaskGrid({
     getValues: (row: TaskRecord) => string[],
     sortType: FilterSortType,
   ): GridColDef<TaskRecord> {
-    if (!showFilters) return { ...col, hideSortIcons: true };
+    // Registered regardless of `filterVisible` — a filter set while the
+    // row was visible must keep working after the user hides it (see
+    // passesAllFilters's own comment).
     filterConfigs[col.field] = { getValues, sortType };
+    if (!filterVisible) return { ...col, hideSortIcons: true };
     return {
       ...col,
       hideSortIcons: true,
@@ -830,8 +850,62 @@ export function TaskGrid({
     else openItemWindow("tasks", row.task_id);
   }
 
+  // Right-click-anywhere-on-the-grid menu (D1.4-56), reproducing V1.2's own
+  // GridControl exactly (Requirements/UserInterfaceWindows.md §3.20,
+  // GridControl.cs: `dataGridView.ContextMenuStrip = contextMenuStrip1`,
+  // attached to the whole grid, not just its filter row) — the standard
+  // MUI "anchor a Menu at the click position" recipe.
+  function handleContextMenu(event: React.MouseEvent) {
+    event.preventDefault();
+    setContextMenu(contextMenu === null ? { mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : null);
+  }
+
+  function handleCloseContextMenu() {
+    setContextMenu(null);
+  }
+
+  function handleResetAllFilters() {
+    setFilterState({});
+    handleCloseContextMenu();
+  }
+
+  function handleToggleShowFilter() {
+    setFilterVisible((prev) => !prev);
+    handleCloseContextMenu();
+  }
+
+  // V1.2's own "Copy All" (GridControl.cs's selectAllToolStripMenuItem_Click):
+  // a tab-separated, newline-separated copy of every currently visible row
+  // and column — header row first — straight to the OS clipboard, in
+  // whatever the user's current sort order is (V1.2 excludes its own
+  // hidden "column zero," the underlying-object column; the equivalent
+  // here is the `__delete` actions column, excluded the same way).
+  // `getCellParams(...).formattedValue` mirrors V1.2's own per-column
+  // `m_columnFormats`-driven text — what's actually shown in the cell, not
+  // the raw underlying value (matters for Owner/Requestor, whose real
+  // value is a person_id).
+  async function handleCopyAll() {
+    const dataColumns = columns.filter((c) => c.field !== "__delete");
+    const header = dataColumns.map((c) => c.headerName ?? c.field).join("\t");
+    const lines = apiRef.current.getSortedRowIds().map((id) =>
+      dataColumns
+        .map((c) => {
+          const params = apiRef.current.getCellParams(id, c.field);
+          const value = params.formattedValue ?? params.value;
+          return value == null ? "" : String(value);
+        })
+        .join("\t"),
+    );
+    try {
+      await navigator.clipboard.writeText([header, ...lines].join("\n"));
+    } catch (err) {
+      setSnackbarError(formatApiError(err, "could not copy to the clipboard."));
+    }
+    handleCloseContextMenu();
+  }
+
   return (
-    <Box sx={{ height: 600 }}>
+    <Box sx={{ height: 600 }} onContextMenu={handleContextMenu}>
       <DataGrid<TaskRecord>
         apiRef={apiRef}
         rows={filteredTasks}
@@ -899,6 +973,25 @@ export function TaskGrid({
           {snackbarError}
         </Alert>
       </Snackbar>
+      <Menu
+        open={contextMenu !== null}
+        onClose={handleCloseContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={contextMenu !== null ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
+      >
+        <MenuItem onClick={handleResetAllFilters} dense>
+          Reset All Filters
+        </MenuItem>
+        <MenuItem onClick={handleCopyAll} dense>
+          Copy All
+        </MenuItem>
+        <MenuItem onClick={handleToggleShowFilter} dense>
+          <ListItemIcon sx={{ minWidth: 28 }}>
+            {filterVisible && <CheckIcon fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>Show Filter</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }
