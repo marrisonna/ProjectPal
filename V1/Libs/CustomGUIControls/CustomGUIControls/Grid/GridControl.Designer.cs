@@ -130,27 +130,27 @@
             this.selectAllToolStripMenuItem,
             this.showFilterToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(154, 70);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(165, 70);
             this.contextMenuStrip1.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuStrip1_Opening);
             // 
             // resetAllFiltersToolStripMenuItem
             // 
             this.resetAllFiltersToolStripMenuItem.Name = "resetAllFiltersToolStripMenuItem";
-            this.resetAllFiltersToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.resetAllFiltersToolStripMenuItem.Size = new System.Drawing.Size(164, 22);
             this.resetAllFiltersToolStripMenuItem.Text = "&Reset All Filters";
             this.resetAllFiltersToolStripMenuItem.Click += new System.EventHandler(this.resetAllFiltersToolStripMenuItem_Click);
             // 
             // selectAllToolStripMenuItem
             // 
             this.selectAllToolStripMenuItem.Name = "selectAllToolStripMenuItem";
-            this.selectAllToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.selectAllToolStripMenuItem.Size = new System.Drawing.Size(164, 22);
             this.selectAllToolStripMenuItem.Text = "&Copy All";
             this.selectAllToolStripMenuItem.Click += new System.EventHandler(this.selectAllToolStripMenuItem_Click);
             // 
             // showFilterToolStripMenuItem
             // 
             this.showFilterToolStripMenuItem.Name = "showFilterToolStripMenuItem";
-            this.showFilterToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.showFilterToolStripMenuItem.Size = new System.Drawing.Size(164, 22);
             this.showFilterToolStripMenuItem.Text = "Show Filter";
             this.showFilterToolStripMenuItem.Click += new System.EventHandler(this.showFilterToolStripMenuItem_Click);
             // 

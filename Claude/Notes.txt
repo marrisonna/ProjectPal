@@ -323,12 +323,249 @@ No changes yet, just tell me what you think.
 
 How feasible is it to implement the urgency calculation now, using exactly the PP V1.2 algorithm?
 
+When a Team Lead logs in, on the All Tasks view, they should only see tasks for teams that they belong to.
+
+
+
+
+
+We don't need the 'orig_task_number' column on the task table, or anywhere throughout the code base or windows - please remove it everywhere - regenerate the database.
+While regenerating the database, once the data is loaded into the database, create a SQL script that will adjust all of the start_date and due_date fields on the project table.
+Where a date is less than 1-Dec-2014, I want to adjust it my adding on 4372 days.
+Run this script was it has been created.  
+Each time the database is regenerated from now on, going forwards run this script after creating and populating the database, until I say to stop using it.
+The idea is that the original data is preserved and this script makes some last minute adjustments that will aid some testing I want to do.
+I may change or remove this script in the future.
+
+After doing the above do the following.
+
+Can you double check the urgency calculation detailed in Requirements/KeyConcepts.md against the Project Pal V1.2 code base and verify it is correct and complete in the document.
+If you don't need any further clarification from me, can you please go ahead and implement the code needed to support calculating the urgency, then modify the
+All Tasks GUI to show the colour coding, using the same colour algorithm as Project Pal V1.2
+
+
+
+I need zoom functionality.  
+The current display can be taken as the initial definition of 100% zoom for both axes.
+
+By using Ctrl+Mouse scroll wheel I want to be able to zoom in and out horizontally.  The centre date should remain constant by centre I
+mean the date of the centre of the area being displayed for the horizontal centre.
+
+By using Shift+Mouse scroll wheel I want to be able to zoom in and out vertically. The centre vertically should remain constant, that is, the central task/project being displayed for the virtical centre.
+This means the text size will need to change.
+I don't the area used to display the text expand or contract.
+
+If both Shift and Ctrl are pressed, the zoom should be on both axes.
+
+Can you make a little more space under the 'Top Level Projects' title.   I want to add some extra controls in a line beneath the title and above the Gantt graphic area.
+The first I want to add is a Horizontal and virtical zoom indicator.  This will be a Label that says 'Zoom: H', followed by an edit box that shows the percentage horizontal zoom, 
+followed a label that says 'V', followed by an edit box that shows the percentage vertical zoom.
+I'd also like a button that says 'Zoom Reset', that resets both zooms to 100%.
+I'd also like a button that says 'Today' which horizontally scrolls the Gantt so that today is positioned 25% from the left of the Gantt graphic area.
+
+
+
+
+That's works and looks good.
+I'd like to make a change for zooming in.
+Instead of holding the centre of the graphic constant, instead, determine the date and task/project at the current mouse location.
+After the zoom in, scroll the window so that the same date and task/project are located at exactly the current mouse location.
+This allows the use to focus in on an area of interest.
+
+At both ends of a project box on the Gantt chart, I would like a faint vertical line to be draw downwards to the extent of the its child tasks/projects.
+
+I would like a new line for controls to be added below the current line that contains the zoom indicators.
+When the mouse is above a task or project bar on the gantt graphical area, I would like the name of the project/test to be displayed in a read only label control
+that is placed on this new line of controls.  The left edge of the label control should be inline with the left edge of the gantt graphic area.
+When the mouse move off a task or project bar, the label should be empty.
+Look at the code in ProjectPal V1.2 to see how it creates the text from projects and tasks.  It uses a special syntax to show the project hierarchy to the task/project of interest.
+
+
+As the cursor moves over the I'd like the gantt, I'd the date under the cursor to be shown as text.  The text should be placed at the beginning of the
+second line of controls, before the task/project name indicator.  The same style should be used as for the task/project name indicator.
+The right hand edge of this control should be 2ems to left of the left hand edge of the gantt graphical area, and the text should be right aligned.
+
+I'd like the gantt graphic area to have a background colour, I'd like to be a very light, pastal green, similar to one used by ProjectPal V1.2, but maybe even slightly lighter than that.
+
+I'd like the Gantt graphical area to have very faint vertical lines across the whole height of the graphic, placed at the beginning of every Monday.\
+The colour and thickness of these lines should be the same as the vertical lines at the end of each project bar, however, the opacity should be 50%.
+I'd also like similar bars to be should at the start of each day which is the 1st day of month.  The lines should be same as the weekly lines, except they should be twice as thick.
+
+
+
+In ProjectPal V1.2, its gantt graphic uses an unusual graphical syntax for projects.  Rather than then being just a bar, they are instead a box, where the box is drawn around all of the child tasks/projects.
+I would like to add a tick box
+to the top line of controls called 'Boxed', when it is ticked, a box is drawn around all of each projects child tasks/projects.  When not ticked
+the current view, behaviour prevails.
+In 'Boxed' mode there is a subtle different, the current functionality that shows the project/task name under the mouse (in the second line of controls) should
+change so that the project name is shown if the mouse is any where inside a project box.  If there is a child project, then the child's project text is shown rather than 
+the parents.
+One way to achieve this might be to change the current project 'bar' into a rectangle that is a parent (graphically) for its task/project children.  The contents
+of the rentangle possibly needs to made mostly transparant, (e.g. 20% opacity).  This should mean that projects within projects should appear slight darker than their parent.
+Have a think, tell me what you think.
+
 ---------------------------
 
-We don't need the 'orig_task_number' column on the task table, or anywhere through the code base or windows - please remove it.
+Have a go at the following 8 changes.
 
-Can you give me a SQL script that will adjust all of the start_date and due_date fields on the project table.
-I the date is less than 1-Dec-2014, I want to add on 4372 days.
-Don't run the script.
+Take them one at a time, in the order given, they are not dependant upon each other, so no need to consume your whole context with all of them at once.
 
+Do a commit after each one.
+
+At the end, give me a status report for each of them.
+
+If you get stuck on one and need my input, continue with the next one and ask me once there is nothing more you can do.
+
+
+1. The current 'Dashboard' window is not required.
+When I log into Project Pal as a non team-lead, the first window I should see is the All Tasks Window.
+A team lead should see the 'MainWindow' when they login - however, that window is not implemented yet, so a team-lead should also see the All Tasks window first until the 'MainWindow' has been developed - make a note.
+Implement these changes.
+
+2. The Projects shown on the Project view should only be projects that a user belongs to.
+
+3. There is problem when vertically resizing the window.  The bottom of the Gantt area does not stick to the bottom of the window.  When the vertical size
+increase, the space between the bottom of the gantt area and the bottom of the window increases.  When the vertical size gets smaller, the space gets small
+and looks like it goes negative, hiding the bottom of the gantt area, that this, the horizontal scroll bar at the bottom become hidded, and an extra vertical 
+scroll bar appears on the right for the window as a whole
+
+4. Allow the user to manually expand or contract, horizontally, the area where the Gantt text is displayed.  The Gantt graphical area should should contract/expand at the same time.
+On the first line of controls, after the today button, add a check box 'Show Names',  if not ticked, the the Gantt text is not displayed.
+If the user completely contracts the area where the Gantt text is displayed (and lets go off the mouse button), then the tick box will automatically switch to off.
+If it is not ticked, and then is ticked, the Gantt text is displayed with the default width, (which is the width that is used in the implementation right now).
+
+5. At the bottom, centred underneath each month start marker, I'd like a small text label the indicates the month that is about to begin in the format Mmm.\
+Each Jan, the year should be include, e.g., Mmm-YY, e.g., Jan-26.\
+This needs to be underneath the gantt graphical area, but above the horizontal scroll bar, so some extra space needs to be added there.
+
+6. Allow the user to re-order the project / task vertically.  The user is not allowed to change the project hierarchy or to change 
+the parent project of a task, but they are allow to re-order the projects/task as long as long as it involves no changes
+to the database.  They should be able to do this by clicking on a project/task, dragging it up or down and dropping it.
+While being dragged, a 50% opaque text label that represents the project/task name should be used.
+The drag feature should stop the label when it moves beyond the scope that it may be modified, e.g., a task or project cannot be dragged
+beyound the bounds of the parent project.
+This change is local to use and can be memorised in a manner that is local to the user (may be with a cookie?), add a memorise order button underneath the text area where the 
+gannt project/task names are listed.
+
+
+7. If I double click on a task/project label on the left hand side text area, the related GUI for the Task or Project should be opened.
+
+8. The tooltip popups on the task and projects on the Gantt graphical area, can you move these about 15 pixel to the right, since when they appear 
+the first letter is obscured by the mouse cursor.
+
+Can you add a new tick box to the right of 'Boxed' call 'Weekends'.  If it is not checked, then the graphic area of the gantt chart will exclude weekends.
+This means that between each week vertical line, there will only be five days, rather than seven.  If a task/project finishes on a Saturday or Sunday, it will be 
+drawn as if it ends at the end of the Friday.  If a task/project starts on a Saturday or Sunday, it will be drawn as if it starts at the beginning of the Monday.
+If the check box is checked, then Saturday and Sundays will be included in the display, which is effectively how it is shown right now.  The default value should be not checked.
+
+
+===========
+
+I'd like you to create a document called 4_GuiClient/PlanViewDesign.md\
+In that document I'd like you to document, in detail, all the design decisions and implementation details for the PlanView.  
+To be clear, I don't mean to document the code, but I mean to document all of the 'rules' about how it looks and behaves, e.g,
+colours, line widths, opaqueness, how the zooms work (what is centred), the drag and drop for task/project titles, the algorithm for formulating
+the text in the task/project label at that top left of gantt chart, weekend rules, etc.
+Sufficient detail so that someone could code up a PlanView and get a very similar result to the one we have implemented.
+
+I'd like you to create a new directory under V2 called 'UserDocumentation'.
+In that directory we will create a document for each of the GUIs.
+The documentation in that directory will be aimed at the end user, so it should avoid details about how things are implemented and instead focus on
+how things works and how people can use the ProjectPal and the GUIs.
+We will, in time, add other documents in there that cover ProjectPal as whole, e.g., IntroductionToProjectPal.md, UserGuide.md etc., which will 
+focus on ProjectPal as a whole and common themes.
+In each of the GUI documents I'd like you to document each of those GUIs, this can only be done once GUIs are implemented (or ammended)
+since they need to document the actual GUIs, not what is planned.
+The documents should cover what each GUI shows, its purpose and all the possible ways a user can interact with it, (which may need
+to include details on the different types of users and what they are each able to do.)
+The GUI documents each need a table of contents.
+The GUI documents should be as consistent as possible in terms of layout and major section headings.
+We will add more of these GUI focussed documents as we build them - make a note 4_GuiClient/plan.md
+We also need a 'Glossary.md' in that directory - again this should be a Glossay of terms that are meaningful to a user of ProjectPal and
+should stay away from implementation details unless a user really needs to know.
+In addition we need to keep all of the documents in 'UserDocumentation' up to date.
+I need you to record that keeping these up to date is an on going and important activity.  
+I don't want to update these documents on every turn, but before each major commit
+if you feel some of the documents need to be updated, you should let me know or if changes are trivial, do it yourself without asking.
+Can you create a new document in Claude/Guidelines called 'UserDocumentationGuidelines.md' that provided full details of all that I have
+just described
+and ensure it gives sufficient directions to future instanciations of Claude so that they know what they need to do.
+Do not create any documents under 'UserDocumentation' in this turn, just update 4_GuiClient/plan.md and create Claude/Guidelines/UserDocumentationGuidelines.md
+
+
+
+In the directory V2/UserDocumentation, I'd like you to create four documents, one called 'GanttView.md', one called 'AllTaskView.md'  onee called 'TaskDetailView.md'  and 'Glossary.md'
+In each of these I'd like you to follow the UserDocumentationGuidelines.md and create user facing documentation.
+
+==================
+
+On the Gantt GUI, I'd like projects to be collaspable/expandable.  When collasped, all of the children for project are hidden (tasks and projects).
+There needs to be a small icon to left of each project title that indicates whether the project is collasped or expanded, pressing the icon will
+cause collasped to become expanded or expanded to become collasped.
+
+On the All Tasks window, the tasks are shown in a grid.  The grid is sortable and has a filter.
+In addition, we need to add some edit capability to some of the columns, to allow the use to directly edit task from the grid, without having to open
+the TaskDetail Window.
+Further, other windows will require a task grid with the same features.
+This means we need to make common component that can be reused across different windows, lets call this common component the TaskGrid.
+The TaskGrid, needs to be configurable for the columns it displays, by default is will show a fixed set of columns, initially, the default
+set of columns will be as used in the current All Tasks windows.
+The TaskGrid also needs to be configurable as to whether the filter is shown or not.
+By configurable, I mean different windows might create an instance of the TaskGrid with different values for the configurable attributes. 
+Additionally, each TaskGrid will be given a collection of tasks that it needs to render.
+The initial implementation for the TaskGrid can use the grid shown in AllTasks as a template for how it should look and feel.
+The task is to:-
+1. Document this in UserInterfaceWindows.md
+2. Create a common GUI component called TaskGrid that can be reused by any Windows.
+3. Make the current AllTasks window use the common TaskGrid, rather than its current grid.  For this to succeed, the look and feel of the TaskGrid in the AllTask window should be identical to the current AllTask window.
+In order to test this out, I'd like you to rename the current 'AllTasks' window to 'AllTaskOrig' and create a new implementation for the 'AllTask' windows.
+I also want you to make both windows available to me, so that I can compare them side by side.  Once I'm happy the 'AllTaskOrig' window can be deleted from the code base.
+No changes yet, give me your thoughts.
+
+
+1 - I mostly agree, however, across all windows, the experience for any specific user should be the same.  That is, a Team Lead will always see the 'T'.  If
+a task editable in a TaskGrid in one window, it will also be editable in a TaskGrid in a different window.  So the Window dictates more about what can see
+and settings such as, is the filter shown, but for behaviour, that is not Window specific, but is user specific (e.g., a ReadyOnly user can't edit any tasks
+regardless of window, a NormalUser can edit some specific fields of tasks that are assigned to them, but can't edit tasks that they are not assigned to etc.
+So the logic about what behavior is permissable should be outside of the TaskGrid, it should be in a central location, but it is not specific to each Window type.
+
+2 - Editable columns for Level 1 should be Status, T, Priority, Owner (Only by the team lead or lead user for tasks within a project they own), Effort, allocation, task type, requestor - whether a column is actually editable depends on the users role and who owns the task or its parent project.
+
+The Save mechanism needs more work.  V1.2 got around this by having all edits held in memory only until the user pressed a 'Save All' button for everything.
+With the TaskDetail having its own save button this becomes somewhat inconsistent.
+I think this is something we need to worry more about in Level 2, where 'undo' will also be a concern.
+So immediate save from grid is OK for Level 1, but will need to be revisted for Level 2.
+
+3 - I agree to your TaskGridPlan.md document.
+
+4 - /tasks should point to the new page.
+
+Thoughts
+
+
+1. Agreed
+2. Agreed, the same permission module should be used throughout, not just for the TaskGrid.
+3. Effort Type stays read-only, the use would need to go to the TaskDetail window to change this.  This is to avoid accidental changes, since changing the effort type can have large knock effects.
+4. Sounds good.  Once think to check, if a user edits a task field from the TaskGrid, and that task is open in a TaskDetail window, then the TaskDetail window should reflect that change immediately.  Going the other way, any TaskGrids should reflect changes on a TaskDetail window as soons as Save is pressed.  Please confirm.
+5. Pefect
+Yes, it makes sense to make it visible to the user what they can and cannot edit before they attempt to make an edit.
+Tell me your thoughts on the above first.
+
+
+1.  V1.2 is correct here, the assignee to task should be able to update the detailed description and set the status to InProgress or Ready.  We need this in PP V2.
+2.  V1.2 is again correct and we need this in V2
+3.  In Level 1 of V2, we need to be able to delete tasks.  The permissions to do this should be the same as V1.2.  Deleting a Task from the TaskGrid should also be possible, but a confirmation diaglog must be used.
+4. This is all fine.
+5. Good.
+
+
+=====================
+
+In the Resources list box on TaskDetails for task #10990, Friedel is the assigned resource, but he is not listed in the Resources list box.  I'm guessing that is because he is not listed as a
+  rource for that team.  In this case, it is probably the case that he was previously listed as a team resource.
+  The list box should contain everyone that is assigned to a task, even if they are not a team resource.  This allows a Lead User to remove that person if they choose to, if they do, then clearly they will
+  not be able to add them back as a resource for the Task.  But if they are currently set as a resource for a Task, they should be in the Resource list box.
+
+
+  ============
 
