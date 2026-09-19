@@ -179,6 +179,26 @@ function optionLabel(option: ValueOptions): string {
   return typeof option === "object" ? option.label : String(option);
 }
 
+// MUI DataGrid's own default row-hover style is a flat, solid
+// backgroundColor (measured live: rgb(245, 245, 245)) painted straight over
+// whatever a row's own background already was — for this grid, that erases
+// the urgency tint entirely for as long as the cursor sits over the row,
+// rather than just tinting it. Blending the two (50/50) instead means the
+// hover state still reads as "the same row, now highlighted," not "a
+// different, flat-grey row" — the hovered colour is derived from the row's
+// own urgency colour, not a fixed value applied regardless of it.
+const HOVER_GREY = { r: 245, g: 245, b: 245 };
+const RGB_PATTERN = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/;
+
+function blendWithHoverGrey(rgbColor: string): string {
+  const match = rgbColor.match(RGB_PATTERN);
+  if (!match) return rgbColor;
+  const r = Math.round((HOVER_GREY.r + Number(match[1])) / 2);
+  const g = Math.round((HOVER_GREY.g + Number(match[2])) / 2);
+  const b = Math.round((HOVER_GREY.b + Number(match[3])) / 2);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 // A plain native <select>, not MUI's own Select/Menu — the same "native
 // controls, sized explicitly" convention DenseField.tsx already established
 // for this whole app (Q1.4-17), and for the same reason here: MUI's own
@@ -383,11 +403,18 @@ export function TaskGrid({
   // inline-style hook, only discrete classes via getRowClassName.
   const urgencyRowSx = useMemo(() => {
     const sx: Record<string, { bgcolor: string }> = {
-      "& .urgency-row-grey": { bgcolor: "rgb(190, 190, 190)" },
       "& .task-grid-readonly-cell": { bgcolor: READONLY_BG },
     };
+    const greyBase = "rgb(190, 190, 190)";
+    sx["& .urgency-row-grey"] = { bgcolor: greyBase };
+    // A higher-specificity selector than DataGrid's own plain
+    // ".MuiDataGrid-row:hover" (this one carries an extra class, the
+    // urgency class itself) — no !important needed to win.
+    sx["& .urgency-row-grey:hover"] = { bgcolor: blendWithHoverGrey(greyBase) };
     for (let m = 0; m <= 100; m++) {
-      sx[`& .urgency-row-${m}`] = { bgcolor: computeUrgencyColour(100 + m) };
+      const base = computeUrgencyColour(100 + m);
+      sx[`& .urgency-row-${m}`] = { bgcolor: base };
+      sx[`& .urgency-row-${m}:hover`] = { bgcolor: blendWithHoverGrey(base) };
     }
     return sx;
   }, []);
