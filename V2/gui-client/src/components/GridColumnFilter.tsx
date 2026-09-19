@@ -203,6 +203,7 @@ export function FilterableHeader({
   onExactChange,
   getOptions,
   columnWidth,
+  filterRowVisible = true,
 }: {
   label: string;
   state: ColumnFilterState;
@@ -213,6 +214,21 @@ export function FilterableHeader({
   /** The column's own live (resizable) width in px — see AllTaskOrigPage.tsx's
    * `withFilter` for why this is a number, not "100%". */
   columnWidth: number;
+  /**
+   * Whether the filter box + button beneath the label are actually usable
+   * right now ("Show Filter"/"Hide filter", TaskGrid.tsx's own right-click
+   * menu, D1.4-56). Deliberately `visibility: hidden` + `pointerEvents:
+   * none` here, not conditionally rendered/removed: the label row above
+   * must stay pixel-identical (same font weight, same position) whether
+   * this is showing or not — confirmed as a real, reported bug when an
+   * earlier version fell back to DataGrid's own default header renderer
+   * instead, which centred its single line differently and used a lighter
+   * font weight, both changing the label's own appearance depending on
+   * this flag. Keeping the same element always present, just invisible,
+   * guarantees the label's own layout box is computed identically either
+   * way.
+   */
+  filterRowVisible?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [popoverProps, setPopoverProps] = useState<{ options: string[]; anchorRect: DOMRect } | null>(
@@ -257,7 +273,14 @@ export function FilterableHeader({
       </Box>
       <Box
         ref={rowRef}
-        sx={{ display: "flex", gap: 0, height: 20, width: columnWidth }}
+        sx={{
+          display: "flex",
+          gap: 0,
+          height: 20,
+          width: columnWidth,
+          visibility: filterRowVisible ? "visible" : "hidden",
+          pointerEvents: filterRowVisible ? "auto" : "none",
+        }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >

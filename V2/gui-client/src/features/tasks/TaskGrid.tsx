@@ -16,10 +16,8 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import DeleteIcon from "@mui/icons-material/Delete";
-import CheckIcon from "@mui/icons-material/Check";
 import { useDeleteTask, useUpdateTaskField } from "../../api/hooks";
 import {
   PRIORITY_LEVELS,
@@ -481,7 +479,16 @@ export function TaskGrid({
     // row was visible must keep working after the user hides it (see
     // passesAllFilters's own comment).
     filterConfigs[col.field] = { getValues, sortType };
-    if (!filterVisible) return { ...col, hideSortIcons: true };
+    // Always the same renderHeader, never DataGrid's own default one — the
+    // label above the filter box must render identically (same bold
+    // weight, same position) whether the filter box itself is visible or
+    // not; only FilterableHeader's own `filterRowVisible` prop toggles,
+    // never which component renders the header at all. Falling back to
+    // DataGrid's default renderer when hidden was tried first and is
+    // exactly what caused the reported bug — its own single-line, centred,
+    // non-bold layout doesn't match FilterableHeader's own top-aligned
+    // bold label, so the label's own appearance visibly changed depending
+    // on this flag.
     return {
       ...col,
       hideSortIcons: true,
@@ -493,6 +500,7 @@ export function TaskGrid({
           onExactChange={(exact) => setExact(col.field, exact)}
           getOptions={() => getOptionsForField(col.field)}
           columnWidth={params.colDef.computedWidth}
+          filterRowVisible={filterVisible}
         />
       ),
     };
@@ -986,10 +994,7 @@ export function TaskGrid({
           Copy All
         </MenuItem>
         <MenuItem onClick={handleToggleShowFilter} dense>
-          <ListItemIcon sx={{ minWidth: 28 }}>
-            {filterVisible && <CheckIcon fontSize="small" />}
-          </ListItemIcon>
-          <ListItemText>Show Filter</ListItemText>
+          <ListItemText>{filterVisible ? "Hide filter" : "Show Filter"}</ListItemText>
         </MenuItem>
       </Menu>
     </Box>
