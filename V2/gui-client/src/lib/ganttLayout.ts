@@ -254,6 +254,7 @@ function collectRows(
   rows: RawRow[],
   parentKey: string,
   customOrder: GanttCustomOrder | undefined,
+  collapsedProjectIds: Set<number> | undefined,
 ): void {
   const project = graph.projectsById.get(projectId);
   if (!project) return;
@@ -275,6 +276,15 @@ function collectRows(
     hoverLabel: ancestorChain ? `P: ${project.name} : [${ancestorChain}]` : `P: ${project.name}`,
     parentKey,
   });
+
+  // Collapsed (the same client-only, PlanPage-owned state as
+  // GanttCustomOrder above, never persisted server-side): this Project's
+  // own row is still shown, but every descendant Task/sub-Project is left
+  // out of `rows` entirely, rather than merely hidden by the renderer —
+  // so a collapsed Project's own arrows, extent guide lines, and Boxed-mode
+  // box all fall out of the same "no visible children" handling an empty
+  // Project already gets, with nothing extra to special-case.
+  if (collapsedProjectIds?.has(projectId)) return;
 
   // Default order — Tasks by start date, then sub-Projects alphabetically
   // — same as before D1.4-27. A user's own manual reorder (`customOrder`,
@@ -319,7 +329,7 @@ function collectRows(
         parentKey: childKey,
       });
     } else {
-      collectRows(graph, child.project.project_id, depth + 1, today, rows, childKey, customOrder);
+      collectRows(graph, child.project.project_id, depth + 1, today, rows, childKey, customOrder, collapsedProjectIds);
     }
   }
 }
@@ -336,6 +346,7 @@ export function buildGanttLayout(
   today: Date = new Date(),
   customOrder?: GanttCustomOrder,
   excludeWeekends = false,
+  collapsedProjectIds?: Set<number>,
 ): GanttLayout {
   // The one place this whole layout's day-to-pixel mapping is chosen —
   // every x/width/todayX below goes through this, so the "Weekends"
@@ -345,14 +356,14 @@ export function buildGanttLayout(
   const rows: RawRow[] = [];
 
   if (rootProjectId != null) {
-    collectRows(graph, rootProjectId, 0, today, rows, "root", customOrder);
+    collectRows(graph, rootProjectId, 0, today, rows, "root", customOrder, collapsedProjectIds);
   } else {
     const topLevelProjects = Array.from(graph.projectsById.values())
       .filter((p) => p.parent_project_id == null && isVisibleProjectPriority(p.priority))
       .sort((a, b) => a.name.localeCompare(b.name));
     const orderedTopLevel = applyCustomOrder(topLevelProjects, (p) => `project:${p.project_id}`, customOrder?.root);
     for (const project of orderedTopLevel) {
-      collectRows(graph, project.project_id, 0, today, rows, "root", customOrder);
+      collectRows(graph, project.project_id, 0, today, rows, "root", customOrder, collapsedProjectIds);
     }
   }
 

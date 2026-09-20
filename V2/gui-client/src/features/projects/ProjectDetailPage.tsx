@@ -239,9 +239,15 @@ export function ProjectDetailPage() {
   const dueDate = id != null && form?.due_date ? new Date(form.due_date as string) : null;
   const endDate = id != null ? getProjectSchedule(scheduleGraph, id).endDate : null;
 
+  // "Top Level Projects" (no id) fills the whole window, both axes — a
+  // browsing screen, not a form, so there's no reason to leave it capped at
+  // a Task-Detail-style card width/height the way a single Project's own
+  // fields view still is.
+  const fillWindow = id == null;
+
   return (
-    <Box sx={{ p: "6px" }}>
-      <Box sx={{ width: 700, mx: "auto" }}>
+    <Box sx={{ p: "6px", boxSizing: "border-box", ...(fillWindow && { height: "100%", display: "flex", flexDirection: "column" }) }}>
+      <Box sx={fillWindow ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } : { width: 700, mx: "auto" }}>
         <Box
           sx={{
             bgcolor: "#fff",
@@ -252,6 +258,7 @@ export function ProjectDetailPage() {
             display: "flex",
             flexDirection: "column",
             gap: "10px",
+            ...(fillWindow && { flex: 1, minHeight: 0 }),
           }}
         >
           {/* Compact identity header, matching TaskDetailPage.tsx's own
@@ -458,7 +465,15 @@ export function ProjectDetailPage() {
             </Box>
           )}
 
-          <Box sx={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px", p: "6px", maxHeight: 320, overflowY: "auto" }}>
+          <Box
+            sx={{
+              border: "1px solid rgba(0,0,0,0.12)",
+              borderRadius: "6px",
+              p: "6px",
+              overflowY: "auto",
+              ...(fillWindow ? { flex: 1, minHeight: 0 } : { maxHeight: 320 }),
+            }}
+          >
             <Projects
               parentProjectId={id}
               alsoShowTasksForProject={id != null ? project : undefined}

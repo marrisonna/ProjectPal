@@ -302,6 +302,58 @@ describe("buildGanttLayout", () => {
     });
   });
 
+  describe("collapsedProjectIds (Plan View's own Project row collapse/expand)", () => {
+    it("hides every descendant Task/sub-Project of a collapsed Project, but keeps the Project's own row", () => {
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const sub = makeProject({ project_id: 2, parent_project_id: 1, name: "Sub" });
+      const rootTask = makeTask({ task_id: 1, project_id: 1, description: "Root task", effort_in_days: 1 });
+      const subTask = makeTask({ task_id: 2, project_id: 2, description: "Sub task", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph(
+        [rootTask, subTask],
+        [root, sub],
+        [],
+        new Map([[1, 1], [2, 1]]),
+      );
+
+      const layout = buildGanttLayout(graph, [], 1, new Date(), undefined, false, new Set([1]));
+      expect(layout.bars.map((b) => `${b.kind}:${b.id}`)).toEqual(["project:1"]);
+    });
+
+    it("only hides the collapsed Project's own descendants, leaving its siblings and their children untouched", () => {
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const subA = makeProject({ project_id: 2, parent_project_id: 1, name: "SubA" });
+      const subB = makeProject({ project_id: 3, parent_project_id: 1, name: "SubB" });
+      const taskA = makeTask({ task_id: 1, project_id: 2, description: "A task", effort_in_days: 1 });
+      const taskB = makeTask({ task_id: 2, project_id: 3, description: "B task", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph(
+        [taskA, taskB],
+        [root, subA, subB],
+        [],
+        new Map([[1, 1], [2, 1]]),
+      );
+
+      const layout = buildGanttLayout(graph, [], 1, new Date(), undefined, false, new Set([2]));
+      expect(layout.bars.map((b) => `${b.kind}:${b.id}`)).toEqual([
+        "project:1",
+        "project:2",
+        "project:3",
+        "task:2",
+      ]);
+    });
+
+    it("a collapsed Project's own extent guide lines are null, the same as any other childless Project", () => {
+      const root = makeProject({ project_id: 1, name: "Root" });
+      const task = makeTask({ task_id: 1, project_id: 1, description: "T", effort_in_days: 1 });
+
+      const graph = buildScheduleGraph([task], [root], [], new Map([[1, 1]]));
+      const layout = buildGanttLayout(graph, [], 1, new Date(), undefined, false, new Set([1]));
+
+      expect(layout.bars.find((b) => b.id === 1)!.subtreeBottomY).toBeNull();
+    });
+  });
+
   describe("hoverLabel ('P/T - name : [ancestor chain]', adapted from V1.2's own Gantt hover caption)", () => {
     it("for a top-level Project (no parent), is 'P - name' with no ' : [...]' suffix at all", () => {
       const root = makeProject({ project_id: 1, name: "Marketing" });

@@ -70,6 +70,16 @@ const MONTH_LINE_WIDTH = 2;
 // per-depth colour needed.
 const PROJECT_BOX_FILL = "rgba(52, 108, 158, 0.15)";
 
+// Reserved space for a Project row's own collapse/expand chevron
+// (Project.tsx's own rotating ChevronRight, D1.4-24 follow-up) — applied to
+// every row's own label x, Task or Project, so text at the same depth still
+// lines up regardless of kind; a Task row simply leaves it blank, having
+// nothing to toggle.
+const LABEL_ICON_SLOT_WIDTH = 12;
+function labelTextX(depth: number): number {
+  return 8 + depth * 14 + LABEL_ICON_SLOT_WIDTH;
+}
+
 // A bar's own hover tooltip (name + date range) — a plain SVG `<title>`
 // used to do this, but a native title tooltip's position is entirely
 // browser-controlled and can't be offset, so the cursor itself ends up
@@ -160,11 +170,29 @@ export function PlanPage() {
   // Monday, or finished at the end of the preceding Friday.
   const [weekends, setWeekends] = useState(false);
 
+  // Collapse/expand a Project's own row (mirrors the Project GUI
+  // component's own chevron, Project.tsx) — session-only, like
+  // customOrder never written to the server, and not scoped to whichever
+  // Project the chart is currently rooted at: a Project id collapsed while
+  // browsing one scope simply has no effect if it never appears as a row
+  // in another. Collapsing hides every descendant Task/sub-Project — done
+  // in buildGanttLayout itself (ganttLayout.ts's collectRows) so bars,
+  // arrows, and extent guide lines all reflect it for free.
+  const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<number>>(new Set());
+  function toggleProjectCollapsed(id: number) {
+    setCollapsedProjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const layout = useMemo(() => {
     if (!projects || !tasks || !dependencies) return null;
     const graph = buildScheduleGraph(tasks, projects, dependencies, resourceCountByTaskId);
-    return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder, !weekends);
-  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder, weekends]);
+    return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder, !weekends, collapsedProjectIds);
+  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder, weekends, collapsedProjectIds]);
 
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
@@ -433,7 +461,7 @@ export function PlanPage() {
       const key = `${bar.kind}:${bar.id}`;
       const el = labelTextRefs.current.get(key);
       if (!el) continue;
-      const availableWidth = labelColumnWidth - (8 + bar.depth * 14) - 4;
+      const availableWidth = labelColumnWidth - labelTextX(bar.depth) - 4;
       if (el.getComputedTextLength() > availableWidth) truncated.add(key);
     }
     setTruncatedLabelKeys(truncated);
@@ -985,12 +1013,43 @@ export function PlanPage() {
                               setLabelTooltip(null);
                             }}
                           />
+                          {bar.kind === "project" && (
+                            // Collapse/expand chevron (Project.tsx's own
+                            // rotating ChevronRight) — a separate element
+                            // painted on top of the row's own hit-rect
+                            // above, so clicking it toggles collapse
+                            // instead of starting a row-reorder drag or
+                            // opening this Project's own scoped chart
+                            // (stopPropagation keeps the click from
+                            // reaching either of that rect's handlers).
+                            <g
+                              onMouseDown={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleProjectCollapsed(bar.id);
+                              }}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <rect
+                                x={8 + bar.depth * 14 - 3}
+                                y={bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2 - 7}
+                                width={14}
+                                height={14}
+                                fill="transparent"
+                              />
+                              <path
+                                d="M -2.5,-3.5 L 2.5,0 L -2.5,3.5 Z"
+                                fill="rgba(0,0,0,0.55)"
+                                transform={`translate(${8 + bar.depth * 14 + 4}, ${bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2}) rotate(${collapsedProjectIds.has(bar.id) ? 0 : 90})`}
+                              />
+                            </g>
+                          )}
                           <text
                             ref={(el) => {
                               if (el) labelTextRefs.current.set(key, el);
                               else labelTextRefs.current.delete(key);
                             }}
-                            x={8 + bar.depth * 14}
+                            x={labelTextX(bar.depth)}
                             // Vertically centred within this row's own
                             // band (ROW_HEIGHT*scaleY tall, matching the
                             // hover highlight/hit-rect above) via
