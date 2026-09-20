@@ -367,14 +367,14 @@ export function ProjectDetailPage() {
               </Box>
             )}
             {id != null && <DenseButton onClick={() => openListWindow("projects")}>All Projects</DenseButton>}
-            {canEdit && (
-              <DenseButton variant="filled" onClick={handleSave} disabled={!dirty || updateProject.isPending}>
-                Save
-              </DenseButton>
-            )}
             {canDelete && project && (
               <DenseButton onClick={() => handleDeleteProject(project)} disabled={deleteProject.isPending}>
                 Delete
+              </DenseButton>
+            )}
+            {canEdit && (
+              <DenseButton variant="filled" onClick={handleSave} disabled={!dirty || updateProject.isPending}>
+                Save
               </DenseButton>
             )}
           </Box>
@@ -455,7 +455,7 @@ export function ProjectDetailPage() {
                   })
                 }
               >
-                Add New Project
+                Add Subproject
               </DenseButton>
               <DenseButton
                 onClick={() => setDialog({ kind: "addTask", projectId: project.project_id, teamId: project.team_id })}
@@ -486,7 +486,11 @@ export function ProjectDetailPage() {
               resourceIdsByTask={resourceIdsByTask}
               attachmentsCountByTask={attachmentsCountByTask}
               remarksCountByTask={remarksCountByTask}
-              onOpenProject={(p) => navigate(`/projects/${p.project_id}`)}
+              // Opens (or refocuses) that Project's own singleton window
+              // (windowNav.ts's openItemWindow, same as a Task row) rather
+              // than navigating this window away from whatever it's
+              // currently showing.
+              onOpenProject={(p) => openItemWindow("projects", p.project_id)}
               onRenameProject={(p) =>
                 setDialog({
                   kind: "rename",

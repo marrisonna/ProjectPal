@@ -7,8 +7,7 @@ import type {
   ProjectRecord,
   TaskRecord,
 } from "../../api/types";
-import { getTaskSchedule, priorityWeight, type ScheduleGraph } from "../../lib/schedule";
-import { FieldLabel } from "../../components/DenseField";
+import { getTaskSchedule, isProjectActive, priorityWeight, type ScheduleGraph } from "../../lib/schedule";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
 import { EMBEDDED_TASK_GRID_COLUMNS, TaskGrid } from "../tasks/TaskGrid";
 import { Project } from "./Project";
@@ -85,6 +84,10 @@ export interface ProjectsProps extends ProjectTreeSharedProps {
   defaultTaskVisibility?: TaskVisibility;
   /** Required when showToggle is false. */
   taskVisibility?: TaskVisibility;
+  /** Default true — matches V1.2's own "active projects only" checkbox default. */
+  defaultActiveOnly?: boolean;
+  /** Required when showToggle is false. */
+  activeOnly?: boolean;
 }
 
 /**
@@ -120,12 +123,20 @@ export function Projects({
   showToggle = true,
   defaultTaskVisibility = "None",
   taskVisibility: controlledTaskVisibility,
+  defaultActiveOnly = true,
+  activeOnly: controlledActiveOnly,
 }: ProjectsProps) {
   const [ownTaskVisibility, setOwnTaskVisibility] = useState<TaskVisibility>(defaultTaskVisibility);
   const taskVisibility = showToggle ? ownTaskVisibility : controlledTaskVisibility!;
   const visibilityGroupName = useId();
 
-  const siblingProjects = childProjectsOf(projects, parentProjectId);
+  const [ownActiveOnly, setOwnActiveOnly] = useState<boolean>(defaultActiveOnly);
+  const activeOnly = showToggle ? ownActiveOnly : controlledActiveOnly!;
+
+  const allSiblingProjects = childProjectsOf(projects, parentProjectId);
+  const siblingProjects = activeOnly
+    ? allSiblingProjects.filter((p) => isProjectActive(scheduleGraph, p.project_id))
+    : allSiblingProjects;
   const ownTasks = alsoShowTasksForProject
     ? childTasksOf(tasks, alsoShowTasksForProject.project_id, scheduleGraph, taskVisibility)
     : [];
@@ -134,7 +145,27 @@ export function Projects({
     <Box>
       {showToggle && (
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px", mb: "6px" }}>
-          <FieldLabel>Tasks</FieldLabel>
+          <Box
+            component="label"
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              fontSize: DENSE_FONT_SIZE,
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            <Box
+              component="input"
+              type="checkbox"
+              checked={ownActiveOnly}
+              onChange={(event) => setOwnActiveOnly(event.target.checked)}
+              sx={{ width: 13, height: 13, m: 0, cursor: "pointer" }}
+            />
+            Only Active Projects
+          </Box>
+          <Box sx={{ fontSize: DENSE_FONT_SIZE, ml: "12px" }}>Tasks</Box>
           {TASK_VISIBILITY_OPTIONS.map((v) => (
             <Box
               component="label"
@@ -173,20 +204,16 @@ export function Projects({
             attachmentsCountByTask={attachmentsCountByTask}
             remarksCountByTask={remarksCountByTask}
             columns={EMBEDDED_TASK_GRID_COLUMNS}
+            showFilters={false}
           />
         </Box>
       )}
       {siblingProjects.length === 0 && ownTasks.length === 0 ? (
-        <Box
-          component="hr"
-          sx={{
-            width: "28px",
-            height: 0,
-            m: "4px 0 4px 18px",
-            border: "none",
-            borderTop: "1px solid rgba(0,0,0,0.25)",
-          }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: "4px", m: "1px 0 1px 18px" }}>
+          <Box component="hr" sx={{ width: "18px", height: 0, m: 0, border: "none", borderTop: "1px solid rgba(0,0,0,0.4)" }} />
+          <Box sx={{ fontSize: DENSE_FONT_SIZE, color: "rgba(0,0,0,0.4)" }}>none</Box>
+          <Box component="hr" sx={{ width: "18px", height: 0, m: 0, border: "none", borderTop: "1px solid rgba(0,0,0,0.4)" }} />
+        </Box>
       ) : (
         siblingProjects.map((p) => (
           <Project
@@ -202,6 +229,7 @@ export function Projects({
             attachmentsCountByTask={attachmentsCountByTask}
             remarksCountByTask={remarksCountByTask}
             taskVisibility={taskVisibility}
+            activeOnly={activeOnly}
             onOpenProject={onOpenProject}
             onRenameProject={onRenameProject}
             onDeleteProject={onDeleteProject}

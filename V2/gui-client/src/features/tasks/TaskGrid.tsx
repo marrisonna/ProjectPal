@@ -428,6 +428,14 @@ export function TaskGrid({
   const urgencyRowSx = useMemo(() => {
     const sx: Record<string, { bgcolor: string }> = {
       "& .task-grid-readonly-cell": { bgcolor: READONLY_BG },
+      // No fill at all (not even the row's own urgency tint showing
+      // through) — a plain trash icon sitting in its own cell, matching
+      // the unfilled rename/delete/add-task icons on Project.tsx's rows.
+      // "transparent" is the wrong value here even though it sounds
+      // right: a transparent cell lets the row's own colour underneath
+      // show straight through it; an opaque colour is what actually
+      // *blocks* that tint from showing in this one cell.
+      "& .task-grid-delete-cell": { bgcolor: "#fff" },
     };
     const greyBase = "rgb(190, 190, 190)";
     sx["& .urgency-row-grey"] = { bgcolor: greyBase };
@@ -839,7 +847,16 @@ export function TaskGrid({
     field: "__delete",
     type: "actions",
     headerName: "",
-    width: 36,
+    // The "actions" column type inherits GRID_STRING_COL_DEF's own
+    // minWidth: 50 (@mui/x-data-grid's gridActionsColDef.js) — an
+    // unmatched `width` alone is silently clamped back up to 50, which is
+    // what was actually making this cell wider than it looked like it
+    // should be; minWidth/maxWidth both have to be pinned to the same
+    // value as width for the clamp to land on it exactly.
+    width: DENSE_ROW_HEIGHT,
+    minWidth: DENSE_ROW_HEIGHT,
+    maxWidth: DENSE_ROW_HEIGHT,
+    cellClassName: "task-grid-delete-cell",
     sortable: false,
     filterable: false,
     hideSortIcons: true,
@@ -848,7 +865,10 @@ export function TaskGrid({
         ? [
             <GridActionsCellItem
               key="delete"
-              icon={<DeleteIcon fontSize="inherit" />}
+              // Same muted grey as the rename/delete/add-task icons next to
+              // a Project's own name (Project.tsx's ROW_ICON_SX) — matching
+              // that, not the DataGrid action button's own default colour.
+              icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
               label="Delete"
               onClick={() => handleDeleteTask(params.row)}
             />,

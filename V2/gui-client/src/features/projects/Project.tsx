@@ -45,6 +45,7 @@ function expandChevronSx(expanded: boolean) {
 export interface ProjectProps extends ProjectTreeSharedProps {
   project: ProjectRecord;
   taskVisibility: TaskVisibility;
+  activeOnly: boolean;
   initiallyExpanded?: boolean;
 }
 
@@ -69,6 +70,7 @@ export function Project({
   attachmentsCountByTask,
   remarksCountByTask,
   taskVisibility,
+  activeOnly,
   onOpenProject,
   onRenameProject,
   onDeleteProject,
@@ -146,6 +148,7 @@ export function Project({
                 attachmentsCountByTask={attachmentsCountByTask}
                 remarksCountByTask={remarksCountByTask}
                 columns={EMBEDDED_TASK_GRID_COLUMNS}
+                showFilters={false}
               />
             </Box>
           )}
@@ -166,6 +169,7 @@ export function Project({
             onAddTask={onAddTask}
             showToggle={false}
             taskVisibility={taskVisibility}
+            activeOnly={activeOnly}
           />
         </Box>
       )}
