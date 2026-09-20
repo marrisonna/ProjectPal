@@ -4,7 +4,6 @@ import { LoginPage } from "./auth/LoginPage";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AppShell } from "./app/AppShell";
 import { AllTaskPage } from "./features/tasks/AllTaskPage";
-import { AllTaskOrigPage } from "./features/tasks/AllTaskOrigPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
 import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
@@ -42,11 +41,6 @@ export default function App() {
                 (D1.4-XX, Claude/Level1_Implementation/4_GuiClient/Plan.md). */}
             <Route path="/" element={<Navigate to="/tasks" replace />} />
             <Route path="/tasks" element={<AllTaskPage />} />
-            {/* Comparison baseline for the new TaskGrid-based AllTaskPage
-                (TaskGridPlan.md §5.3/D1.4-50) — deleted, along with this
-                route and AppShell.tsx's own temporary nav button, once the
-                user confirms the two are equivalent (§5.4). */}
-            <Route path="/tasks-orig" element={<AllTaskOrigPage />} />
           </Route>
           <Route element={<BareAuthenticatedLayout />}>
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />

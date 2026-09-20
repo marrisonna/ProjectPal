@@ -383,7 +383,7 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 // A missing/unrecognised Priority is always treated as Med (3) — both for
 // a Task's own Priority and every ancestor Project's, matching V1.2's
 // `Priority.HasValue` check (Task) and `?? PriorityValue._3_Med` (Project).
-// Exported for features/projects/ProjectTaskTree.tsx's own sibling-Project
+// Exported for features/projects/Projects.tsx's own sibling-Project
 // ordering (highest Priority first, then alphabetically) — the same
 // Priority-to-number mapping Urgency already uses, not a second one.
 export function priorityWeight(priority: string | null): number {

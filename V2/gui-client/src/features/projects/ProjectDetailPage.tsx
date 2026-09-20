@@ -3,8 +3,6 @@ import { useNavigate, useParams } from "react-router";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import {
   DateField,
   DenseButton,
@@ -16,9 +14,12 @@ import {
 } from "../../components/DenseField";
 import { buildBreadcrumb, type TreeItem } from "../../components/TreePicker";
 import {
+  useAllAttachments,
   useAllDependencies,
+  useAllRemarks,
   useAllTaskResources,
   useAttachments,
+  useComponents,
   useDeleteProject,
   useDependencies,
   usePeople,
@@ -40,7 +41,7 @@ import { buildScheduleGraph, formatDdMmmYy, getProjectSchedule } from "../../lib
 import { RemarksPanel } from "../remarks/RemarksPanel";
 import { DependenciesPanel } from "../dependencies/DependenciesPanel";
 import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
-import { ProjectTaskTree, type TaskVisibility } from "./ProjectTaskTree";
+import { Projects } from "./Projects";
 import { CreateOrRenameProjectDialog } from "./CreateOrRenameProjectDialog";
 import { AddTaskDialog } from "./AddTaskDialog";
 
@@ -62,7 +63,7 @@ type DialogState =
       teamId: number;
       initialName: string;
     }
-  | { kind: "addTask" }
+  | { kind: "addTask"; projectId: number; teamId: number }
   | null;
 
 // D1.4-24-equivalent for Project: singleton-per-project window
@@ -80,10 +81,13 @@ export function ProjectDetailPage() {
   const { data: project, isLoading: projectLoading } = useProject(id);
   const { data: allProjects, isLoading: projectsLoading } = useProjects();
   const { data: tasks, isLoading: tasksLoading } = useTasks();
+  const { data: components } = useComponents();
   const { data: people } = usePeople();
   const { data: personRoles } = usePersonRoles();
   const { data: allDependencies } = useAllDependencies();
   const { data: allTaskResources } = useAllTaskResources();
+  const { data: allRemarks } = useAllRemarks();
+  const { data: allAttachments } = useAllAttachments();
   const updateProject = useUpdateProject(id ?? -1);
   const deleteProject = useDeleteProject();
 
@@ -103,7 +107,6 @@ export function ProjectDetailPage() {
   const [form, setForm] = useState<Record<string, unknown> | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [taskVisibility, setTaskVisibility] = useState<TaskVisibility>("None");
   const [dialog, setDialog] = useState<DialogState>(null);
 
   const loadedProjectIdRef = useRef<number | null>(null);
@@ -117,18 +120,46 @@ export function ProjectDetailPage() {
 
   useDocumentTitle(id != null ? `Project - ${(form?.name as string | undefined) ?? id}` : "Top Level Projects");
 
-  const resourceCountByTaskId = useMemo(() => {
-    const map = new Map<number, number>();
-    for (const r of allTaskResources ?? []) map.set(r.task_id, (map.get(r.task_id) ?? 0) + 1);
+  const resourceIdsByTask = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const r of allTaskResources ?? []) {
+      const list = map.get(r.task_id);
+      if (list) list.push(r.person_id);
+      else map.set(r.task_id, [r.person_id]);
+    }
     return map;
   }, [allTaskResources]);
+
+  const remarksCountByTask = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const r of allRemarks ?? []) {
+      if (r.task_id == null) continue;
+      map.set(r.task_id, (map.get(r.task_id) ?? 0) + 1);
+    }
+    return map;
+  }, [allRemarks]);
+
+  const attachmentsCountByTask = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const a of allAttachments ?? []) {
+      if (a.task_id == null) continue;
+      map.set(a.task_id, (map.get(a.task_id) ?? 0) + 1);
+    }
+    return map;
+  }, [allAttachments]);
+
+  const resourceCountByTaskId = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [taskId, ids] of resourceIdsByTask) map.set(taskId, ids.length);
+    return map;
+  }, [resourceIdsByTask]);
 
   const scheduleGraph = useMemo(
     () => buildScheduleGraph(tasks ?? [], projects, allDependencies ?? [], resourceCountByTaskId),
     [tasks, projects, allDependencies, resourceCountByTaskId],
   );
 
-  if (projectsLoading || tasksLoading || !people || !personRoles) {
+  if (projectsLoading || tasksLoading || !components || !people || !personRoles) {
     return <CircularProgress sx={{ m: 2 }} />;
   }
   if (id != null && (projectLoading || !form)) {
@@ -405,61 +436,54 @@ export function ProjectDetailPage() {
             </>
           )}
 
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <FieldLabel>Tasks</FieldLabel>
-              <ToggleButtonGroup
-                exclusive
-                size="small"
-                value={taskVisibility}
-                onChange={(_event, value) => value && setTaskVisibility(value)}
+          {canCreateHere && project && (
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+              <DenseButton
+                onClick={() =>
+                  setDialog({
+                    kind: "create",
+                    parentProjectId: project.project_id,
+                    parentProjectName: project.name,
+                    teamId: project.team_id,
+                  })
+                }
               >
-                <ToggleButton value="None">None</ToggleButton>
-                <ToggleButton value="Open">Open</ToggleButton>
-                <ToggleButton value="All">All</ToggleButton>
-              </ToggleButtonGroup>
+                Add New Project
+              </DenseButton>
+              <DenseButton
+                onClick={() => setDialog({ kind: "addTask", projectId: project.project_id, teamId: project.team_id })}
+              >
+                Add Task
+              </DenseButton>
             </Box>
-            {canCreateHere && project && (
-              <Box sx={{ display: "flex", gap: "6px" }}>
-                <DenseButton
-                  onClick={() =>
-                    setDialog({
-                      kind: "create",
-                      parentProjectId: project.project_id,
-                      parentProjectName: project.name,
-                      teamId: project.team_id,
-                    })
-                  }
-                >
-                  Add New Project
-                </DenseButton>
-                <DenseButton onClick={() => setDialog({ kind: "addTask" })}>Add Task</DenseButton>
-              </Box>
-            )}
-          </Box>
+          )}
 
           <Box sx={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px", p: "6px", maxHeight: 320, overflowY: "auto" }}>
-            <ProjectTaskTree
+            <Projects
+              parentProjectId={id}
+              alsoShowTasksForProject={id != null ? project : undefined}
               projects={projects}
               tasks={tasks ?? []}
-              rootProjectId={id}
-              graph={scheduleGraph}
-              taskVisibility={taskVisibility}
-              callbacks={{
-                onOpenProject: (p) => navigate(`/projects/${p.project_id}`),
-                onOpenTask: (t) => openItemWindow("tasks", t.task_id),
-                onRenameProject: (p) =>
-                  setDialog({
-                    kind: "rename",
-                    projectId: p.project_id,
-                    parentProjectId: p.parent_project_id ?? -1,
-                    parentProjectName: projects.find((pp) => pp.project_id === p.parent_project_id)?.name ?? "(top level)",
-                    teamId: p.team_id,
-                    initialName: p.name,
-                  }),
-                onDeleteProject: (p) => handleDeleteProject(p),
-                canManageTeam: (teamId) => hasRoleAtLeast(person, teamId, "LeadUser"),
-              }}
+              components={components}
+              people={people}
+              personRoles={personRoles}
+              scheduleGraph={scheduleGraph}
+              resourceIdsByTask={resourceIdsByTask}
+              attachmentsCountByTask={attachmentsCountByTask}
+              remarksCountByTask={remarksCountByTask}
+              onOpenProject={(p) => navigate(`/projects/${p.project_id}`)}
+              onRenameProject={(p) =>
+                setDialog({
+                  kind: "rename",
+                  projectId: p.project_id,
+                  parentProjectId: p.parent_project_id ?? -1,
+                  parentProjectName: projects.find((pp) => pp.project_id === p.parent_project_id)?.name ?? "(top level)",
+                  teamId: p.team_id,
+                  initialName: p.name,
+                })
+              }
+              onDeleteProject={(p) => handleDeleteProject(p)}
+              onAddTask={(p) => setDialog({ kind: "addTask", projectId: p.project_id, teamId: p.team_id })}
             />
           </Box>
 
@@ -487,10 +511,10 @@ export function ProjectDetailPage() {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === "addTask" && id != null && project && (
+      {dialog?.kind === "addTask" && (
         <AddTaskDialog
-          projectId={id}
-          teamId={project.team_id}
+          projectId={dialog.projectId}
+          teamId={dialog.teamId}
           defaultRequestorPersonId={person?.person_id ?? null}
           onClose={() => setDialog(null)}
           onCreated={(task) => {

@@ -57,9 +57,10 @@ import {
   type FilterSortType,
 } from "../../components/GridColumnFilter";
 
-// Same dense, WinForms-like row/header sizing AllTaskOrigPage.tsx already
-// uses — see that file's own top-of-file comment (D-Win-11/14) for why
-// these exact pixel values, and why `density="compact"` is never used.
+// Dense, WinForms-like row/header sizing (D-Win-11/14) — these are the
+// exact literal pixel values wanted; `density="compact"` is deliberately
+// never used, since DataGrid multiplies whatever rowHeight/
+// columnHeaderHeight is *given* by a further density factor on top.
 const DENSE_ROW_HEIGHT = 22;
 const HEADER_HEIGHT = 48;
 // With the filter row hidden (D1.4-56's "Show Filter"/"Hide filter" toggle),
@@ -123,6 +124,15 @@ export const DEFAULT_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
   "detailed_description",
 ];
 
+// V1.2's own narrower embedded-grid column set (`ProjectsGUIComponent.md`
+// §2.1/§4.5, `m_columnOrder`/`m_hiddenTaskColumns`) — the same catalogue,
+// minus `project_id` (redundant inside that Project's own section) and
+// `detailed_description`. Used by `Project`'s own embedded `TaskGrid`
+// instance, not `AllTaskPage`.
+export const EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = DEFAULT_TASK_GRID_COLUMNS.filter(
+  (key) => key !== "project_id" && key !== "detailed_description",
+);
+
 // The 9 columns ever editable in a cell (TaskGridPlan.md §4.4, up from the
 // original 8 once Detailed Description joined per D1.4-52) — Effort Type is
 // deliberately excluded on purpose (large knock-on effects on what Effort
@@ -148,9 +158,8 @@ interface FilterConfig {
 
 export interface TaskGridProps {
   tasks: TaskRecord[];
-  // Reference data this grid's own column value-getters/editors need — the
-  // same queries AllTaskOrigPage.tsx already fetches today, just handed
-  // down instead of fetched internally (TaskGrid is a controlled, data-in
+  // Reference data this grid's own column value-getters/editors need,
+  // handed down rather than fetched internally (TaskGrid is a controlled, data-in
   // component, TaskGridPlan.md §4.1 — it fetches nothing itself).
   projects: ProjectRecord[];
   components: ComponentRecord[];
@@ -413,9 +422,9 @@ export function TaskGrid({
     return scheduledUrgency.get(row.task_id) ?? 100;
   }
 
-  // Same "precompute a palette of CSS classes" approach as
-  // AllTaskOrigPage.tsx (see its own comment) — DataGrid has no per-row
-  // inline-style hook, only discrete classes via getRowClassName.
+  // Precompute a palette of CSS classes, one per possible urgency bucket —
+  // DataGrid has no per-row inline-style hook, only discrete classes via
+  // getRowClassName.
   const urgencyRowSx = useMemo(() => {
     const sx: Record<string, { bgcolor: string }> = {
       "& .task-grid-readonly-cell": { bgcolor: READONLY_BG },
@@ -824,7 +833,7 @@ export function TaskGrid({
   // window's own `columns` catalog (§4.1's "deliberately absent" note):
   // whether the trash icon shows at all is a per-row permission decision
   // (canDeleteRow), not something any window configures (TaskGridPlan.md
-  // §4.10/D1.4-53), matching how ProjectTaskTree.tsx's own trash icon is
+  // §4.10/D1.4-53), matching how Project.tsx's own trash icon is
   // gated purely on permission, never a prop.
   const deleteColumn: GridColDef<TaskRecord> = {
     field: "__delete",
@@ -918,10 +927,22 @@ export function TaskGrid({
   }
 
   return (
-    <Box sx={{ height: 600 }} onContextMenu={handleContextMenu}>
+    <Box onContextMenu={handleContextMenu}>
       <DataGrid<TaskRecord>
         apiRef={apiRef}
         rows={filteredTasks}
+        // Always sizes to its own content (ProjectsGUIComponent.md §4.5,
+        // D1.4-59) — a small embedded per-Project grid doesn't need the
+        // 600px box a full-page one used to be fixed at, and a fixed box
+        // would either clip a taller grid or leave dead space under a
+        // shorter one. Applies everywhere, including AllTaskPage, not just
+        // embedded instances — the outer Box above has no fixed height of
+        // its own for the same reason.
+        autoHeight
+        // No pagination footer once every row already fits on the current
+        // page — nothing to page through. Reappears automatically once
+        // there's genuinely more than one page's worth of Tasks.
+        hideFooter={filteredTasks.length <= 100}
         getRowId={(row) => row.task_id}
         columns={columns}
         // Single click, not the DataGrid default of double click, starts

@@ -1,6 +1,6 @@
 # Project / Projects GUI Components — Design
 
-**Status: design confirmed (`D1.4-58`–`D1.4-62`, `D1.4-64`), no code written yet.** Written before any code, per the user's own request, following the same before-code-review pattern `TaskGridPlan.md`/`ProjectDetailPlan.md` (this folder) already established. `Q1.4-63` (§7) is deliberately left open — build the initial implementation against it, then revisit.
+**Status: implemented (Level 1).** `Project.tsx`/`Projects.tsx` (`V2/gui-client/src/features/projects/`) replace `ProjectTaskTree.tsx` (deleted), matching the design confirmed in `D1.4-58`–`D1.4-62`/`D1.4-64` exactly; `ProjectDetailPage.tsx` (both "Top Level Projects" and single-Project modes) is now a thin wrapper around one `Projects` instance. `Q1.4-63` (§7, embedded-tree area sizing) is still deliberately left open — the initial implementation kept the same fixed `maxHeight: 320` box unchanged, now with a real embedded-TaskGrid tree inside it to revisit that against.
 
 <a id="contents"></a>
 ## Contents

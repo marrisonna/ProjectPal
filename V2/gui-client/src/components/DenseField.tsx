@@ -271,11 +271,17 @@ export function DenseButton({
   variant = "outlined",
   onClick,
   disabled,
+  square,
 }: {
   children: ReactNode;
   variant?: "outlined" | "filled";
   onClick?: () => void;
   disabled?: boolean;
+  /** A single-character button (e.g. the "+"/"−" expand toggle) — width
+   * matches height and content is centred, instead of the normal text
+   * button's horizontal padding, which otherwise reads as a long, mostly
+   * empty rectangle around one character. */
+  square?: boolean;
 }) {
   return (
     <Box
@@ -284,13 +290,16 @@ export function DenseButton({
       disabled={disabled}
       sx={{
         height: 22,
-        px: "12px",
+        width: square ? 22 : undefined,
+        px: square ? 0 : "12px",
         borderRadius: "3px",
         fontSize: DENSE_FONT_SIZE,
         fontWeight: 600,
         letterSpacing: "0.3px",
         display: "flex",
         alignItems: "center",
+        justifyContent: square ? "center" : undefined,
+        flexShrink: 0,
         cursor: disabled ? "default" : "pointer",
         border: variant === "outlined" ? "1px solid rgba(0,0,0,0.23)" : "1px solid transparent",
         // Disabled: the same grey used for a read-only field (READONLY_BG/
@@ -402,7 +411,11 @@ export function FieldTreePicker({
         >
           {breadcrumb || "(none)"}
         </Box>
-        {!readOnly && <DenseButton onClick={() => setOpen((o) => !o)}>{open ? "−" : "+"}</DenseButton>}
+        {!readOnly && (
+          <DenseButton square onClick={() => setOpen((o) => !o)}>
+            {open ? "−" : "+"}
+          </DenseButton>
+        )}
       </Box>
       {open && (
         <TreePicker

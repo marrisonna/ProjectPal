@@ -4,9 +4,9 @@ import branding from "../../branding.json";
 export { branding };
 
 // The one font size every dense, WinForms-like control (DenseField.tsx's
-// edit boxes, DenseButton, AllTaskOrigPage.tsx's grid) shares, so "make the
-// grid match the edit boxes" (or any future density change) is one number
-// to change, not several call sites that happen to currently agree.
+// edit boxes, DenseButton, TaskGrid.tsx) shares, so "make the grid match
+// the edit boxes" (or any future density change) is one number to change,
+// not several call sites that happen to currently agree.
 export const DENSE_FONT_SIZE = 12;
 
 export const theme = createTheme({

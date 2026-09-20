@@ -79,7 +79,7 @@ export function TaskDetailPage() {
   const id = Number(taskId);
   const navigate = useNavigate();
   const { person } = useAuth();
-  // See AllTaskOrigPage.tsx's own call for why this is needed even though
+  // See windowNav.ts's own doc comment for why this is needed even though
   // this page is currently only ever reached via a window already named
   // at creation (openItemWindow) — this closes the same gap for any
   // future in-place link to a Task, and its own cleanup-on-navigate-away
@@ -503,7 +503,7 @@ export function TaskDetailPage() {
             </Box>
           </Box>
           {/* Real, computed client-side (D1.2-2/D1.5-1) — the same
-              computeUrgency AllTaskOrigPage.tsx's Urgency column uses.
+              computeUrgency TaskGrid.tsx's Urgency column uses.
               Background is V1.2's own row colour (KeyConcepts.md §12.2's
               "Applying it to a Task's row colour", D1.5-5): white when not
               urgent, fading to light red as Urgency climbs past 100, or a

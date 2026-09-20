@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useMemo, useState, type DragEvent } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -24,6 +24,7 @@ import {
   type DependencyOwner,
 } from "../../api/hooks";
 import type { DependencyRecord } from "../../api/types";
+import { useAuth } from "../../auth/AuthContext";
 import { formatApiError } from "../../lib/apiErrors";
 import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 
@@ -49,6 +50,7 @@ export function DependenciesPanel({
   const { data: dependencies } = useDependencies(owner);
   const { data: tasks } = useTasks();
   const { data: projects } = useProjects();
+  const { person } = useAuth();
   const createDependency = useCreateDependency();
   const deleteDependency = useDeleteDependency();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -122,11 +124,36 @@ export function DependenciesPanel({
     return "(unknown)";
   }
 
+  // A user should only ever see/pick a Task or Project on a Team they
+  // belong to (any role) — matching ProjectDetailPage.tsx's/PlanPage.tsx's
+  // own client-side Team-scoping, applied here too since this "Add
+  // Dependency" search picker previously listed every Task/Project
+  // org-wide. `otherSideLabel` (an *existing* Dependency's other side,
+  // rather than something newly picked here) is deliberately left
+  // unfiltered — it only ever displays a side someone with real access
+  // already created, not something this user is choosing from a list.
+  const memberTeamIds = useMemo(
+    () => new Set((person?.team_roles ?? []).map((tr) => tr.team_id)),
+    [person],
+  );
+  const projectsById = useMemo(
+    () => new Map((projects ?? []).map((p) => [p.project_id, p])),
+    [projects],
+  );
+  const memberProjects = useMemo(
+    () => (projects ?? []).filter((p) => memberTeamIds.has(p.team_id)),
+    [projects, memberTeamIds],
+  );
+  const memberTasks = useMemo(
+    () => (tasks ?? []).filter((t) => memberTeamIds.has(projectsById.get(t.project_id)?.team_id ?? -1)),
+    [tasks, projectsById, memberTeamIds],
+  );
+
   const options: DependencyOption[] = [
-    ...(tasks ?? [])
+    ...memberTasks
       .filter((t) => !(ownerTaskId != null && t.task_id === ownerTaskId))
       .map((t): DependencyOption => ({ kind: "task", id: t.task_id, label: `Task #${t.task_id} — ${t.description}` })),
-    ...(projects ?? [])
+    ...memberProjects
       .filter((p) => !(ownerProjectId != null && p.project_id === ownerProjectId))
       .map((p): DependencyOption => ({ kind: "project", id: p.project_id, label: `Project — ${p.name}` })),
   ];

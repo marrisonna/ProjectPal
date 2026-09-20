@@ -29,13 +29,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button color="inherit" component={RouterLink} to="/tasks">
               Tasks
             </Button>
-            {/* Temporary, for the TaskGrid/AllTaskOrigPage comparison period
-                only (TaskGridPlan.md §5.3/D1.4-50) — deleted, along with
-                AllTaskOrigPage.tsx and its route, once the user confirms
-                AllTaskPage.tsx (the "Tasks" button above) is equivalent. */}
-            <Button color="inherit" onClick={() => openListWindow("tasks-orig")}>
-              Tasks (orig)
-            </Button>
             {/* Its own popped-out singleton window (D1.4-8), like Task
                 Detail — not in-place nav like "Tasks" above — matching
                 V1.2's own standalone Plan Display window

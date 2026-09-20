@@ -211,7 +211,7 @@ export function FilterableHeader({
   onExactChange: (exact: Set<string> | null) => void;
   /** Computed lazily, only when the checklist popover is opened. */
   getOptions: () => string[];
-  /** The column's own live (resizable) width in px — see AllTaskOrigPage.tsx's
+  /** The column's own live (resizable) width in px — see TaskGrid.tsx's
    * `withFilter` for why this is a number, not "100%". */
   columnWidth: number;
   /**
@@ -264,7 +264,7 @@ export function FilterableHeader({
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           // The ambient MUI header cell padding is zeroed out grid-wide
-          // (AllTaskOrigPage.tsx's own sx) so the filter row below can sit
+          // (TaskGrid.tsx's own sx) so the filter row below can sit
           // flush with the column's own border lines with no clipping
           // trickery — this restores that same 10px inset for the title
           // text only, which still wants it.

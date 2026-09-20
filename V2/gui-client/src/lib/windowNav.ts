@@ -36,7 +36,7 @@ export function registerThisWindow(): void {
 }
 
 /**
- * Call from a singleton-eligible page's own component (AllTaskOrigPage.tsx:
+ * Call from a singleton-eligible page's own component (AllTaskPage.tsx:
  * `useSingletonWindowIdentity("tasks-list")`, TaskDetailPage.tsx:
  * `useSingletonWindowIdentity(\`tasks-${id}\`)`) — this is what makes the
  * registry correct for a window that reached this route by plain in-place

@@ -20,15 +20,10 @@ import { buildScheduleGraph } from "../../lib/schedule";
 import type { ColumnFilterState } from "../../components/GridColumnFilter";
 import { DEFAULT_TASK_GRID_COLUMNS, TaskGrid } from "./TaskGrid";
 
-// The new, TaskGrid-based All Tasks screen (TaskGridPlan.md §5.2, D1.4-50),
-// taking over the primary /tasks route immediately for direct side-by-side
-// comparison with AllTaskOrigPage.tsx (still reachable at /tasks-orig until
-// approved, §5.3/5.4). Reproduces AllTaskOrigPage.tsx's own data-fetching,
-// Team-scoping, and default filter state exactly (the user's own
-// acceptance criterion: "the look and feel... should be identical to the
-// current AllTask window") — everything specific to *this* screen lives
-// here, not in TaskGrid itself, which only ever renders whatever `tasks`
-// it's handed (§4.1).
+// The TaskGrid-based All Tasks screen (TaskGridPlan.md §5.2, D1.4-50) — the
+// approved replacement for the original grid (D1.4-65). Team-scoping and
+// default filter state are this screen's own concern (D-Win-15/16), not
+// TaskGrid's, which only ever renders whatever `tasks` it's handed (§4.1).
 export function AllTaskPage() {
   useDocumentTitle("All Tasks");
   useSingletonWindowIdentity("tasks-list");
@@ -45,8 +40,8 @@ export function AllTaskPage() {
 
   const isTeamLead = isTeamLeadOfAnyTeam(person);
 
-  // Same default filter state AllTaskOrigPage.tsx computes (D-Win-16): every
-  // Status except Closed/Cancelled. This is window-level display
+  // Default filter state (D-Win-16): every Status except Closed/Cancelled.
+  // This is window-level display
   // configuration (§4.6), not a permission — a different window embedding
   // TaskGrid is free to start with a different default.
   const [filterState, setFilterState] = useState<Record<string, ColumnFilterState>>(() => ({
@@ -56,14 +51,14 @@ export function AllTaskPage() {
     },
   }));
 
-  // Same one-time "default Resources filter to yourself unless you're a
-  // Team Lead" behaviour as AllTaskOrigPage.tsx (D-Win-15). TaskGrid only
-  // ever reads `initialFilterState` once (a lazy useState initializer, so
-  // its own filter UI stays responsive to the user's later edits without
-  // fighting a prop that keeps changing underneath it) — so this has to
-  // finish updating `filterState` *before* TaskGrid first mounts, not
-  // asynchronously afterwards the way the single-component original could.
-  // `defaultFilterReady` (below) gates that first mount on it.
+  // One-time "default Resources filter to yourself unless you're a Team
+  // Lead" behaviour (D-Win-15). TaskGrid only ever reads
+  // `initialFilterState` once (a lazy useState initializer, so its own
+  // filter UI stays responsive to the user's later edits without fighting
+  // a prop that keeps changing underneath it) — so this has to finish
+  // updating `filterState` *before* TaskGrid first mounts, not
+  // asynchronously afterwards. `defaultFilterReady` (below) gates that
+  // first mount on it.
   const appliedDefaultResourceFilter = useRef(false);
   const [defaultFilterReady, setDefaultFilterReady] = useState(false);
   useEffect(() => {
@@ -87,8 +82,11 @@ export function AllTaskPage() {
   }, [projects]);
 
   // Every user's All Tasks view is hard-restricted to their own Team(s)
-  // (D-Win-17) — see AllTaskOrigPage.tsx's own comment for why this is a
-  // floor under the row set itself, not a clearable filter.
+  // (D-Win-17) — a floor under the row set itself, not a clearable filter:
+  // a Team Lead previously saw every Task company-wide with no filter at
+  // all, and a non-Team-Lead could reach the same thing simply by clearing
+  // their own Resources filter, since `useTasks()` itself is never
+  // Team-scoped.
   const myTeamIds = useMemo(
     () => new Set(person?.team_roles.map((tr) => tr.team_id) ?? []),
     [person],
