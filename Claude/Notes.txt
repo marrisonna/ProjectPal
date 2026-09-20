@@ -569,3 +569,31 @@ In the Resources list box on TaskDetails for task #10990, Friedel is the assigne
 
   ============
 
+  Looking at the Top Level Projects window.
+
+  1. When tasks are shown on this window, use an instance of the TaskGrid.
+  2. We need to create a 'Project' (singular) GUI component.  A 'Project' GUI component consists of the name of a project, followed by a TaskGrid to display the tasks associated with project, followed by 
+  a list for further 'Project' GUI components, one for each sub project.  This is pattern repeats to any depth.
+  We also need a 'Projects' (plural) GUI component.  A 'Projects' GUI components consists of a Task toggle control (None, Open, All) as seen at the top of the 'Top Level Projects' window,
+  followed by a list of 'Project' (singular) GUI components.
+  The 'Projects' (plural) GUI component will be used on a number of different windows.
+  The 'Top Level Projects' window essentially then consists of a single 'Projects' (plural) GUI component, where the list of project is the list of the top level projects.
+  Look at the V1.2 implementation to see how this was done previously.
+  Have a think about the design of this and document both 1 and 2 above in 4_GuiClient/ProjectsGUIComponent.md, then consisder implementation options and also document these.
+  No code changes yet.
+
+
+  On Section 4.3 - Let's got with the implementation described in the first bullet.  I think the reduces the amount of code that needs to be written 
+  and reduces the possibility of disparity between different, almost duplicated, parts of the code base.
+
+  Agreed with the observation on that TaskGrid needs autoHeight and to hide the footer if there are less than 101 tasks to display.  I feel this behaviour is 
+  also OK for the All Tasks Window.
+
+  I agree with option B for the implementation.
+
+  can you give the open questions the correct number referencing, then I'll answer them.
+  No code changes yet.
+
+  Q1.4-61 I believe V1.2 offers "Add Task" at every depth, but does not offer "Add Project" at all from the Project GUI component itself.
+  Q1.4-62 Let' leave this until polishing - I want to give to it more thought at that time.
+  Q1.4-63 I'm not sure, let's keep this open, do an intial implementation and then revisit it.
