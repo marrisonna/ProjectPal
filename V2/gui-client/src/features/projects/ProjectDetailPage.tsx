@@ -159,7 +159,22 @@ export function ProjectDetailPage() {
     [tasks, projects, allDependencies, resourceCountByTaskId],
   );
 
-  if (projectsLoading || tasksLoading || !components || !people || !personRoles) {
+  if (
+    projectsLoading ||
+    tasksLoading ||
+    !components ||
+    !people ||
+    !personRoles ||
+    // Same gap AllTaskPage.tsx had (D1.4-65-adjacent fix): without these,
+    // the page could render — and Projects/Project.tsx see `?? []`, i.e.
+    // genuinely empty — a render or two before these bulk queries actually
+    // resolved, showing Resources/Remarks/Attachments as blank until
+    // whichever later re-render happened to land after they did.
+    !allDependencies ||
+    !allTaskResources ||
+    !allRemarks ||
+    !allAttachments
+  ) {
     return <CircularProgress sx={{ m: 2 }} />;
   }
   if (id != null && (projectLoading || !form)) {

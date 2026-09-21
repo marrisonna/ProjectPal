@@ -135,7 +135,26 @@ export function AllTaskPage() {
     [tasks, projects, allDependencies, resourceCountByTaskId],
   );
 
-  if (isLoading || !projects || !components || !people || !personRoles || !defaultFilterReady) {
+  if (
+    isLoading ||
+    !projects ||
+    !components ||
+    !people ||
+    !personRoles ||
+    !defaultFilterReady ||
+    // These four weren't gated here before — the grid could render (and
+    // TaskGrid.tsx sees `?? []`, i.e. genuinely empty) a render or two
+    // before any of them actually resolved, showing Resources/Remarks/
+    // Attachments as blank until whichever later re-render happened to
+    // land after they did. Matches the reported "resources are empty
+    // straight after logging in, populated after a hard refresh" — a
+    // fresh login is exactly the case with the least already-cached data
+    // for these to fall back on while they're still in flight.
+    !allDependencies ||
+    !allTaskResources ||
+    !allRemarks ||
+    !allAttachments
+  ) {
     return null;
   }
 

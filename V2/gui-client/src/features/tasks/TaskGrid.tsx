@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DataGrid,
   GridActionsCellItem,
@@ -46,7 +46,7 @@ import {
   type ScheduleGraph,
 } from "../../lib/schedule";
 import { READONLY_BG } from "../../components/DenseField";
-import { DENSE_FONT_SIZE } from "../../theme/theme";
+import { branding, DENSE_FONT_SIZE } from "../../theme/theme";
 import { formatApiError } from "../../lib/apiErrors";
 import {
   columnFilterPasses,
@@ -68,6 +68,147 @@ const HEADER_HEIGHT = 48;
 // the rest of HEADER_HEIGHT back to data rows is the whole point of hiding
 // it, not leaving it as blank space under the label.
 const HEADER_HEIGHT_NO_FILTER_ROW = 24;
+
+// Every column is sized to its own heading/content by measuring real text
+// against the grid's own font via an offscreen canvas, computed directly in
+// `withFilter` below — *not* MUI DataGrid's own built-in `autosizeColumns`.
+// That was tried first and abandoned: `columns` necessarily gets rebuilt
+// (a new array/object graph) on every render, since its column defs close
+// over live `filterState`/etc., and DataGrid re-derives each column's
+// width straight from its own colDef (`hydrateColumnsWidth`,
+// gridColumnsUtils.js) every time that `columns` prop's identity changes —
+// falling back to a flat 100px for any column with no explicit `width` of
+// its own. `autosizeColumns` is also async (at least one Promise tick), so
+// even re-running it on every render couldn't reliably win that race
+// before the *next* incidental re-render (a filter keystroke, an
+// unrelated prop from the parent, anything) rebuilt `columns` again and
+// reset it. Computing an explicit `width` ourselves, synchronously, every
+// time a column def is built sidesteps the whole problem: a rebuild can
+// only ever arrive at the same correct answer, never a wrong default.
+// A hidden, offscreen <span> — not a canvas 2D context — reused for every
+// measurement. Canvas measureText was tried first and, even once Inter was
+// confirmed loaded (document.fonts.check), still produced widths narrower
+// than several strings actually render at, badly enough to truncate them:
+// a canvas created via document.createElement but never attached to the
+// document doesn't reliably go through the same font-resolution/text-
+// shaping path a real, live DOM element does, so a font it should have
+// available can still measure using a substituted fallback. An actual DOM
+// element, appended to the page, goes through exactly the same layout and
+// font engine the grid's own cells do — there's no plausible way for it to
+// disagree with them, since they're both just ordinary DOM/CSS text.
+// Individual longhand style properties, not the `font` shorthand — that
+// was tried first and is likely the actual reason truncation persisted
+// even after switching from canvas to a real DOM element: `element.style
+// .font = "..."` goes through the CSS shorthand parser (stricter than
+// canvas's own lenient `ctx.font`), and an invalid/unrecognised shorthand
+// value is *silently rejected*, leaving the element at whatever font it
+// already had — here, no explicit font at all, i.e. the document's
+// default serif/sans-serif at its own default size, which happens to
+// measure narrower than Inter at 12px for exactly the strings that were
+// truncating and wide enough not to visibly matter for the others. Each
+// longhand property below has simple, unambiguous parsing, with nothing
+// to silently reject.
+let measurementSpan: HTMLSpanElement | null = null;
+function measureTextWidth(text: string, fontWeight: number): number {
+  if (!measurementSpan) {
+    measurementSpan = document.createElement("span");
+    measurementSpan.style.position = "absolute";
+    measurementSpan.style.visibility = "hidden";
+    measurementSpan.style.whiteSpace = "pre";
+    measurementSpan.style.top = "-9999px";
+    measurementSpan.style.left = "-9999px";
+    measurementSpan.style.fontFamily = branding.fontFamily;
+    measurementSpan.style.fontSize = `${DENSE_FONT_SIZE}px`;
+    document.body.appendChild(measurementSpan);
+  }
+  measurementSpan.style.fontWeight = String(fontWeight);
+  measurementSpan.textContent = text;
+  return measurementSpan.getBoundingClientRect().width;
+}
+const HEADER_FONT_WEIGHT = 700;
+const CELL_FONT_WEIGHT = 400;
+// Shorthand strings kept only for the Font Loading API below (`document
+// .fonts.check`/`.load`), which requires exactly this CSS font shorthand
+// syntax — unrelated to, and unaffected by, the span-styling bug above.
+const HEADER_FONT = `${HEADER_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
+const CELL_FONT = `${CELL_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
+
+// FilterableHeader's own label padding (GridColumnFilter.tsx: `px: "10px"`
+// on the label Box, i.e. 10px each side = 20px) plus a real safety margin —
+// not just rounding tolerance: CSS `text-overflow: ellipsis` doesn't clip
+// by however many pixels are actually missing, it drops *whole trailing
+// characters* until what's left plus "…" fits, so even a few px of
+// genuine shortfall reads as several missing characters. Better to have a
+// little unused space than to trigger that.
+const HEADER_LABEL_PADDING = 32;
+// MUI DataGrid's own default cell horizontal padding is `0 10px`
+// (GridRootStyles.js: `.MuiDataGrid-cell/-columnHeader { padding: '0
+// 10px' }`, confirmed by reading it directly) — 20px, not the 16px first
+// assumed here (a real, if minor, contributor to a real reported
+// under-measurement bug) — plus the same ellipsis safety margin as above.
+const CELL_PADDING = 30;
+// A boolean column ("T") renders a checkbox icon, not text — not
+// meaningfully measurable via canvas the way every other column's actual
+// displayed text is, so this is a plain fixed width instead (a bit more
+// than DENSE_ROW_HEIGHT's own 22px, since the icon needs a little
+// breathing room on each side).
+const BOOLEAN_COLUMN_WIDTH = 30;
+
+// Description: capped at 2.5x the width of its own header text, rather
+// than growing arbitrarily wide with long content. Ref URL: capped at
+// roughly 12 characters of content width — "0" is the same reference
+// glyph CSS's own `ch` unit is defined against for "how wide is N
+// characters" in a proportional font. Detailed Description: capped at 2x
+// its own header text width, the same shape as Description just with a
+// different multiplier.
+//
+// Applied only to the *default* (computed) width, in `withFilter` below —
+// never as a hard `colDef.maxWidth`, which would also permanently block a
+// user manually dragging either column wider afterwards (the actual bug
+// reported when this was first tried as `maxWidth`). A column already in
+// `manualColumnWidthsRef` (below) skips this entirely.
+//
+// A function, not a module-level constant computed once at import time —
+// that was tried first and is wrong for the same reason the truncation bug
+// below is: `@fontsource/inter`'s actual font files (main.tsx) load over
+// the network, asynchronously, and a module evaluates long before that can
+// possibly have finished, so a constant computed then would be measuring
+// against whatever fallback font the browser substitutes for Inter,
+// forever — not a one-off first-render flash, an outright wrong constant.
+function defaultMaxWidths(): Record<string, number> {
+  return {
+    description: measureTextWidth("Description", HEADER_FONT_WEIGHT) * 2.5,
+    external_reference_url: measureTextWidth("0", CELL_FONT_WEIGHT) * 12,
+    detailed_description: measureTextWidth("Detailed Description", HEADER_FONT_WEIGHT) * 2,
+  };
+}
+
+// `getValues` — the same function each column already passes to
+// `withFilter` to build its own filter-dropdown options — is the actual
+// source of truth for "what does this cell display," reused here rather
+// than re-derived a second, independent way (a `col.valueGetter`-based
+// version was tried first: it matches the *stored* value, not necessarily
+// what's *shown* — `owner_person_id`/`requestor_person_id` have no
+// `valueGetter` at all, since `valueOptions` alone resolves their raw
+// numeric person_id to a display name for `type: "singleSelect"`, so that
+// version measured a bare "3", not "Ben Okafor", a real, confirmed bug).
+// Joined with ", " for a multi-value column (Resources) to reconstruct the
+// same joined string its own `valueGetter` actually renders.
+function measureColumnContentWidth(
+  getValues: (row: TaskRecord) => string[],
+  rows: TaskRecord[],
+  isBoolean: boolean,
+): number {
+  if (isBoolean) return BOOLEAN_COLUMN_WIDTH; // a checkbox icon, not measurable text
+  let max = 0;
+  for (const row of rows) {
+    const text = getValues(row).join(", ");
+    if (!text) continue;
+    const width = measureTextWidth(text, CELL_FONT_WEIGHT);
+    if (width > max) max = width;
+  }
+  return Math.ceil(max) + CELL_PADDING;
+}
 
 // The full column catalog (TaskGridPlan.md §4.2) — identical set, order,
 // and value-getters to today's All Tasks. A window's own `columns` prop
@@ -124,14 +265,39 @@ export const DEFAULT_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
   "detailed_description",
 ];
 
-// V1.2's own narrower embedded-grid column set (`ProjectsGUIComponent.md`
-// §2.1/§4.5, `m_columnOrder`/`m_hiddenTaskColumns`) — the same catalogue,
-// minus `project_id` (redundant inside that Project's own section) and
-// `detailed_description`. Used by `Project`'s own embedded `TaskGrid`
-// instance, not `AllTaskPage`.
-export const EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = DEFAULT_TASK_GRID_COLUMNS.filter(
-  (key) => key !== "project_id" && key !== "detailed_description",
-);
+// The narrower, reordered column set for the Project GUI component's own
+// embedded `TaskGrid` (`ProjectsGUIComponent.md` §2.1/§4.5, `Project.tsx`/
+// `Projects.tsx`, not `AllTaskPage`) — no ID column (redundant once a Task
+// is already reached by browsing into its own Project), and the columns
+// a user most wants at a glance (Urgency/T/Description/Status/Resources/
+// End Date/Effort/Effort Type/%Allocation/Task Type) moved to the front;
+// every other column keeps DEFAULT_TASK_GRID_COLUMNS's own relative order
+// after that, minus `project_id` (redundant here) and
+// `detailed_description`. A fixed, same-for-every-user set/order for now —
+// a user-configurable picker is deferred to Level 2
+// (`Claude/Level2_Implementation/Scope.md`).
+export const EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
+  "urgency",
+  "tentative_resource_assignment",
+  "description",
+  "status",
+  "resources",
+  "end_date",
+  "effort_in_days",
+  "effort_type",
+  "percentage_allocation",
+  "task_type",
+  "component_id",
+  "priority",
+  "start_date",
+  "attachments",
+  "remarks",
+  "owner_person_id",
+  "requestor_person_id",
+  "date_added",
+  "status_date",
+  "external_reference_url",
+];
 
 // The 9 columns ever editable in a cell (TaskGridPlan.md §4.4, up from the
 // original 8 once Detailed Description joined per D1.4-52) — Effort Type is
@@ -303,6 +469,46 @@ export function TaskGrid({
   const deleteTask = useDeleteTask();
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
   const apiRef = useGridApiRef();
+  // Fields the user has manually drag-resized (DataGrid's own
+  // `onColumnResize`, below), keyed to the width they chose — once a
+  // column's width is the user's own choice, `withFilter` (below) uses it
+  // verbatim instead of recomputing a default, in either direction
+  // (narrower or wider), and never re-applies DEFAULT_MAX_WIDTHS to it.
+  const manualColumnWidthsRef = useRef<Map<string, number>>(new Map());
+
+  // Whether Inter (main.tsx's @fontsource/inter imports) has actually
+  // finished loading — its real font files are fetched over the network,
+  // asynchronously, so measureTextWidth calls made before this resolves
+  // are silently measuring against whatever fallback font the browser
+  // substitutes in the meantime (system-ui/sans-serif), which is narrower
+  // than Inter for several of these strings — the actual cause of a real,
+  // reported bug: specific columns (Status, Project, Owner, dates — not
+  // all of them, only the ones whose computed width happened to be close
+  // enough to the true one for the gap to matter) truncating their own
+  // content on a typical page load, not just some rare first-millisecond
+  // flash. `document.fonts.load` both starts the fetch (if it hasn't
+  // already, e.g. a very first cold load) and resolves once it's ready;
+  // `document.fonts.check` covers the far more common case where it's
+  // already loaded (every earlier screen already rendered Inter text) by
+  // the time this component first mounts, so there's no needless render
+  // delay/flash then.
+  const [fontsReady, setFontsReady] = useState(
+    () => document.fonts.check(HEADER_FONT) && document.fonts.check(CELL_FONT),
+  );
+  useEffect(() => {
+    if (fontsReady) return;
+    let cancelled = false;
+    Promise.all([document.fonts.load(HEADER_FONT), document.fonts.load(CELL_FONT)]).then(() => {
+      if (!cancelled) setFontsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fontsReady]);
+  // Generous while fonts aren't confirmed loaded yet (safe — a column
+  // reads as "not quite as tight as it could be" for at most one render,
+  // never truncated), removed the moment they are.
+  const fontSafetyMargin = fontsReady ? 0 : 20;
 
   const [filterState, setFilterState] = useState<Record<string, ColumnFilterState>>(
     () => initialFilterState ?? {},
@@ -511,8 +717,38 @@ export function TaskGrid({
     // non-bold layout doesn't match FilterableHeader's own top-aligned
     // bold label, so the label's own appearance visibly changed depending
     // on this flag.
+    //
+    // minWidth is computed here, from the label text alone — not left to
+    // DataGrid's own DOM measurement, since FilterableHeader's own root Box
+    // is styled `width: columnWidth` (it always fills whatever the
+    // column's *current* width already is), so a DOM measurement of it
+    // can only ever report the column's existing width back to itself.
+    const headerLabel = col.headerName ?? col.field;
+    const headerMinWidth = Math.ceil(measureTextWidth(headerLabel, HEADER_FONT_WEIGHT)) + HEADER_LABEL_PADDING;
+
+    // The actual width: the user's own manual choice if they've resized
+    // this column (verbatim — no cap, no recomputation), otherwise
+    // whichever is larger of the header's own width and the widest actual
+    // cell content across every Task, capped at DEFAULT_MAX_WIDTHS for the
+    // two columns that have one. Computed fresh on every render (this
+    // function runs on every render regardless, and canvas measureText is
+    // cheap), so a `columns` rebuild — unavoidable, since these closures
+    // capture live `filterState`/`person`/etc. — always lands on the same
+    // right answer instead of DataGrid's own ~100px fallback for a column
+    // with no explicit `width`.
+    const manualWidth = manualColumnWidthsRef.current.get(col.field);
+    let width = manualWidth;
+    if (width == null) {
+      const contentWidth = measureColumnContentWidth(getValues, tasks, col.type === "boolean");
+      width = Math.max(headerMinWidth, contentWidth) + fontSafetyMargin;
+      const cap = defaultMaxWidths()[col.field];
+      if (cap != null) width = Math.min(width, cap);
+    }
+
     return {
       ...col,
+      width,
+      minWidth: Math.max(col.minWidth ?? 0, headerMinWidth),
       hideSortIcons: true,
       renderHeader: (params) => (
         <FilterableHeader
@@ -544,14 +780,16 @@ export function TaskGrid({
   const isTeamLead = isTeamLeadOfAnyTeam(person);
 
   const allColumnDefs: Partial<Record<TaskGridColumnKey, GridColDef<TaskRecord>>> = {
-    task_id: withFilter({ field: "task_id", headerName: "ID", width: 60 }, (row) => [String(row.task_id)], "number"),
+    task_id: withFilter(
+      { field: "task_id", headerName: "ID", align: "center" },
+      (row) => [String(row.task_id)],
+      "number",
+    ),
     urgency: withFilter(
       {
         field: "urgency",
         headerName: "Urgency",
-        width: 80,
-        align: "right",
-        headerAlign: "right",
+        align: "center",
         valueGetter: (_value, row) => taskUrgency(row),
       },
       (row) => [String(taskUrgency(row))],
@@ -561,7 +799,6 @@ export function TaskGrid({
       {
         field: "resources",
         headerName: "Resources",
-        width: 180,
         valueGetter: (_value, row) => {
           const project = projectsById.get(row.project_id);
           const ids = resourceIdsByTask.get(row.task_id) ?? [];
@@ -580,7 +817,6 @@ export function TaskGrid({
         {
           field: "status",
           headerName: "Status",
-          width: 110,
           type: "singleSelect",
           valueOptions: ({ row }) =>
             row ? [...editableTaskStatusValues(person, projectTeamId(row), row.owner_person_id)] : [],
@@ -600,7 +836,6 @@ export function TaskGrid({
         {
           field: "tentative_resource_assignment",
           headerName: "T",
-          width: 36,
           align: "center",
           headerAlign: "center",
           type: "boolean",
@@ -611,7 +846,7 @@ export function TaskGrid({
       "tentative_resource_assignment",
     ),
     description: withFilter(
-      { field: "description", headerName: "Description", flex: 1, minWidth: 180 },
+      { field: "description", headerName: "Description" },
       (row) => [row.description ?? ""],
       "string",
     ),
@@ -619,7 +854,6 @@ export function TaskGrid({
       {
         field: "component_id",
         headerName: "Component",
-        width: 140,
         valueGetter: (_value, row) =>
           row.component_id != null ? (componentsById.get(row.component_id)?.name ?? "") : "",
       },
@@ -630,7 +864,6 @@ export function TaskGrid({
       {
         field: "project_id",
         headerName: "Project",
-        width: 140,
         valueGetter: (_value, row) => projectsById.get(row.project_id)?.name ?? row.project_id,
       },
       (row) => [projectsById.get(row.project_id)?.name ?? String(row.project_id)],
@@ -641,7 +874,6 @@ export function TaskGrid({
         {
           field: "priority",
           headerName: "Priority",
-          width: 90,
           type: "singleSelect",
           valueOptions: [...PRIORITY_LEVELS],
           renderEditCell: DenseSingleSelectEditCell,
@@ -655,7 +887,7 @@ export function TaskGrid({
       {
         field: "end_date",
         headerName: "End Date",
-        width: 100,
+        align: "center",
         valueGetter: (_value, row) => formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).endDate),
       },
       (row) => [formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).endDate)],
@@ -665,7 +897,7 @@ export function TaskGrid({
       {
         field: "start_date",
         headerName: "Planned Start",
-        width: 100,
+        align: "center",
         valueGetter: (_value, row) => formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).startDate),
       },
       (row) => [formatDdMmmYy(getTaskSchedule(scheduleGraph, row.task_id).startDate)],
@@ -675,9 +907,7 @@ export function TaskGrid({
       {
         field: "attachments",
         headerName: "Attachments",
-        width: 90,
-        align: "right",
-        headerAlign: "right",
+        align: "center",
         valueGetter: (_value, row) => attachmentsCountByTask.get(row.task_id) ?? 0,
       },
       (row) => [String(attachmentsCountByTask.get(row.task_id) ?? 0)],
@@ -687,9 +917,7 @@ export function TaskGrid({
       {
         field: "remarks",
         headerName: "Remarks",
-        width: 80,
-        align: "right",
-        headerAlign: "right",
+        align: "center",
         valueGetter: (_value, row) => remarksCountByTask.get(row.task_id) ?? 0,
       },
       (row) => [String(remarksCountByTask.get(row.task_id) ?? 0)],
@@ -700,7 +928,6 @@ export function TaskGrid({
         {
           field: "owner_person_id",
           headerName: "Owner",
-          width: 120,
           type: "singleSelect",
           valueOptions: ({ row }) => {
             if (!row) return [];
@@ -725,7 +952,6 @@ export function TaskGrid({
         {
           field: "requestor_person_id",
           headerName: "Requested By",
-          width: 120,
           type: "singleSelect",
           valueOptions: ({ row }) => [
             { value: null, label: "(none)" },
@@ -745,7 +971,7 @@ export function TaskGrid({
       {
         field: "date_added",
         headerName: "Date Added",
-        width: 100,
+        align: "center",
         valueGetter: (_value, row) => formatDdMmmYy(new Date(row.date_added)),
       },
       (row) => [formatDdMmmYy(new Date(row.date_added))],
@@ -753,7 +979,7 @@ export function TaskGrid({
     ),
     effort_in_days: governed(
       withFilter(
-        { field: "effort_in_days", headerName: "Effort", width: 70, align: "right", headerAlign: "right", type: "number" },
+        { field: "effort_in_days", headerName: "Effort", align: "center", type: "number" },
         (row) => [row.effort_in_days != null ? String(row.effort_in_days) : ""],
         "number",
       ),
@@ -763,7 +989,7 @@ export function TaskGrid({
     // have large knock-on effects on what Effort itself means, so it stays a
     // Task-Detail-only edit.
     effort_type: withFilter(
-      { field: "effort_type", headerName: "Effort Type", width: 100 },
+      { field: "effort_type", headerName: "Effort Type" },
       (row) => [row.effort_type ?? ""],
       "string",
     ),
@@ -772,9 +998,7 @@ export function TaskGrid({
         {
           field: "percentage_allocation",
           headerName: "% Allocation",
-          width: 100,
-          align: "right",
-          headerAlign: "right",
+          align: "center",
           type: "number",
           // Stored/edited as a fraction (1 = 100%), displayed/typed as a
           // whole percentage — the same transform Task Detail's own field
@@ -798,7 +1022,6 @@ export function TaskGrid({
         {
           field: "task_type",
           headerName: "Task Type",
-          width: 130,
           type: "singleSelect",
           valueOptions: [...TASK_TYPES],
           renderEditCell: DenseSingleSelectEditCell,
@@ -812,20 +1035,20 @@ export function TaskGrid({
       {
         field: "status_date",
         headerName: "Status Date",
-        width: 100,
+        align: "center",
         valueGetter: (_value, row) => (row.status_date ? formatDdMmmYy(new Date(row.status_date)) : ""),
       },
       (row) => [row.status_date ? formatDdMmmYy(new Date(row.status_date)) : ""],
       "date",
     ),
     external_reference_url: withFilter(
-      { field: "external_reference_url", headerName: "Ref URL", width: 160 },
+      { field: "external_reference_url", headerName: "Ref URL" },
       (row) => [row.external_reference_url ?? ""],
       "string",
     ),
     detailed_description: governed(
       withFilter(
-        { field: "detailed_description", headerName: "Detailed Description", width: 240 },
+        { field: "detailed_description", headerName: "Detailed Description" },
         (row) => [row.detailed_description ?? ""],
         "string",
       ),
@@ -963,6 +1186,14 @@ export function TaskGrid({
         // page — nothing to page through. Reappears automatically once
         // there's genuinely more than one page's worth of Tasks.
         hideFooter={filteredTasks.length <= 100}
+        // Every column's own `width` is computed in `withFilter` above
+        // (measured against real heading/content text, not MUI DataGrid's
+        // own async `autosizeColumns` — see that block's own comment for
+        // why). `onColumnResize` fires continuously while the user drags a
+        // column's own separator; recording the field/width here is what
+        // lets `withFilter` use exactly that width on every later render
+        // instead of recomputing (and so silently overriding) it.
+        onColumnResize={(params) => manualColumnWidthsRef.current.set(params.colDef.field, params.width)}
         getRowId={(row) => row.task_id}
         columns={columns}
         // Single click, not the DataGrid default of double click, starts
