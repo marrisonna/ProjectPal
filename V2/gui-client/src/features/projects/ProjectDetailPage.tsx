@@ -43,7 +43,7 @@ import { DependenciesPanel } from "../dependencies/DependenciesPanel";
 import { AttachmentsPanel } from "../attachments/AttachmentsPanel";
 import { Projects } from "./Projects";
 import { CreateOrRenameProjectDialog } from "./CreateOrRenameProjectDialog";
-import { AddTaskDialog } from "./AddTaskDialog";
+import { AddTaskDialog } from "../tasks/AddTaskDialog";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -551,8 +551,7 @@ export function ProjectDetailPage() {
       )}
       {dialog?.kind === "addTask" && (
         <AddTaskDialog
-          projectId={dialog.projectId}
-          teamId={dialog.teamId}
+          openedFrom={{ kind: "project", projectId: dialog.projectId, teamId: dialog.teamId }}
           defaultRequestorPersonId={person?.person_id ?? null}
           onClose={() => setDialog(null)}
           onCreated={(task) => {

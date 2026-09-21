@@ -10,7 +10,7 @@ import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import { FieldTreePicker } from "../../components/DenseField";
 import { buildBreadcrumb, type TreeItem } from "../../components/TreePicker";
-import { useComponents, useCreateTask, usePeople, usePersonRoles } from "../../api/hooks";
+import { useComponents, useCreateTask, usePeople, usePersonRoles, useProjects } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_TYPES, type TaskRecord } from "../../api/types";
 import { personDisplayName } from "../../lib/people";
 import { formatApiError } from "../../lib/apiErrors";
@@ -18,31 +18,50 @@ import { formatApiError } from "../../lib/apiErrors";
 /**
  * ProjectDetailPlan.md §4.7 (`D1.4-43`/`D1.4-45`) — V1.2's `TaskDetail.cs`
  * refuses to save a newly-created Task without a Component, Project,
- * Description, Priority, Task Type, and Requestor. Opened from a
- * Project's own context (as this dialog always is), Project/Priority/
- * Requestor already arrive pre-filled with a sensible default; only
- * Description, Component, and Task Type are genuinely required here.
+ * Description, Priority, Task Type, and Requestor. Whichever of
+ * Project/Component this dialog was opened from already supplies one of
+ * those two mandatory-in-this-dialog fields; the other still has to be
+ * picked.
+ *
+ * `openedFrom` (`ComponentDetailPlan.md` §4.6, `D1.4-71`) is what makes this
+ * one dialog work from either direction — generalised from an
+ * originally Project-only dialog once Component Detail needed the inverse
+ * shape (Component implicit, Project picked) rather than building a second,
+ * near-identical dialog: the validation, error handling, and every other
+ * field (Description/Task Type/Priority/Requestor) are identical either
+ * way, and two independent copies of the same rules is exactly the kind of
+ * drift `D1.4-64`'s permission-check fix was about.
  */
+export type AddTaskDialogOpenedFrom =
+  | { kind: "project"; projectId: number; teamId: number }
+  | { kind: "component"; componentId: number; teamId: number };
+
 export function AddTaskDialog({
-  projectId,
-  teamId,
+  openedFrom,
   defaultRequestorPersonId,
   onClose,
   onCreated,
 }: {
-  projectId: number;
-  teamId: number;
+  openedFrom: AddTaskDialogOpenedFrom;
   defaultRequestorPersonId: number | null;
   onClose: () => void;
   onCreated: (task: TaskRecord) => void;
 }) {
+  const { data: projects } = useProjects();
   const { data: components } = useComponents();
   const { data: people } = usePeople();
   const { data: personRoles } = usePersonRoles();
   const createTask = useCreateTask();
 
+  const teamId = openedFrom.teamId;
+
   const [description, setDescription] = useState("");
-  const [componentId, setComponentId] = useState<number | null>(null);
+  const [componentId, setComponentId] = useState<number | null>(
+    openedFrom.kind === "component" ? openedFrom.componentId : null,
+  );
+  const [projectId, setProjectId] = useState<number | null>(
+    openedFrom.kind === "project" ? openedFrom.projectId : null,
+  );
   const [taskType, setTaskType] = useState("");
   const [priority, setPriority] = useState("Med");
   const [requestorId, setRequestorId] = useState<number | null>(defaultRequestorPersonId);
@@ -55,6 +74,12 @@ export function AddTaskDialog({
     name: c.name,
     parentId: c.parent_component_id,
   }));
+  const teamProjects = projects?.filter((p) => p.team_id === teamId) ?? [];
+  const projectTreeItems: TreeItem[] = teamProjects.map((p) => ({
+    id: p.project_id,
+    name: p.name,
+    parentId: p.parent_project_id,
+  }));
   // Requestor is org-wide, not Team-scoped — matches TaskDetailPage.tsx's
   // own existing Requestor field exactly (D1.4-15), unlike Owner.
   const activePeople = people?.filter((p) => p.is_active) ?? [];
@@ -62,7 +87,8 @@ export function AddTaskDialog({
   async function handleAdd() {
     const newErrors: Record<string, string> = {};
     if (!description.trim()) newErrors.description = "The task must have a Description";
-    if (componentId == null) newErrors.component = "A Component must be specified";
+    if (openedFrom.kind === "project" && componentId == null) newErrors.component = "A Component must be specified";
+    if (openedFrom.kind === "component" && projectId == null) newErrors.project = "A Project must be specified";
     if (!taskType) newErrors.taskType = "The task must have a Task Type";
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -70,9 +96,9 @@ export function AddTaskDialog({
     setSaveError(null);
     try {
       const task = await createTask.mutateAsync({
-        project_id: projectId,
+        project_id: openedFrom.kind === "project" ? openedFrom.projectId : projectId!,
         description: description.trim(),
-        component_id: componentId,
+        component_id: openedFrom.kind === "component" ? openedFrom.componentId : componentId,
         task_type: taskType,
         priority,
         requestor_person_id: requestorId,
@@ -100,22 +126,38 @@ export function AddTaskDialog({
           error={!!errors.description}
           helperText={errors.description}
         />
-        <Box sx={{ mt: 2, mb: 1 }}>
-          <FieldTreePicker
-            label="Component"
-            flex={1}
-            items={componentTreeItems}
-            selectedId={componentId}
-            breadcrumb={buildBreadcrumb(componentTreeItems, componentId)}
-            onSelect={(id) => {
-              setComponentId(id);
-              setErrors((prev) => ({ ...prev, component: "" }));
-            }}
-          />
-          {errors.component && (
-            <FormHelperText error>{errors.component}</FormHelperText>
-          )}
-        </Box>
+        {openedFrom.kind === "project" && (
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <FieldTreePicker
+              label="Component"
+              flex={1}
+              items={componentTreeItems}
+              selectedId={componentId}
+              breadcrumb={buildBreadcrumb(componentTreeItems, componentId)}
+              onSelect={(id) => {
+                setComponentId(id);
+                setErrors((prev) => ({ ...prev, component: "" }));
+              }}
+            />
+            {errors.component && <FormHelperText error>{errors.component}</FormHelperText>}
+          </Box>
+        )}
+        {openedFrom.kind === "component" && (
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <FieldTreePicker
+              label="Project"
+              flex={1}
+              items={projectTreeItems}
+              selectedId={projectId}
+              breadcrumb={buildBreadcrumb(projectTreeItems, projectId)}
+              onSelect={(id) => {
+                setProjectId(id);
+                setErrors((prev) => ({ ...prev, project: "" }));
+              }}
+            />
+            {errors.project && <FormHelperText error>{errors.project}</FormHelperText>}
+          </Box>
+        )}
         <TextField
           select
           label="Task Type"

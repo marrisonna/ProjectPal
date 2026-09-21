@@ -7,6 +7,7 @@ import { AllTaskPage } from "./features/tasks/AllTaskPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
 import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
+import { ComponentDetailPage } from "./features/components/ComponentDetailPage";
 
 function AuthenticatedLayout() {
   return (
@@ -52,6 +53,11 @@ export default function App() {
                 dual-purpose /plan already has for PlanPage. */}
             <Route path="/projects" element={<ProjectDetailPage />} />
             <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            {/* No separate Component List route either, same reasoning —
+                /components with no id is ComponentDetailPage's own "Top
+                Level Components" browsing mode (ComponentDetailPlan.md). */}
+            <Route path="/components" element={<ComponentDetailPage />} />
+            <Route path="/components/:componentId" element={<ComponentDetailPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

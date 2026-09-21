@@ -155,9 +155,14 @@ const TASK_DETAIL_WINDOW_FEATURES = "width=728,height=800";
 // does — same width, taller default height.
 const PROJECT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
 
+// ComponentDetailPage.tsx's own card (ComponentDetailPlan.md) — same
+// embedded-tree shape as Project Detail's, so the same sizing.
+const COMPONENT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
+
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
   if (entityType === "projects") return PROJECT_DETAIL_WINDOW_FEATURES;
+  if (entityType === "components") return COMPONENT_DETAIL_WINDOW_FEATURES;
   return undefined;
 }
 

@@ -117,6 +117,85 @@ export function useComponents() {
   });
 }
 
+// --- Components (CRUD, ComponentDetailPlan.md §5.1) ------------------------
+
+// componentId is nullable so ComponentDetailPage.tsx's own "no Component"
+// (Top Level Components) mode can call this unconditionally, per the Rules
+// of Hooks, without actually fetching anything in that mode — same shape
+// as useProject above.
+export function useComponent(componentId: number | null) {
+  return useQuery({
+    queryKey: ["components", componentId],
+    enabled: componentId != null,
+    queryFn: async () =>
+      unwrap<ComponentRecord>(
+        await apiClient.GET("/component/{component_id}", {
+          params: { path: { component_id: componentId! } },
+        }),
+      ),
+  });
+}
+
+export function useCreateComponent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: CreateComponentRequest has a required field (team_id, name)
+    // a loosely-typed Record<string, unknown> can't structurally satisfy —
+    // same cast useCreateProject already uses for the same reason.
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<ComponentRecord>(await apiClient.POST("/component", { body: body as never })),
+    onSuccess: () => invalidateEverywhere(queryClient, ["components"]),
+  });
+}
+
+export function useUpdateComponent(componentId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<ComponentRecord>(
+        await apiClient.PATCH("/component/{component_id}", {
+          params: { path: { component_id: componentId } },
+          body,
+        }),
+      ),
+    // Optimistic fast path (D1.4-54/55), same as useUpdateProject.
+    onMutate: (body) =>
+      beginOptimisticUpdate<ComponentRecord>(
+        queryClient,
+        ["components", componentId],
+        ["components"],
+        "component_id",
+        componentId,
+        body,
+      ),
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) {
+        updateEverywhere(queryClient, ["components", componentId], ["components"], "component_id", context.snapshot);
+      }
+    },
+    onSuccess: (data) => {
+      updateEverywhere(queryClient, ["components", componentId], ["components"], "component_id", data);
+    },
+  });
+}
+
+// No fixed id, unlike useUpdateComponent — a single instance is shared for
+// both the header's own Delete button and every sub-Component row's own
+// trash icon, each supplying whichever component_id it's actually deleting
+// at call time, the same shape useDeleteProject already uses.
+export function useDeleteComponent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (componentId: number) =>
+      unwrap<void>(
+        await apiClient.DELETE("/component/{component_id}", {
+          params: { path: { component_id: componentId } },
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["components"]),
+  });
+}
+
 export function usePeople() {
   return useQuery({
     queryKey: ["people"],

@@ -62,12 +62,22 @@ import {
 // never used, since DataGrid multiplies whatever rowHeight/
 // columnHeaderHeight is *given* by a further density factor on top.
 const DENSE_ROW_HEIGHT = 22;
-const HEADER_HEIGHT = 48;
+// Tight to FilterableHeader's own content now that its own py/gap are both
+// 0 (GridColumnFilter.tsx) — the label line plus the filter row's own
+// fixed 20px height. A structural fix (making that content stretch to
+// fill columnHeaderHeight exactly, rather than tuning this constant to
+// match it) was tried and made things worse — DataGrid's own header cell
+// sizing doesn't behave as a simple, predictable flex container once
+// fought with height/alignSelf overrides — so this stays a plain, tuned
+// pixel value instead, shaved down further from 40 since a small amount
+// of MUI's own default vertical centring was still visible either side of
+// the content at that value.
+const HEADER_HEIGHT = 36;
 // With the filter row hidden (D1.4-56's "Show Filter"/"Hide filter" toggle),
 // the header only needs to fit FilterableHeader's own label line — freeing
 // the rest of HEADER_HEIGHT back to data rows is the whole point of hiding
 // it, not leaving it as blank space under the label.
-const HEADER_HEIGHT_NO_FILTER_ROW = 24;
+const HEADER_HEIGHT_NO_FILTER_ROW = 16;
 
 // Every column is sized to its own heading/content by measuring real text
 // against the grid's own font via an offscreen canvas, computed directly in
@@ -288,6 +298,37 @@ export const EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
   "percentage_allocation",
   "task_type",
   "component_id",
+  "priority",
+  "start_date",
+  "attachments",
+  "remarks",
+  "owner_person_id",
+  "requestor_person_id",
+  "date_added",
+  "status_date",
+  "external_reference_url",
+];
+
+// The Component GUI component's own embedded `TaskGrid` column set
+// (`ComponentDetailPlan.md` §4.3, `D1.4-68`) — the inverse swap from
+// `EMBEDDED_TASK_GRID_COLUMNS` above: a Component's own Tasks can belong to
+// *any* Project (Task→Component is independent of Task→Project), so
+// `project_id` is useful here rather than redundant, while `component_id`
+// is now the one that's redundant inside that Component's own section.
+// Same front-loaded ordering otherwise, `project_id` sitting where
+// `component_id` used to in the tail.
+export const COMPONENT_EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
+  "urgency",
+  "tentative_resource_assignment",
+  "description",
+  "status",
+  "resources",
+  "end_date",
+  "effort_in_days",
+  "effort_type",
+  "percentage_allocation",
+  "task_type",
+  "project_id",
   "priority",
   "start_date",
   "attachments",
@@ -1245,7 +1286,17 @@ export function TaskGrid({
         getRowClassName={(params) => urgencyRowClassName(params.row)}
         sx={{
           fontSize: DENSE_FONT_SIZE,
+          // A fine, dark grey outline around the whole grid — MUI's own
+          // default border reads as too faint to clearly separate the grid
+          // from whatever it's embedded in (a Project/Component row, most
+          // of all).
+          border: "1px solid rgba(0,0,0,0.4)",
           "& .MuiDataGrid-columnHeader": { paddingLeft: 0, paddingRight: 0 },
+          // The header/sort row's own grey fill lives on FilterableHeader's
+          // own label Box instead (GridColumnFilter.tsx) — not here — since
+          // this container wraps the filter row too, and that needs to
+          // stay white, not shaded the same as the label above it.
+          "& .MuiDataGrid-columnHeaders": { bgcolor: "#fff" },
           ...urgencyRowSx,
         }}
       />

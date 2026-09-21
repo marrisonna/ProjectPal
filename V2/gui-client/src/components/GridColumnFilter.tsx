@@ -254,7 +254,11 @@ export function FilterableHeader({
 
   return (
     <Box
-      sx={{ display: "flex", flexDirection: "column", width: columnWidth, gap: "2px", py: "3px" }}
+      // No gap/py: the label's own grey fill (below) should touch the
+      // header's own top border directly, and the filter row should touch
+      // the bottom of the grey label directly — any padding/gap here is
+      // otherwise-unfillable dead space, not something to recolour.
+      sx={{ display: "flex", flexDirection: "column", width: columnWidth, gap: 0, py: 0 }}
     >
       <Box
         sx={{
@@ -269,6 +273,11 @@ export function FilterableHeader({
           // trickery — this restores that same 10px inset for the title
           // text only, which still wants it.
           px: "10px",
+          // The header/sort row's own light grey fill — applied here, on
+          // just the label, rather than as a blanket background on the
+          // whole header cell (TaskGrid.tsx's own sx) — so the filter row
+          // below stays white, not shaded the same as the title above it.
+          bgcolor: "rgba(0,0,0,0.08)",
         }}
       >
         {label}
