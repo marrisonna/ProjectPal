@@ -278,6 +278,13 @@ export function FilterableHeader({
           // whole header cell (TaskGrid.tsx's own sx) — so the filter row
           // below stays white, not shaded the same as the title above it.
           bgcolor: "rgba(0,0,0,0.08)",
+          // Darkened to match TaskGrid.tsx's own outer border color, but
+          // only across the label's own height — the cell's ambient
+          // vertical separator (showColumnVerticalBorder, spanning the
+          // whole header cell including the filter row below) stays at
+          // MUI's own default lighter shade, since this border sits right
+          // on top of it for just this Box's own height and paints over it.
+          borderRight: "1px solid rgba(0,0,0,0.4)",
         }}
       >
         {label}
