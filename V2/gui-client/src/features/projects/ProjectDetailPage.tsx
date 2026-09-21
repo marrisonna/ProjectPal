@@ -492,6 +492,10 @@ export function ProjectDetailPage() {
             <Projects
               parentProjectId={id}
               alsoShowTasksForProject={id != null ? project : undefined}
+              // A specific Project's own detail view defaults to "Open" —
+              // "Top Level Projects" (id == null) keeps Projects's own
+              // default of "None".
+              defaultTaskVisibility={id != null ? "Open" : undefined}
               projects={projects}
               tasks={tasks ?? []}
               components={components}
