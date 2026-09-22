@@ -49,6 +49,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button color="inherit" onClick={() => openListWindow("components")}>
               Components
             </Button>
+            {/* Its own popped-out singleton window (D1.4-8), like the
+                three above — opens SearchPage (SearchPlan.md). */}
+            <Button color="inherit" onClick={() => openListWindow("search")}>
+              Search
+            </Button>
           </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />

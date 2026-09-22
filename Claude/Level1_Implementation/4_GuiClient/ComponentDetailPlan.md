@@ -1,6 +1,6 @@
 # Component List + Component Detail — Design and Implementation Plan
 
-**Status: design confirmed (`D1.4-66`–`D1.4-72`), no code written yet.** Written before any code, per the user's own request, following the same before-code-review pattern `ProjectDetailPlan.md`/`TaskGridPlan.md`/`ProjectsGUIComponent.md` (this folder) already established. All three open questions (§7) are answered: Option A (a new, parallel `Component`/`Components` pair, `D1.4-70`), generalise `AddTaskDialog.tsx` (`D1.4-71`), and defer the Component-rooted Gantt Display as its own follow-up rather than building it in this same slice (`D1.4-72`).
+**Status: implemented and verified end-to-end against the real REST API (`D1.4-66`–`D1.4-72`).** Written before any code, per the user's own request, following the same before-code-review pattern `ProjectDetailPlan.md`/`TaskGridPlan.md`/`ProjectsGUIComponent.md` (this folder) already established. All three open questions (§7) were answered: Option A (a new, parallel `Component`/`Components` pair, `D1.4-70`), generalise `AddTaskDialog.tsx` (`D1.4-71`), and defer the Component-rooted Gantt Display as its own follow-up rather than building it in this same slice (`D1.4-72`) — Gantt Display remains not yet built; everything else in this document is.
 
 ## Contents
 

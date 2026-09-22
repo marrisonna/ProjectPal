@@ -159,10 +159,16 @@ const PROJECT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
 // embedded-tree shape as Project Detail's, so the same sizing.
 const COMPONENT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
 
+// SearchPage.tsx (SearchPlan.md §4.1) — wider than Project/Component
+// Detail's own card (a results grid with several columns wants more
+// horizontal room), shorter (a search screen wants less vertical room).
+const SEARCH_WINDOW_FEATURES = "width=900,height=600";
+
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
   if (entityType === "projects") return PROJECT_DETAIL_WINDOW_FEATURES;
   if (entityType === "components") return COMPONENT_DETAIL_WINDOW_FEATURES;
+  if (entityType === "search") return SEARCH_WINDOW_FEATURES;
   return undefined;
 }
 

@@ -39,6 +39,8 @@ export const EMPTY_COLUMN_FILTER: ColumnFilterState = { contains: "", exact: nul
 // a required action.
 const ACTIVE_FILTER_BG = "#ffe082";
 
+const FILTER_ROW_HEIGHT = 20;
+
 export function columnFilterPasses(values: string[], state: ColumnFilterState): boolean {
   if (state.exact) {
     if (!values.some((v) => state.exact!.has(v))) return false;
@@ -204,6 +206,7 @@ export function FilterableHeader({
   getOptions,
   columnWidth,
   filterRowVisible = true,
+  onLabelDoubleClick,
 }: {
   label: string;
   state: ColumnFilterState;
@@ -214,6 +217,16 @@ export function FilterableHeader({
   /** The column's own live (resizable) width in px — see TaskGrid.tsx's
    * `withFilter` for why this is a number, not "100%". */
   columnWidth: number;
+  /**
+   * Double-clicking the label itself snaps this column back to its own
+   * auto-fit width (`DenseDataGrid.tsx`'s `withFilter`) — a self-contained
+   * replacement for MUI's own native "double-click the resize separator"
+   * gesture, which needs the double-click to land on a specific few-pixel
+   * strip *underneath* this very label and, in practice, proved
+   * indistinguishable from two ordinary single clicks. Omitted (`undefined`)
+   * for a `flex` column — it has no manual width to reset to.
+   */
+  onLabelDoubleClick?: () => void;
   /**
    * Whether the filter box + button beneath the label are actually shown
    * right now ("Show Filter"/"Hide filter", TaskGrid.tsx's own right-click
@@ -261,12 +274,14 @@ export function FilterableHeader({
       sx={{ display: "flex", flexDirection: "column", width: columnWidth, gap: 0, py: 0 }}
     >
       <Box
+        onDoubleClick={onLabelDoubleClick}
         sx={{
           fontSize: DENSE_FONT_SIZE,
           fontWeight: 700,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          cursor: onLabelDoubleClick ? "pointer" : undefined,
           // The ambient MUI header cell padding is zeroed out grid-wide
           // (TaskGrid.tsx's own sx) so the filter row below can sit
           // flush with the column's own border lines with no clipping
@@ -278,13 +293,6 @@ export function FilterableHeader({
           // whole header cell (TaskGrid.tsx's own sx) — so the filter row
           // below stays white, not shaded the same as the title above it.
           bgcolor: "rgba(0,0,0,0.08)",
-          // Darkened to match TaskGrid.tsx's own outer border color, but
-          // only across the label's own height — the cell's ambient
-          // vertical separator (showColumnVerticalBorder, spanning the
-          // whole header cell including the filter row below) stays at
-          // MUI's own default lighter shade, since this border sits right
-          // on top of it for just this Box's own height and paints over it.
-          borderRight: "1px solid rgba(0,0,0,0.4)",
         }}
       >
         {label}
@@ -295,7 +303,7 @@ export function FilterableHeader({
         sx={{
           display: "flex",
           gap: 0,
-          height: 20,
+          height: FILTER_ROW_HEIGHT,
           width: columnWidth,
         }}
         onMouseDown={(e) => e.stopPropagation()}

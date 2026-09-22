@@ -1,22 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  DataGrid,
   GridActionsCellItem,
-  useGridApiContext,
   useGridApiRef,
   type GridCellParams,
   type GridColDef,
-  type GridRenderEditCellParams,
   type GridRowParams,
-  type GridSingleSelectColDef,
-  type ValueOptions,
 } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import ListItemText from "@mui/material/ListItemText";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useDeleteTask, useUpdateTaskField } from "../../api/hooks";
 import {
@@ -40,129 +31,24 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import {
   computeUrgency,
-  computeUrgencyColour,
   formatDdMmmYy,
   getTaskSchedule,
+  urgencyRowClassName,
+  urgencyRowPaletteSx,
   type ScheduleGraph,
 } from "../../lib/schedule";
 import { READONLY_BG } from "../../components/DenseField";
-import { branding, DENSE_FONT_SIZE } from "../../theme/theme";
 import { formatApiError } from "../../lib/apiErrors";
 import {
-  columnFilterPasses,
-  EMPTY_COLUMN_FILTER,
-  FilterableHeader,
-  sortFilterOptions,
-  type ColumnFilterState,
-  type FilterSortType,
-} from "../../components/GridColumnFilter";
-
-// Dense, WinForms-like row/header sizing (D-Win-11/14) — these are the
-// exact literal pixel values wanted; `density="compact"` is deliberately
-// never used, since DataGrid multiplies whatever rowHeight/
-// columnHeaderHeight is *given* by a further density factor on top.
-const DENSE_ROW_HEIGHT = 22;
-// Tight to FilterableHeader's own content now that its own py/gap are both
-// 0 (GridColumnFilter.tsx) — the label line plus the filter row's own
-// fixed 20px height. A structural fix (making that content stretch to
-// fill columnHeaderHeight exactly, rather than tuning this constant to
-// match it) was tried and made things worse — DataGrid's own header cell
-// sizing doesn't behave as a simple, predictable flex container once
-// fought with height/alignSelf overrides — so this stays a plain, tuned
-// pixel value instead, shaved down further from 40 since a small amount
-// of MUI's own default vertical centring was still visible either side of
-// the content at that value.
-const HEADER_HEIGHT = 36;
-// With the filter row hidden (D1.4-56's "Show Filter"/"Hide filter" toggle),
-// the header only needs to fit FilterableHeader's own label line — freeing
-// the rest of HEADER_HEIGHT back to data rows is the whole point of hiding
-// it, not leaving it as blank space under the label.
-const HEADER_HEIGHT_NO_FILTER_ROW = 16;
-
-// Every column is sized to its own heading/content by measuring real text
-// against the grid's own font via an offscreen canvas, computed directly in
-// `withFilter` below — *not* MUI DataGrid's own built-in `autosizeColumns`.
-// That was tried first and abandoned: `columns` necessarily gets rebuilt
-// (a new array/object graph) on every render, since its column defs close
-// over live `filterState`/etc., and DataGrid re-derives each column's
-// width straight from its own colDef (`hydrateColumnsWidth`,
-// gridColumnsUtils.js) every time that `columns` prop's identity changes —
-// falling back to a flat 100px for any column with no explicit `width` of
-// its own. `autosizeColumns` is also async (at least one Promise tick), so
-// even re-running it on every render couldn't reliably win that race
-// before the *next* incidental re-render (a filter keystroke, an
-// unrelated prop from the parent, anything) rebuilt `columns` again and
-// reset it. Computing an explicit `width` ourselves, synchronously, every
-// time a column def is built sidesteps the whole problem: a rebuild can
-// only ever arrive at the same correct answer, never a wrong default.
-// A hidden, offscreen <span> — not a canvas 2D context — reused for every
-// measurement. Canvas measureText was tried first and, even once Inter was
-// confirmed loaded (document.fonts.check), still produced widths narrower
-// than several strings actually render at, badly enough to truncate them:
-// a canvas created via document.createElement but never attached to the
-// document doesn't reliably go through the same font-resolution/text-
-// shaping path a real, live DOM element does, so a font it should have
-// available can still measure using a substituted fallback. An actual DOM
-// element, appended to the page, goes through exactly the same layout and
-// font engine the grid's own cells do — there's no plausible way for it to
-// disagree with them, since they're both just ordinary DOM/CSS text.
-// Individual longhand style properties, not the `font` shorthand — that
-// was tried first and is likely the actual reason truncation persisted
-// even after switching from canvas to a real DOM element: `element.style
-// .font = "..."` goes through the CSS shorthand parser (stricter than
-// canvas's own lenient `ctx.font`), and an invalid/unrecognised shorthand
-// value is *silently rejected*, leaving the element at whatever font it
-// already had — here, no explicit font at all, i.e. the document's
-// default serif/sans-serif at its own default size, which happens to
-// measure narrower than Inter at 12px for exactly the strings that were
-// truncating and wide enough not to visibly matter for the others. Each
-// longhand property below has simple, unambiguous parsing, with nothing
-// to silently reject.
-let measurementSpan: HTMLSpanElement | null = null;
-function measureTextWidth(text: string, fontWeight: number): number {
-  if (!measurementSpan) {
-    measurementSpan = document.createElement("span");
-    measurementSpan.style.position = "absolute";
-    measurementSpan.style.visibility = "hidden";
-    measurementSpan.style.whiteSpace = "pre";
-    measurementSpan.style.top = "-9999px";
-    measurementSpan.style.left = "-9999px";
-    measurementSpan.style.fontFamily = branding.fontFamily;
-    measurementSpan.style.fontSize = `${DENSE_FONT_SIZE}px`;
-    document.body.appendChild(measurementSpan);
-  }
-  measurementSpan.style.fontWeight = String(fontWeight);
-  measurementSpan.textContent = text;
-  return measurementSpan.getBoundingClientRect().width;
-}
-const HEADER_FONT_WEIGHT = 700;
-const CELL_FONT_WEIGHT = 400;
-// Shorthand strings kept only for the Font Loading API below (`document
-// .fonts.check`/`.load`), which requires exactly this CSS font shorthand
-// syntax — unrelated to, and unaffected by, the span-styling bug above.
-const HEADER_FONT = `${HEADER_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
-const CELL_FONT = `${CELL_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
-
-// FilterableHeader's own label padding (GridColumnFilter.tsx: `px: "10px"`
-// on the label Box, i.e. 10px each side = 20px) plus a real safety margin —
-// not just rounding tolerance: CSS `text-overflow: ellipsis` doesn't clip
-// by however many pixels are actually missing, it drops *whole trailing
-// characters* until what's left plus "…" fits, so even a few px of
-// genuine shortfall reads as several missing characters. Better to have a
-// little unused space than to trigger that.
-const HEADER_LABEL_PADDING = 32;
-// MUI DataGrid's own default cell horizontal padding is `0 10px`
-// (GridRootStyles.js: `.MuiDataGrid-cell/-columnHeader { padding: '0
-// 10px' }`, confirmed by reading it directly) — 20px, not the 16px first
-// assumed here (a real, if minor, contributor to a real reported
-// under-measurement bug) — plus the same ellipsis safety margin as above.
-const CELL_PADDING = 30;
-// A boolean column ("T") renders a checkbox icon, not text — not
-// meaningfully measurable via canvas the way every other column's actual
-// displayed text is, so this is a plain fixed width instead (a bit more
-// than DENSE_ROW_HEIGHT's own 22px, since the icon needs a little
-// breathing room on each side).
-const BOOLEAN_COLUMN_WIDTH = 30;
+  CELL_FONT_WEIGHT,
+  DENSE_ROW_HEIGHT,
+  DenseDataGrid,
+  DenseSingleSelectEditCell,
+  HEADER_FONT_WEIGHT,
+  measureTextWidth,
+  useDenseGridColumns,
+} from "../../components/DenseDataGrid";
+import type { ColumnFilterState } from "../../components/GridColumnFilter";
 
 // Description: capped at 2.5x the width of its own header text, rather
 // than growing arbitrarily wide with long content. Ref URL: capped at
@@ -172,15 +58,16 @@ const BOOLEAN_COLUMN_WIDTH = 30;
 // its own header text width, the same shape as Description just with a
 // different multiplier.
 //
-// Applied only to the *default* (computed) width, in `withFilter` below —
-// never as a hard `colDef.maxWidth`, which would also permanently block a
-// user manually dragging either column wider afterwards (the actual bug
-// reported when this was first tried as `maxWidth`). A column already in
-// `manualColumnWidthsRef` (below) skips this entirely.
+// Applied only to the *default* (computed) width, via `withFilter`'s own
+// `widthCap` argument below — never as a hard `colDef.maxWidth`, which
+// would also permanently block a user manually dragging either column
+// wider afterwards (the actual bug reported when this was first tried as
+// `maxWidth`). A column the user has already manually resized skips this
+// entirely (`useDenseGridColumns`'s own `withFilter`).
 //
 // A function, not a module-level constant computed once at import time —
-// that was tried first and is wrong for the same reason the truncation bug
-// below is: `@fontsource/inter`'s actual font files (main.tsx) load over
+// that was tried first and is wrong for the same reason a truncation bug
+// once was: `@fontsource/inter`'s actual font files (main.tsx) load over
 // the network, asynchronously, and a module evaluates long before that can
 // possibly have finished, so a constant computed then would be measuring
 // against whatever fallback font the browser substitutes for Inter,
@@ -191,33 +78,6 @@ function defaultMaxWidths(): Record<string, number> {
     external_reference_url: measureTextWidth("0", CELL_FONT_WEIGHT) * 12,
     detailed_description: measureTextWidth("Detailed Description", HEADER_FONT_WEIGHT) * 2,
   };
-}
-
-// `getValues` — the same function each column already passes to
-// `withFilter` to build its own filter-dropdown options — is the actual
-// source of truth for "what does this cell display," reused here rather
-// than re-derived a second, independent way (a `col.valueGetter`-based
-// version was tried first: it matches the *stored* value, not necessarily
-// what's *shown* — `owner_person_id`/`requestor_person_id` have no
-// `valueGetter` at all, since `valueOptions` alone resolves their raw
-// numeric person_id to a display name for `type: "singleSelect"`, so that
-// version measured a bare "3", not "Ben Okafor", a real, confirmed bug).
-// Joined with ", " for a multi-value column (Resources) to reconstruct the
-// same joined string its own `valueGetter` actually renders.
-function measureColumnContentWidth(
-  getValues: (row: TaskRecord) => string[],
-  rows: TaskRecord[],
-  isBoolean: boolean,
-): number {
-  if (isBoolean) return BOOLEAN_COLUMN_WIDTH; // a checkbox icon, not measurable text
-  let max = 0;
-  for (const row of rows) {
-    const text = getValues(row).join(", ");
-    if (!text) continue;
-    const width = measureTextWidth(text, CELL_FONT_WEIGHT);
-    if (width > max) max = width;
-  }
-  return Math.ceil(max) + CELL_PADDING;
 }
 
 // The full column catalog (TaskGridPlan.md §4.2) — identical set, order,
@@ -358,11 +218,6 @@ const GOVERNED_FIELDS = new Set<EditableTaskField>([
   "detailed_description",
 ]);
 
-interface FilterConfig {
-  getValues: (row: TaskRecord) => string[];
-  sortType: FilterSortType;
-}
-
 export interface TaskGridProps {
   tasks: TaskRecord[];
   // Reference data this grid's own column value-getters/editors need,
@@ -396,99 +251,6 @@ function byId<T extends Record<K, number>, K extends string>(
   return map;
 }
 
-function optionValue(option: ValueOptions): string | number | null {
-  return typeof option === "object" ? option.value : option;
-}
-function optionLabel(option: ValueOptions): string {
-  return typeof option === "object" ? option.label : String(option);
-}
-
-// MUI DataGrid's own default row-hover style is a flat, solid
-// backgroundColor (measured live: rgb(245, 245, 245)) painted straight over
-// whatever a row's own background already was — for this grid, that erases
-// the urgency tint entirely for as long as the cursor sits over the row,
-// rather than just tinting it. Blending the two (50/50) instead means the
-// hover state still reads as "the same row, now highlighted," not "a
-// different, flat-grey row" — the hovered colour is derived from the row's
-// own urgency colour, not a fixed value applied regardless of it.
-const HOVER_GREY = { r: 245, g: 245, b: 245 };
-const RGB_PATTERN = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/;
-
-function blendWithHoverGrey(rgbColor: string): string {
-  const match = rgbColor.match(RGB_PATTERN);
-  if (!match) return rgbColor;
-  const r = Math.round((HOVER_GREY.r + Number(match[1])) / 2);
-  const g = Math.round((HOVER_GREY.g + Number(match[2])) / 2);
-  const b = Math.round((HOVER_GREY.b + Number(match[3])) / 2);
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-// A plain native <select>, not MUI's own Select/Menu — the same "native
-// controls, sized explicitly" convention DenseField.tsx already established
-// for this whole app (Q1.4-17), and for the same reason here: MUI's own
-// singleSelect edit cell (GridEditSingleSelectCell) renders its dropdown
-// through a themed Popper portalled straight onto <body>, entirely outside
-// TaskGrid's own DOM subtree — so its font size falls back to the ambient
-// MUI theme default (16px/body1) rather than inheriting the grid's own
-// dense font, however the grid's own sx is set. A native <select> has no
-// such portal: the browser always renders its dropdown using the trigger
-// element's own computed font, so setting fontSize here is guaranteed to
-// apply to the closed cell, the open dropdown, and every option in it.
-//
-// Also commits immediately on selection (setEditCellValue then
-// stopCellEditMode together, not left to a later blur) — MUI's own default
-// only calls setEditCellValue on change and waits for the cell to lose
-// focus to actually commit, which is what made a value picked here not
-// show up in an already-open Task Detail window until the user clicked
-// elsewhere in the grid first.
-function DenseSingleSelectEditCell(props: GridRenderEditCellParams<TaskRecord>) {
-  const { id, field, value, colDef, row } = props;
-  const apiRef = useGridApiContext();
-  // colDef here is the grid's own runtime GridStateColDef, which doesn't
-  // carry the singleSelect-specific valueOptions in its type even though
-  // it's present at runtime (this cell only ever renders for a column that
-  // set type: "singleSelect") — cast to the real declared shape rather than
-  // widen the whole function to `any`.
-  const singleSelectColDef = colDef as unknown as GridSingleSelectColDef<TaskRecord>;
-  const options: ValueOptions[] =
-    typeof singleSelectColDef.valueOptions === "function"
-      ? singleSelectColDef.valueOptions({ id, row, field })
-      : (singleSelectColDef.valueOptions ?? []);
-
-  return (
-    <select
-      autoFocus
-      value={value == null ? "" : String(value)}
-      style={{
-        width: "100%",
-        height: "100%",
-        fontSize: DENSE_FONT_SIZE,
-        fontFamily: "inherit",
-        border: "none",
-        outline: "none",
-        background: "transparent",
-        padding: "0 5px",
-      }}
-      onChange={async (event) => {
-        const raw = event.target.value;
-        const matched = options.find((o) => String(optionValue(o) ?? "") === raw);
-        const newValue = matched ? optionValue(matched) : raw;
-        await apiRef.current.setEditCellValue({ id, field, value: newValue });
-        apiRef.current.stopCellEditMode({ id, field });
-      }}
-    >
-      {options.map((option) => {
-        const v = optionValue(option);
-        return (
-          <option key={String(v)} value={v == null ? "" : String(v)}>
-            {optionLabel(option)}
-          </option>
-        );
-      })}
-    </select>
-  );
-}
-
 export function TaskGrid({
   tasks,
   projects,
@@ -510,71 +272,15 @@ export function TaskGrid({
   const deleteTask = useDeleteTask();
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
   const apiRef = useGridApiRef();
-  // Fields the user has manually drag-resized (DataGrid's own
-  // `onColumnResize`, below), keyed to the width they chose — once a
-  // column's width is the user's own choice, `withFilter` (below) uses it
-  // verbatim instead of recomputing a default, in either direction
-  // (narrower or wider), and never re-applies DEFAULT_MAX_WIDTHS to it.
-  const manualColumnWidthsRef = useRef<Map<string, number>>(new Map());
 
-  // Whether Inter (main.tsx's @fontsource/inter imports) has actually
-  // finished loading — its real font files are fetched over the network,
-  // asynchronously, so measureTextWidth calls made before this resolves
-  // are silently measuring against whatever fallback font the browser
-  // substitutes in the meantime (system-ui/sans-serif), which is narrower
-  // than Inter for several of these strings — the actual cause of a real,
-  // reported bug: specific columns (Status, Project, Owner, dates — not
-  // all of them, only the ones whose computed width happened to be close
-  // enough to the true one for the gap to matter) truncating their own
-  // content on a typical page load, not just some rare first-millisecond
-  // flash. `document.fonts.load` both starts the fetch (if it hasn't
-  // already, e.g. a very first cold load) and resolves once it's ready;
-  // `document.fonts.check` covers the far more common case where it's
-  // already loaded (every earlier screen already rendered Inter text) by
-  // the time this component first mounts, so there's no needless render
-  // delay/flash then.
-  const [fontsReady, setFontsReady] = useState(
-    () => document.fonts.check(HEADER_FONT) && document.fonts.check(CELL_FONT),
-  );
-  useEffect(() => {
-    if (fontsReady) return;
-    let cancelled = false;
-    Promise.all([document.fonts.load(HEADER_FONT), document.fonts.load(CELL_FONT)]).then(() => {
-      if (!cancelled) setFontsReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fontsReady]);
-  // Generous while fonts aren't confirmed loaded yet (safe — a column
-  // reads as "not quite as tight as it could be" for at most one render,
-  // never truncated), removed the moment they are.
-  const fontSafetyMargin = fontsReady ? 0 : 20;
-
-  const [filterState, setFilterState] = useState<Record<string, ColumnFilterState>>(
-    () => initialFilterState ?? {},
-  );
-  // `showFilters` is only the *initial* value (§4.6) — V1.2's own real
-  // GridControl (Requirements/UserInterfaceWindows.md §3.20) lets the user
-  // toggle the filter row's visibility themselves at runtime, via the same
-  // right-click menu this reproduces (D1.4-56), independent of whatever an
-  // embedding window configured it to start as.
-  const [filterVisible, setFilterVisible] = useState(showFilters);
-  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
-
-  function setContains(field: string, contains: string) {
-    setFilterState((prev) => ({
-      ...prev,
-      [field]: { contains, exact: (prev[field] ?? EMPTY_COLUMN_FILTER).exact },
-    }));
-  }
-
-  function setExact(field: string, exact: Set<string> | null) {
-    setFilterState((prev) => ({
-      ...prev,
-      [field]: { contains: (prev[field] ?? EMPTY_COLUMN_FILTER).contains, exact },
-    }));
-  }
+  const {
+    withFilter,
+    getFilteredRows,
+    filterVisible,
+    setFilterVisible,
+    resetFilters,
+    onColumnResize,
+  } = useDenseGridColumns<TaskRecord>({ rows: tasks, initialFilterState, showFilters, apiRef });
 
   const projectsById = useMemo(() => byId(projects, "project_id"), [projects]);
   const componentsById = useMemo(() => byId(components, "component_id"), [components]);
@@ -669,11 +375,12 @@ export function TaskGrid({
     return scheduledUrgency.get(row.task_id) ?? 100;
   }
 
-  // Precompute a palette of CSS classes, one per possible urgency bucket —
-  // DataGrid has no per-row inline-style hook, only discrete classes via
-  // getRowClassName.
-  const urgencyRowSx = useMemo(() => {
-    const sx: Record<string, { bgcolor: string }> = {
+  // The urgency-bucket palette itself is shared with Search's own results
+  // grid (`lib/schedule.ts`'s `urgencyRowPaletteSx`, `SearchPlan.md`
+  // D1.4-76) — only the two TaskGrid-specific classes (governed-cell grey,
+  // the delete cell's own always-white fill) stay local here.
+  const urgencyRowSx = useMemo(
+    () => ({
       "& .task-grid-readonly-cell": { bgcolor: READONLY_BG },
       // No fill at all (not even the row's own urgency tint showing
       // through) — a plain trash icon sitting in its own cell, matching
@@ -683,126 +390,13 @@ export function TaskGrid({
       // show straight through it; an opaque colour is what actually
       // *blocks* that tint from showing in this one cell.
       "& .task-grid-delete-cell": { bgcolor: "#fff" },
-    };
-    const greyBase = "rgb(190, 190, 190)";
-    sx["& .urgency-row-grey"] = { bgcolor: greyBase };
-    // A higher-specificity selector than DataGrid's own plain
-    // ".MuiDataGrid-row:hover" (this one carries an extra class, the
-    // urgency class itself) — no !important needed to win.
-    sx["& .urgency-row-grey:hover"] = { bgcolor: blendWithHoverGrey(greyBase) };
-    for (let m = 0; m <= 100; m++) {
-      const base = computeUrgencyColour(100 + m);
-      sx[`& .urgency-row-${m}`] = { bgcolor: base };
-      sx[`& .urgency-row-${m}:hover`] = { bgcolor: blendWithHoverGrey(base) };
-    }
-    return sx;
-  }, []);
+      ...urgencyRowPaletteSx(),
+    }),
+    [],
+  );
 
-  function urgencyRowClassName(row: TaskRecord): string {
-    if (row.priority == null || row.priority === "Cancelled" || row.priority === "Closed") {
-      return "urgency-row-grey";
-    }
-    const m = Math.max(0, Math.min(100, Math.trunc(taskUrgency(row)) - 100));
-    return `urgency-row-${m}`;
-  }
-
-  // Populated below as each column is built (withFilter), then used by
-  // getOptionsForField/passesAllFilters — safe because both are only ever
-  // *called* later, from event handlers, by which point this render's
-  // columns array (and so this object) is already fully built.
-  const filterConfigs: Record<string, FilterConfig> = {};
-
-  // V1.2's own ApplyFiltersToRows applies every filter's current value
-  // regardless of whether the filter row itself is visible right now
-  // (`m_filterIsVisible` gates only the row's own layout/visibility,
-  // Requirements/UserInterfaceWindows.md §3.20) — hiding the boxes never
-  // silently drops whatever was already typed into them. Matched here:
-  // filtering is driven by `filterState` alone, never by `filterVisible`.
-  function passesAllFilters(row: TaskRecord, excludeField?: string): boolean {
-    for (const field of Object.keys(filterConfigs)) {
-      if (field === excludeField) continue;
-      const config = filterConfigs[field];
-      const state = filterState[field] ?? EMPTY_COLUMN_FILTER;
-      if (!columnFilterPasses(config.getValues(row), state)) return false;
-    }
-    return true;
-  }
-
-  function getOptionsForField(field: string): string[] {
-    const config = filterConfigs[field];
-    if (!config) return [];
-    const values = new Set<string>();
-    for (const row of tasks) {
-      if (!passesAllFilters(row, field)) continue;
-      for (const v of config.getValues(row)) values.add(v);
-    }
-    return sortFilterOptions([...values], config.sortType);
-  }
-
-  function withFilter(
-    col: GridColDef<TaskRecord>,
-    getValues: (row: TaskRecord) => string[],
-    sortType: FilterSortType,
-  ): GridColDef<TaskRecord> {
-    // Registered regardless of `filterVisible` — a filter set while the
-    // row was visible must keep working after the user hides it (see
-    // passesAllFilters's own comment).
-    filterConfigs[col.field] = { getValues, sortType };
-    // Always the same renderHeader, never DataGrid's own default one — the
-    // label above the filter box must render identically (same bold
-    // weight, same position) whether the filter box itself is visible or
-    // not; only FilterableHeader's own `filterRowVisible` prop toggles,
-    // never which component renders the header at all. Falling back to
-    // DataGrid's default renderer when hidden was tried first and is
-    // exactly what caused the reported bug — its own single-line, centred,
-    // non-bold layout doesn't match FilterableHeader's own top-aligned
-    // bold label, so the label's own appearance visibly changed depending
-    // on this flag.
-    //
-    // minWidth is computed here, from the label text alone — not left to
-    // DataGrid's own DOM measurement, since FilterableHeader's own root Box
-    // is styled `width: columnWidth` (it always fills whatever the
-    // column's *current* width already is), so a DOM measurement of it
-    // can only ever report the column's existing width back to itself.
-    const headerLabel = col.headerName ?? col.field;
-    const headerMinWidth = Math.ceil(measureTextWidth(headerLabel, HEADER_FONT_WEIGHT)) + HEADER_LABEL_PADDING;
-
-    // The actual width: the user's own manual choice if they've resized
-    // this column (verbatim — no cap, no recomputation), otherwise
-    // whichever is larger of the header's own width and the widest actual
-    // cell content across every Task, capped at DEFAULT_MAX_WIDTHS for the
-    // two columns that have one. Computed fresh on every render (this
-    // function runs on every render regardless, and canvas measureText is
-    // cheap), so a `columns` rebuild — unavoidable, since these closures
-    // capture live `filterState`/`person`/etc. — always lands on the same
-    // right answer instead of DataGrid's own ~100px fallback for a column
-    // with no explicit `width`.
-    const manualWidth = manualColumnWidthsRef.current.get(col.field);
-    let width = manualWidth;
-    if (width == null) {
-      const contentWidth = measureColumnContentWidth(getValues, tasks, col.type === "boolean");
-      width = Math.max(headerMinWidth, contentWidth) + fontSafetyMargin;
-      const cap = defaultMaxWidths()[col.field];
-      if (cap != null) width = Math.min(width, cap);
-    }
-
-    return {
-      ...col,
-      width,
-      minWidth: Math.max(col.minWidth ?? 0, headerMinWidth),
-      hideSortIcons: true,
-      renderHeader: (params) => (
-        <FilterableHeader
-          label={col.headerName ?? col.field}
-          state={filterState[col.field] ?? EMPTY_COLUMN_FILTER}
-          onContainsChange={(text) => setContains(col.field, text)}
-          onExactChange={(exact) => setExact(col.field, exact)}
-          getOptions={() => getOptionsForField(col.field)}
-          columnWidth={params.colDef.computedWidth}
-          filterRowVisible={filterVisible}
-        />
-      ),
-    };
+  function rowClassName(row: TaskRecord): string {
+    return urgencyRowClassName(row.priority, taskUrgency(row));
   }
 
   // Governed columns (§4.3/§4.5): editable at the DataGrid level, with the
@@ -819,6 +413,7 @@ export function TaskGrid({
   }
 
   const isTeamLead = isTeamLeadOfAnyTeam(person);
+  const maxWidths = defaultMaxWidths();
 
   const allColumnDefs: Partial<Record<TaskGridColumnKey, GridColDef<TaskRecord>>> = {
     task_id: withFilter(
@@ -890,6 +485,7 @@ export function TaskGrid({
       { field: "description", headerName: "Description" },
       (row) => [row.description ?? ""],
       "string",
+      maxWidths.description,
     ),
     component_id: withFilter(
       {
@@ -1086,12 +682,14 @@ export function TaskGrid({
       { field: "external_reference_url", headerName: "Ref URL" },
       (row) => [row.external_reference_url ?? ""],
       "string",
+      maxWidths.external_reference_url,
     ),
     detailed_description: governed(
       withFilter(
         { field: "detailed_description", headerName: "Detailed Description" },
         (row) => [row.detailed_description ?? ""],
         "string",
+        maxWidths.detailed_description,
       ),
       "detailed_description",
     ),
@@ -1145,7 +743,10 @@ export function TaskGrid({
     ...effectiveColumnKeys.map((key) => allColumnDefs[key]).filter((c): c is GridColDef<TaskRecord> => !!c),
   ];
 
-  const filteredTasks = tasks.filter((row) => passesAllFilters(row));
+  // Only safe to call now — every `withFilter` call above (building
+  // `allColumnDefs`) has already registered its own column's filter, and
+  // `getFilteredRows` reads all of them.
+  const filteredTasks = getFilteredRows();
 
   function isEditableCell(row: TaskRecord, field: string): boolean {
     return GOVERNED_FIELDS.has(field as EditableTaskField) && canEditCell(row, field as EditableTaskField);
@@ -1156,93 +757,35 @@ export function TaskGrid({
     else openItemWindow("tasks", row.task_id);
   }
 
-  // Right-click-anywhere-on-the-grid menu (D1.4-56), reproducing V1.2's own
-  // GridControl exactly (Requirements/UserInterfaceWindows.md §3.20,
-  // GridControl.cs: `dataGridView.ContextMenuStrip = contextMenuStrip1`,
-  // attached to the whole grid, not just its filter row) — the standard
-  // MUI "anchor a Menu at the click position" recipe.
-  function handleContextMenu(event: React.MouseEvent) {
-    event.preventDefault();
-    setContextMenu(contextMenu === null ? { mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : null);
-  }
-
-  function handleCloseContextMenu() {
-    setContextMenu(null);
-  }
-
-  function handleResetAllFilters() {
-    setFilterState({});
-    handleCloseContextMenu();
-  }
-
-  function handleToggleShowFilter() {
-    setFilterVisible((prev) => !prev);
-    handleCloseContextMenu();
-  }
-
-  // V1.2's own "Copy All" (GridControl.cs's selectAllToolStripMenuItem_Click):
-  // a tab-separated, newline-separated copy of every currently visible row
-  // and column — header row first — straight to the OS clipboard, in
-  // whatever the user's current sort order is (V1.2 excludes its own
-  // hidden "column zero," the underlying-object column; the equivalent
-  // here is the `__delete` actions column, excluded the same way).
-  // `getCellParams(...).formattedValue` mirrors V1.2's own per-column
-  // `m_columnFormats`-driven text — what's actually shown in the cell, not
-  // the raw underlying value (matters for Owner/Requestor, whose real
-  // value is a person_id).
-  async function handleCopyAll() {
-    const dataColumns = columns.filter((c) => c.field !== "__delete");
-    const header = dataColumns.map((c) => c.headerName ?? c.field).join("\t");
-    const lines = apiRef.current.getSortedRowIds().map((id) =>
-      dataColumns
-        .map((c) => {
-          const params = apiRef.current.getCellParams(id, c.field);
-          const value = params.formattedValue ?? params.value;
-          return value == null ? "" : String(value);
-        })
-        .join("\t"),
-    );
-    try {
-      await navigator.clipboard.writeText([header, ...lines].join("\n"));
-    } catch (err) {
-      setSnackbarError(formatApiError(err, "could not copy to the clipboard."));
-    }
-    handleCloseContextMenu();
-  }
-
   return (
-    <Box onContextMenu={handleContextMenu}>
-      <DataGrid<TaskRecord>
+    <>
+      <DenseDataGrid<TaskRecord>
         apiRef={apiRef}
         rows={filteredTasks}
-        // Always sizes to its own content (ProjectsGUIComponent.md §4.5,
-        // D1.4-59) — a small embedded per-Project grid doesn't need the
-        // 600px box a full-page one used to be fixed at, and a fixed box
-        // would either clip a taller grid or leave dead space under a
-        // shorter one. Applies everywhere, including AllTaskPage, not just
-        // embedded instances — the outer Box above has no fixed height of
-        // its own for the same reason.
-        autoHeight
-        // No pagination footer once every row already fits on the current
-        // page — nothing to page through. Reappears automatically once
-        // there's genuinely more than one page's worth of Tasks.
-        hideFooter={filteredTasks.length <= 100}
-        // Every column's own `width` is computed in `withFilter` above
-        // (measured against real heading/content text, not MUI DataGrid's
-        // own async `autosizeColumns` — see that block's own comment for
-        // why). `onColumnResize` fires continuously while the user drags a
-        // column's own separator; recording the field/width here is what
-        // lets `withFilter` use exactly that width on every later render
-        // instead of recomputing (and so silently overriding) it.
-        onColumnResize={(params) => manualColumnWidthsRef.current.set(params.colDef.field, params.width)}
-        getRowId={(row) => row.task_id}
         columns={columns}
+        getRowId={(row) => row.task_id}
+        onRowDoubleClick={openTask}
+        onColumnResize={onColumnResize}
+        getRowClassName={rowClassName}
+        sx={urgencyRowSx}
+        defaultSort={[defaultSort]}
+        filtering={{
+          filterVisible,
+          onToggleFilterVisible: () => setFilterVisible((prev) => !prev),
+          onResetFilters: resetFilters,
+        }}
+        processRowUpdate={processRowUpdate}
+        onProcessRowUpdateError={(err) => setSnackbarError(formatApiError(err, "please try again."))}
+        isCellEditable={(params: GridCellParams<TaskRecord>) => {
+          if (!GOVERNED_FIELDS.has(params.field as EditableTaskField)) return false;
+          return canEditCell(params.row, params.field as EditableTaskField);
+        }}
         // Single click, not the DataGrid default of double click, starts
         // editing a governed cell the current user can edit — this alone
         // is what makes a single click sufficient; double-click keeps its
-        // own, unconditional job of opening Task Detail (below), exactly
-        // as it does for every other, non-editable cell/column. The two
-        // are independent gestures reaching independent handlers, not one
+        // own, unconditional job of opening Task Detail, exactly as it
+        // does for every other, non-editable cell/column. The two are
+        // independent gestures reaching independent handlers, not one
         // suppressing the other: double-clicking an editable cell starts
         // an edit (from the first click) *and* opens Task Detail (from
         // the double-click itself) — matching how every other column's
@@ -1253,78 +796,12 @@ export function TaskGrid({
           if (apiRef.current.getCellMode(params.id, params.field) === "edit") return;
           apiRef.current.startCellEditMode({ id: params.id, field: params.field });
         }}
-        onCellDoubleClick={(params) => {
-          if (params.field === "__delete") return;
-          openTask(params.row);
-        }}
-        rowHeight={DENSE_ROW_HEIGHT}
-        columnHeaderHeight={filterVisible ? HEADER_HEIGHT : HEADER_HEIGHT_NO_FILTER_ROW}
-        disableColumnMenu
-        disableColumnFilter
-        // Row *selection* (a separate concept from cell focus, and one
-        // TaskGrid has no use for — no checkbox column, no bulk row
-        // actions) is what was painting a flat grey over a clicked row's
-        // own urgency colour. The focused cell's own black border comes
-        // from cell focus, not row selection, so disabling this leaves
-        // that border exactly as it was.
-        disableRowSelectionOnClick
-        showColumnVerticalBorder
-        showCellVerticalBorder
-        processRowUpdate={processRowUpdate}
-        onProcessRowUpdateError={(err) =>
-          setSnackbarError(formatApiError(err, "please try again."))
-        }
-        isCellEditable={(params: GridCellParams<TaskRecord>) => {
-          if (!GOVERNED_FIELDS.has(params.field as EditableTaskField)) return false;
-          return canEditCell(params.row, params.field as EditableTaskField);
-        }}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 100 } },
-          sorting: { sortModel: [defaultSort] },
-        }}
-        sortingOrder={["asc", "desc"]}
-        getRowClassName={(params) => urgencyRowClassName(params.row)}
-        sx={{
-          fontSize: DENSE_FONT_SIZE,
-          // A fine, dark grey outline around the whole grid — MUI's own
-          // default border reads as too faint to clearly separate the grid
-          // from whatever it's embedded in (a Project/Component row, most
-          // of all).
-          border: "1px solid rgba(0,0,0,0.4)",
-          "& .MuiDataGrid-columnHeader": { paddingLeft: 0, paddingRight: 0 },
-          // The header/sort row's own grey fill lives on FilterableHeader's
-          // own label Box instead (GridColumnFilter.tsx) — not here — since
-          // this container wraps the filter row too, and that needs to
-          // stay white, not shaded the same as the label above it.
-          "& .MuiDataGrid-columnHeaders": { bgcolor: "#fff" },
-          ...urgencyRowSx,
-        }}
       />
-      <Snackbar
-        open={!!snackbarError}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarError(null)}
-      >
+      <Snackbar open={!!snackbarError} autoHideDuration={6000} onClose={() => setSnackbarError(null)}>
         <Alert severity="error" onClose={() => setSnackbarError(null)}>
           {snackbarError}
         </Alert>
       </Snackbar>
-      <Menu
-        open={contextMenu !== null}
-        onClose={handleCloseContextMenu}
-        anchorReference="anchorPosition"
-        anchorPosition={contextMenu !== null ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
-      >
-        <MenuItem onClick={handleResetAllFilters} dense>
-          Reset All Filters
-        </MenuItem>
-        <MenuItem onClick={handleCopyAll} dense>
-          Copy All
-        </MenuItem>
-        <MenuItem onClick={handleToggleShowFilter} dense>
-          <ListItemText>{filterVisible ? "Hide filter" : "Show Filter"}</ListItemText>
-        </MenuItem>
-      </Menu>
-    </Box>
+    </>
   );
 }

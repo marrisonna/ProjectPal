@@ -554,3 +554,29 @@ export function useCreateFileAttachment(owner: RemarkOwner) {
     onSuccess: () => invalidateEverywhere(queryClient, ["attachments"]),
   });
 }
+
+// --- Search (SearchPlan.md, D1-4) -------------------------------------------
+
+// No response_model server-side (rest-api/app/routes/search.py) — typed by
+// hand, matching the WhoAmI/Team precedent in client.ts for other
+// unmodelled endpoints.
+export interface SearchResultRecord {
+  type: "Task" | "Project" | "Component" | "Remark" | "Attachment";
+  id: number;
+  label: string;
+}
+
+// `q` is only ever a non-empty, already-trimmed string — SearchPage.tsx's
+// own explicit trigger (D1.4-74) only calls this once the user has
+// actually submitted something, so there's no "search for empty string"
+// case to guard against here the way a live-as-you-type field would need.
+export function useSearch(q: string) {
+  return useQuery({
+    queryKey: ["search", q],
+    enabled: q.length > 0,
+    queryFn: async () =>
+      unwrap<SearchResultRecord[]>(
+        await apiClient.GET("/search", { params: { query: { q } } }),
+      ),
+  });
+}

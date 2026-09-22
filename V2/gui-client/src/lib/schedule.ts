@@ -555,6 +555,61 @@ export function computeTaskRowColour(priority: string | null, urgency: number): 
   return computeUrgencyColour(urgency);
 }
 
+// MUI DataGrid's own default row-hover style is a flat, solid
+// backgroundColor (measured live: rgb(245, 245, 245)) painted straight over
+// whatever a row's own background already was — for an urgency-tinted row,
+// that erases the tint entirely for as long as the cursor sits over the
+// row, rather than just tinting it. Blending the two (50/50) instead means
+// the hover state still reads as "the same row, now highlighted," not "a
+// different, flat-grey row" — the hovered colour is derived from the row's
+// own urgency colour, not a fixed value applied regardless of it.
+const HOVER_GREY = { r: 245, g: 245, b: 245 };
+const RGB_PATTERN = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/;
+
+function blendWithHoverGrey(rgbColor: string): string {
+  const match = rgbColor.match(RGB_PATTERN);
+  if (!match) return rgbColor;
+  const r = Math.round((HOVER_GREY.r + Number(match[1])) / 2);
+  const g = Math.round((HOVER_GREY.g + Number(match[2])) / 2);
+  const b = Math.round((HOVER_GREY.b + Number(match[3])) / 2);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Shared by `TaskGrid.tsx` and Search's own results grid (`SearchPlan.md`
+// D1.4-76) — DataGrid has no per-row inline-style hook, only discrete
+// classes via `getRowClassName`, so a Task row's urgency tint (otherwise a
+// continuous, per-row colour via `computeTaskRowColour` above) has to be
+// expressed as a lookup into a precomputed palette of one CSS class per
+// possible urgency bucket instead. `urgencyRowClassName` picks the class
+// for one row; `urgencyRowPaletteSx` builds the `sx` map every one of
+// those classes resolves against — a consumer merges it into its own
+// DataGrid `sx` (e.g. `DenseDataGrid`'s own `sx` prop) alongside any
+// classes of its own (TaskGrid's `task-grid-readonly-cell`/
+// `task-grid-delete-cell`, kept local to TaskGrid.tsx since neither is an
+// Urgency concept).
+export function urgencyRowClassName(priority: string | null, urgency: number): string {
+  if (priority == null || priority === "Cancelled" || priority === "Closed") {
+    return "urgency-row-grey";
+  }
+  const m = Math.max(0, Math.min(100, Math.trunc(urgency) - 100));
+  return `urgency-row-${m}`;
+}
+
+export function urgencyRowPaletteSx(): Record<string, { bgcolor: string }> {
+  const sx: Record<string, { bgcolor: string }> = {};
+  sx["& .urgency-row-grey"] = { bgcolor: READ_ONLY_GREY };
+  // A higher-specificity selector than DataGrid's own plain
+  // ".MuiDataGrid-row:hover" (this one carries an extra class, the
+  // urgency class itself) — no !important needed to win.
+  sx["& .urgency-row-grey:hover"] = { bgcolor: blendWithHoverGrey(READ_ONLY_GREY) };
+  for (let m = 0; m <= 100; m++) {
+    const base = computeUrgencyColour(100 + m);
+    sx[`& .urgency-row-${m}`] = { bgcolor: base };
+    sx[`& .urgency-row-${m}:hover`] = { bgcolor: blendWithHoverGrey(base) };
+  }
+  return sx;
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**

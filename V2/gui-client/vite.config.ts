@@ -38,6 +38,23 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // `vite preview` (serves the real production `dist/` build, unlike
+    // `vite dev`) has its own separate config and does not inherit
+    // `server` above — without this, `/api/*` would 404 under `npm run
+    // preview` even though the exact same relative-path request works
+    // under `npm run dev`. Port pinned to Vite's own preview default
+    // (4173) so it doesn't silently drift to the next free port if
+    // something else is already listening there.
+    port: 4173,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
   plugins: [
     react(),
     brandIndexHtml(),

@@ -8,6 +8,7 @@ import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
 import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
 import { ComponentDetailPage } from "./features/components/ComponentDetailPage";
+import { SearchPage } from "./features/search/SearchPage";
 
 function AuthenticatedLayout() {
   return (
@@ -58,6 +59,9 @@ export default function App() {
                 Level Components" browsing mode (ComponentDetailPlan.md). */}
             <Route path="/components" element={<ComponentDetailPage />} />
             <Route path="/components/:componentId" element={<ComponentDetailPage />} />
+            {/* SearchPlan.md — its own popped-out singleton window
+                (D1.4-8), like Plan/Projects/Components. */}
+            <Route path="/search" element={<SearchPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
