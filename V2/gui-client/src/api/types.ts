@@ -54,6 +54,15 @@ export interface PersonRecord {
   colour: string | null;
 }
 
+// GET /team has no response_model server-side either (rest-api/app/routes/
+// teams.py's list_teams) — ManagePeoplePlan.md's own first consumer of a
+// Team as its own client-side record; nothing before this displayed a Team
+// name anywhere.
+export interface TeamRecord {
+  team_id: number;
+  name: string;
+}
+
 // GET /person-role has no response_model server-side either (rest-api/app/
 // routes/teams.py's list_person_roles) — typed from its actual SELECT.
 export interface PersonRoleRecord {

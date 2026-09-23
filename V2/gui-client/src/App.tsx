@@ -9,6 +9,8 @@ import { PlanPage } from "./features/plan/PlanPage";
 import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
 import { ComponentDetailPage } from "./features/components/ComponentDetailPage";
 import { SearchPage } from "./features/search/SearchPage";
+import { ManagePeoplePage } from "./features/people/ManagePeoplePage";
+import { TeamManagementPage } from "./features/teams/TeamManagementPage";
 
 function AuthenticatedLayout() {
   return (
@@ -62,6 +64,15 @@ export default function App() {
             {/* SearchPlan.md — its own popped-out singleton window
                 (D1.4-8), like Plan/Projects/Components. */}
             <Route path="/search" element={<SearchPage />} />
+            {/* ManagePeoplePlan.md — its own popped-out singleton window,
+                organisation-admin-only (the page itself gates access). */}
+            <Route path="/people" element={<ManagePeoplePage />} />
+            {/* ManagePeoplePlan.md §5 — no-id resolves to a picker/redirect
+                depending on the viewer (TeamManagementPage.tsx's own
+                logic), same dual-purpose shape as /projects and
+                /components above. */}
+            <Route path="/team-management" element={<TeamManagementPage />} />
+            <Route path="/team-management/:teamId" element={<TeamManagementPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

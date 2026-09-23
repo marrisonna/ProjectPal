@@ -9,6 +9,7 @@ import { Link as RouterLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../theme/Logo";
 import { openListWindow } from "../lib/windowNav";
+import { isTeamLeadOfAnyTeam } from "../lib/permissions";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { person, logout } = useAuth();
@@ -54,6 +55,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button color="inherit" onClick={() => openListWindow("search")}>
               Search
             </Button>
+            {/* ManagePeoplePlan.md §4.1 — organisation-admin-only, mirroring
+                the existing "Admin" chip's own conditional. Nav button
+                placement for the growing set of admin-only screens is
+                deliberately deferred until Admin tooling is designed too
+                (D1.4-86) — these two just go at the end for now. */}
+            {person?.is_organisation_admin && (
+              <Button color="inherit" onClick={() => openListWindow("people")}>
+                Manage People
+              </Button>
+            )}
+            {/* ManagePeoplePlan.md §5.1 — an organisation admin (any Team)
+                or a Team Lead of at least one Team. */}
+            {(person?.is_organisation_admin || isTeamLeadOfAnyTeam(person)) && (
+              <Button color="inherit" onClick={() => openListWindow("team-management")}>
+                Team Management
+              </Button>
+            )}
           </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />

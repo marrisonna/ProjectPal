@@ -1,11 +1,19 @@
 """Team, Person, PersonRole (Plan.md §2.1/§5.1).
 
-Person is is_organisation_admin-only to create/update, with no delete route
-ever — is_active=false is the only "removal" (D-DM-4). PersonRole writes are
-allowed for is_organisation_admin *or* the target Team's own TeamLeadUser.
-Team creation is is_organisation_admin-only and atomically bootstraps the
-new Team's first PersonRole, granting some existing Person TeamLeadUser —
-a Team is never left leaderless (Requirements/UseCases.md §12).
+Person is is_organisation_admin-only to create/update, with is_active=false
+as the primary removal mechanism (D-DM-4) — plus a narrow DELETE, added back
+by D-DM-12 (ManagePeoplePlan.md §4.5/§6): rejected unless the Person is
+referenced nowhere at all, so it only ever succeeds for one that's never
+actually been used for anything (in practice, undoing a just-made mistake,
+not general deletion). An admin also can't remove their own
+is_organisation_admin flag (ManagePeoplePlan.md §4.6).
+
+PersonRole writes are allowed for is_organisation_admin *or* the target
+Team's own TeamLeadUser. Team creation is is_organisation_admin-only and
+atomically bootstraps the new Team's first PersonRole, granting some
+existing Person TeamLeadUser — and PersonRole's own writes (update/remove)
+now guard the same invariant afterwards too (D1.4-87): a Team is never left
+leaderless, not just at creation (Requirements/UseCases.md §12).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -131,6 +139,14 @@ def update_person(
     fields = body.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No fields to update")
+    # ManagePeoplePlan.md §4.6/D1.4-83: an admin may demote a *different*
+    # admin, but never remove their own flag — client-side alone (disabling
+    # the checkbox on your own row) is never sufficient for something this
+    # sensitive, so this is the authoritative check.
+    if person_id == caller.person_id and fields.get("is_organisation_admin") is False:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Cannot remove your own is_organisation_admin flag"
+        )
     set_clause = ", ".join(f"{k} = %s" for k in fields)
     with get_conn() as conn:
         person = one(
@@ -142,6 +158,58 @@ def update_person(
         if person is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Person")
         return person
+
+
+# ManagePeoplePlan.md §4.5/§6, D-DM-12: every table that can meaningfully
+# reference a Person — ownership, authorship, assignment, or Team
+# membership — checked before a delete is allowed. `(table, column,
+# description)`; `description` feeds directly into the rejection message,
+# matching V1.2's own "here's exactly what's still attached" UX
+# (FormManagePeople.cs's buttonDeletePerson_Click).
+_PERSON_REFERENCE_CHECKS = [
+    ("task", "owner_person_id", "owns {n} Task(s)"),
+    ("task", "requestor_person_id", "is the requestor on {n} Task(s)"),
+    ("task_resource", "person_id", "is assigned as a Resource on {n} Task(s)"),
+    ("project", "owner_person_id", "owns {n} Project(s)"),
+    ("component", "owner_person_id", "owns {n} Component(s)"),
+    ("remark", "created_by_person_id", "authored {n} Remark(s)"),
+    ("attachment", "owner_person_id", "owns {n} Attachment(s)"),
+    ("person_role", "person_id", "is a member of {n} Team(s)"),
+]
+
+# `modified_by` (person/component/project/task/dependency/attachment) is
+# pure audit metadata — who last touched a row, not an ownership/assignment
+# relationship — and isn't written by any route in this API today (nothing
+# ever sets it), but the column is nullable and genuinely FK-referenced, so
+# a delete would still fail at the database level if it were ever populated
+# by something else later. Defensively cleared, not treated as blocking,
+# rather than assumed to always be empty.
+_PERSON_MODIFIED_BY_TABLES = ["person", "component", "project", "task", "dependency", "attachment"]
+
+
+@router.delete("/person/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_person(person_id: int, caller: CurrentPerson = Depends(get_current_person)):
+    require_org_admin(caller)
+    with get_conn() as conn:
+        blocking = []
+        for table, column, description in _PERSON_REFERENCE_CHECKS:
+            row = one(conn.execute(f"SELECT count(*) AS n FROM {table} WHERE {column} = %s", (person_id,)))
+            count = row["n"] if row else 0
+            if count > 0:
+                blocking.append(description.format(n=count))
+        if blocking:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Cannot delete this Person because they: " + "; ".join(blocking),
+            )
+        with conn.transaction():
+            for table in _PERSON_MODIFIED_BY_TABLES:
+                conn.execute(f"UPDATE {table} SET modified_by = NULL WHERE modified_by = %s", (person_id,))
+            deleted = one(
+                conn.execute("DELETE FROM person WHERE person_id = %s RETURNING person_id", (person_id,))
+            )
+        if deleted is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Person")
 
 
 class SetPasswordRequest(BaseModel):
@@ -178,6 +246,7 @@ class WritePersonRoleRequest(BaseModel):
     team_id: int
     is_resource: bool = False
     role: str = "NormalUser"
+    nickname: str | None = None
 
 
 def _require_admin_or_team_lead(caller: CurrentPerson, team_id: int) -> None:
@@ -187,6 +256,25 @@ def _require_admin_or_team_lead(caller: CurrentPerson, team_id: int) -> None:
         status.HTTP_403_FORBIDDEN,
         "Requires is_organisation_admin or TeamLeadUser on this Team",
     )
+
+
+def _would_leave_team_leaderless(conn, team_id: int, excluding_person_id: int) -> bool:
+    """True if `team_id` would have no remaining TeamLeadUser once
+    `excluding_person_id`'s own row no longer counts as one — either
+    because it's being demoted to a different role, or removed outright.
+    ManagePeoplePlan.md §5.6/D1.4-87: `teams.py`'s own stated invariant ("a
+    Team is never left leaderless") was previously only enforced at Team
+    *creation* (`create_team`'s own atomic bootstrap) — nothing stopped a
+    Team being edited down to zero afterwards.
+    """
+    row = one(
+        conn.execute(
+            "SELECT count(*) AS n FROM person_role "
+            "WHERE team_id = %s AND role = 'TeamLeadUser' AND person_id != %s",
+            (team_id, excluding_person_id),
+        )
+    )
+    return (row["n"] if row else 0) == 0
 
 
 @router.get("/person-role")
@@ -218,10 +306,10 @@ def add_person_role(
     with get_conn() as conn:
         return one(
             conn.execute(
-                "INSERT INTO person_role (person_id, team_id, is_resource, role) "
-                "VALUES (%s, %s, %s, %s) "
+                "INSERT INTO person_role (person_id, team_id, is_resource, role, nickname) "
+                "VALUES (%s, %s, %s, %s, %s) "
                 "RETURNING person_id, team_id, is_resource, role, nickname",
-                (body.person_id, body.team_id, body.is_resource, body.role),
+                (body.person_id, body.team_id, body.is_resource, body.role, body.nickname),
             )
         )
 
@@ -229,6 +317,7 @@ def add_person_role(
 class UpdatePersonRoleRequest(BaseModel):
     is_resource: bool | None = None
     role: str | None = None
+    nickname: str | None = None
 
 
 @router.patch("/person-role/{person_id}/{team_id}")
@@ -244,6 +333,22 @@ def update_person_role(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No fields to update")
     set_clause = ", ".join(f"{k} = %s" for k in fields)
     with get_conn() as conn:
+        if fields.get("role") is not None and fields["role"] != "TeamLeadUser":
+            current = one(
+                conn.execute(
+                    "SELECT role FROM person_role WHERE person_id = %s AND team_id = %s",
+                    (person_id, team_id),
+                )
+            )
+            if (
+                current is not None
+                and current["role"] == "TeamLeadUser"
+                and _would_leave_team_leaderless(conn, team_id, person_id)
+            ):
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    "Cannot change this Team's only TeamLeadUser to a different role",
+                )
         row = one(
             conn.execute(
                 f"UPDATE person_role SET {set_clause} WHERE person_id = %s AND team_id = %s "
@@ -262,6 +367,20 @@ def remove_person_role(
 ):
     _require_admin_or_team_lead(caller, team_id)
     with get_conn() as conn:
+        current = one(
+            conn.execute(
+                "SELECT role FROM person_role WHERE person_id = %s AND team_id = %s",
+                (person_id, team_id),
+            )
+        )
+        if (
+            current is not None
+            and current["role"] == "TeamLeadUser"
+            and _would_leave_team_leaderless(conn, team_id, person_id)
+        ):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "Cannot remove this Team's only TeamLeadUser"
+            )
         conn.execute(
             "DELETE FROM person_role WHERE person_id = %s AND team_id = %s",
             (person_id, team_id),

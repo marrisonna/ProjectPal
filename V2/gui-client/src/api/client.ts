@@ -20,16 +20,12 @@ apiClient.use({
   },
 });
 
-// GET /auth/whoami and GET /team have no response_model on the API side
-// (rest-api/app/routes/{auth,teams}.py), so openapi-typescript can't infer
-// their shape — typed here from each handler's actual return.
+// GET /auth/whoami has no response_model on the API side
+// (rest-api/app/routes/auth.py), so openapi-typescript can't infer its
+// shape — typed here from the handler's actual return. (GET /team is the
+// same situation — see api/types.ts's own TeamRecord.)
 export interface WhoAmI {
   person_id: number;
   is_organisation_admin: boolean;
   team_roles: { team_id: number; role: string; is_resource: boolean }[];
-}
-
-export interface Team {
-  team_id: number;
-  name: string;
 }

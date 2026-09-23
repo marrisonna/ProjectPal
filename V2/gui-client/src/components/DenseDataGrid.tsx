@@ -203,8 +203,15 @@ function optionLabel(option: ValueOptions): string {
 // show up in an already-open detail window until the user clicked
 // elsewhere in the grid first.
 export function DenseSingleSelectEditCell<T>(props: GridRenderEditCellParams<T>) {
-  const { id, field, value, colDef, row } = props;
-  const apiRef = useGridApiRef();
+  const { id, field, value, colDef, row, api } = props;
+  // `api` (above) is the grid's own live GridApiCommunity, passed straight
+  // in via GridRenderEditCellParams — not `useGridApiRef()`, which called
+  // fresh here would just be a brand-new, disconnected `useRef(null)`
+  // (confirmed by reading MUI's own source, DenseDataGrid.tsx's own comment
+  // on the sort-history effect below) never attached to any `<DataGrid
+  // apiRef={...}>`, so `.current` would stay `null` forever and every
+  // selection here would silently throw inside this onChange handler
+  // instead of ever committing.
   // colDef here is the grid's own runtime GridStateColDef, which doesn't
   // carry the singleSelect-specific valueOptions in its type even though
   // it's present at runtime (this cell only ever renders for a column that
@@ -234,8 +241,8 @@ export function DenseSingleSelectEditCell<T>(props: GridRenderEditCellParams<T>)
         const raw = event.target.value;
         const matched = options.find((o) => String(optionValue(o) ?? "") === raw);
         const newValue = matched ? optionValue(matched) : raw;
-        await apiRef.current.setEditCellValue({ id, field, value: newValue });
-        apiRef.current.stopCellEditMode({ id, field });
+        await api.setEditCellValue({ id, field, value: newValue });
+        api.stopCellEditMode({ id, field });
       }}
     >
       {options.map((option) => {
@@ -331,11 +338,17 @@ export interface UseDenseGridColumnsResult<T> {
 // passing them straight to `DenseDataGrid` below.
 export function useDenseGridColumns<T>({
   rows,
+  getRowId,
   initialFilterState,
   showFilters = true,
   apiRef,
 }: {
   rows: T[];
+  // The same row-identity function every caller already passes to
+  // `DenseDataGrid`'s own `getRowId` prop — needed here too, for the
+  // per-row width cache below (`columnWidthCacheRef`), to tell "this row's
+  // value actually changed" from "this is the same row as last render."
+  getRowId: (row: T) => string | number;
   initialFilterState?: Record<string, ColumnFilterState>;
   showFilters?: boolean;
   // Optional — only needed for the double-click sort-preservation feature
@@ -345,6 +358,25 @@ export function useDenseGridColumns<T>({
   // going through any prop `DenseDataGrid` itself exposes.
   apiRef?: ReturnType<typeof useGridApiRef>;
 }): UseDenseGridColumnsResult<T> {
+  // Per-column cache of each row's own measured content width, keyed by row
+  // id (D1.4-89/ManagePeoplePlan.md's own perf finding): editing a single
+  // cell in a grid built on this hook previously froze the tab solid for
+  // several seconds, because `withFilter` re-measures *every* row's content
+  // on *every* render, and `measureTextWidth` (above) forces a real,
+  // synchronous browser layout reflow per call — cheap once, not cheap
+  // repeated for every row on every keystroke/edit. A row whose value is
+  // unchanged since it was last measured just reuses its cached width, no
+  // DOM touched at all; only the row(s) that actually changed get
+  // remeasured. The column's own overall width is still recomputed as the
+  // true `Math.max` over every row's (mostly cached) width on every render —
+  // pure arithmetic over already-known numbers, not DOM work — so a value
+  // getting *shorter* correctly narrows the column back down too, not just
+  // a one-way "only ever grows" ratchet. A ref, not state: mutating it must
+  // never itself trigger a render — the column widths it feeds into are
+  // recomputed as an ordinary part of this render anyway.
+  const columnWidthCacheRef = useRef<Map<string, Map<string | number, { text: string; width: number }>>>(
+    new Map(),
+  );
   // State, not a ref (its previous form) — double-click-to-reset (below)
   // needs *removing* an entry to actually trigger a re-render, so the next
   // `withFilter` call recomputes that column's own auto-fit width instead
@@ -485,6 +517,42 @@ export function useDenseGridColumns<T>({
     return sortFilterOptions([...values], config.sortType);
   }
 
+  // The cached counterpart to `measureColumnContentWidth` above, used for a
+  // column's own default (non-manual) auto-width — see `columnWidthCacheRef`'s
+  // own comment. Deliberately not used by the double-click-to-fit handler
+  // below: that measures a different, filtered row set on a rare, explicit
+  // user action, where a full fresh scan is the right (and still cheap
+  // enough, since it's not happening every render) choice.
+  function getCachedColumnContentWidth(field: string, getValues: (row: T) => string[], isBoolean: boolean): number {
+    if (isBoolean) return BOOLEAN_COLUMN_WIDTH;
+    let cache = columnWidthCacheRef.current.get(field);
+    if (!cache) {
+      cache = new Map();
+      columnWidthCacheRef.current.set(field, cache);
+    }
+    const liveIds = new Set<string | number>();
+    let max = 0;
+    for (const row of rows) {
+      const id = getRowId(row);
+      liveIds.add(id);
+      const text = getValues(row).join(", ");
+      let entry = cache.get(id);
+      if (!entry || entry.text !== text) {
+        entry = { text, width: text ? measureTextWidth(text, CELL_FONT_WEIGHT) : 0 };
+        cache.set(id, entry);
+      }
+      if (entry.width > max) max = entry.width;
+    }
+    // Drop rows no longer present (deleted, or simply not in this — always
+    // unfiltered, see measureColumnContentWidth's own comment — `rows` set
+    // any more) so a since-removed row's old width can never keep a column
+    // artificially wide, and the cache doesn't grow unboundedly forever.
+    for (const id of cache.keys()) {
+      if (!liveIds.has(id)) cache.delete(id);
+    }
+    return Math.ceil(max) + CELL_PADDING;
+  }
+
   function withFilter(
     col: GridColDef<T>,
     getValues: (row: T) => string[],
@@ -614,13 +682,14 @@ export function useDenseGridColumns<T>({
     // whichever is larger of the header's own width and the widest actual
     // cell content across every row, capped at `widthCap` if given.
     // Computed fresh on every render (this function runs on every render
-    // regardless, and text measurement is cheap), so a `columns` rebuild —
+    // regardless) via the per-row cache above, so a `columns` rebuild —
     // unavoidable, since these closures capture live `filterState`/etc. —
     // always lands on the same right answer instead of DataGrid's own
-    // ~100px fallback for a column with no explicit `width`.
+    // ~100px fallback for a column with no explicit `width`, without
+    // re-measuring every row's DOM width to get there.
     let width = manualWidth;
     if (width == null) {
-      const contentWidth = measureColumnContentWidth(getValues, rows, col.type === "boolean");
+      const contentWidth = getCachedColumnContentWidth(col.field, getValues, col.type === "boolean");
       width = Math.max(headerMinWidth, contentWidth) + fontSafetyMargin;
       if (widthCap != null) width = Math.min(width, widthCap);
     }
@@ -636,7 +705,24 @@ export function useDenseGridColumns<T>({
 
   return {
     withFilter,
-    getFilteredRows: () => rows.filter((row) => passesAllFilters(row)),
+    // Preserves `rows`' own reference when nothing was actually filtered
+    // out — `Array.prototype.filter` always allocates a brand-new array,
+    // even when every row passed, so without this check a caller whose
+    // `rows` prop hasn't genuinely changed (e.g. React Query's cache is
+    // still the same object — a re-render caused by something unrelated,
+    // such as a mutation's own pending-state flipping) would still hand
+    // `DenseDataGrid` a *new* `rows` array identity on every render. MUI
+    // DataGrid treats a changed `rows` reference as "the data changed" and
+    // re-syncs its whole internal row model from it — including, critically,
+    // overwriting whatever `processRowUpdate`'s own resolved value had just
+    // written into a row via `updateRows`, if that stale-but-different-
+    // identity prop lands in between. That's what turned "commit, done" into
+    // "commit, flash back to the old value, then correct itself once the
+    // real refetch lands" (ManagePeoplePlan.md's own perf finding, round 2).
+    getFilteredRows: () => {
+      const filtered = rows.filter((row) => passesAllFilters(row));
+      return filtered.length === rows.length ? rows : filtered;
+    },
     filterVisible,
     setFilterVisible,
     resetFilters: () => setFilterState({}),

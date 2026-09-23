@@ -1,0 +1,407 @@
+import { useState, type KeyboardEvent } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import {
+  GridActionsCellItem,
+  useGridApiRef,
+  type GridCellParams,
+  type GridColDef,
+  type GridRenderEditCellParams,
+  type GridRowParams,
+} from "@mui/x-data-grid";
+import DeleteIcon from "@mui/icons-material/Delete";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import {
+  useCreatePerson,
+  useDeletePerson,
+  usePeople,
+  useSetPersonPassword,
+  useUpdatePersonField,
+} from "../../api/hooks";
+import type { PersonRecord } from "../../api/types";
+import { useAuth } from "../../auth/AuthContext";
+import { DenseDataGrid, DENSE_ROW_HEIGHT, useDenseGridColumns } from "../../components/DenseDataGrid";
+import { formatApiError } from "../../lib/apiErrors";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
+import { useSingletonWindowIdentity } from "../../lib/windowNav";
+
+// A native <input type="color"> edit cell (this app's own "native controls"
+// convention, DenseField.tsx) — the one HTML control that naturally
+// constrains input to a valid colour, and the first editor for `colour`
+// anywhere in this app (ManagePeoplePlan.md §4.2). Commits immediately on
+// change, the same shape DenseSingleSelectEditCell already uses, and for
+// the same reason: `props.api` is the grid's own live API, passed straight
+// in — not `useGridApiRef()`, which called fresh here would just be a new,
+// disconnected `useRef(null)`.
+function ColourEditCell(props: GridRenderEditCellParams<PersonRecord>) {
+  const { id, field, value, api } = props;
+  return (
+    <input
+      type="color"
+      autoFocus
+      value={(value as string | null) ?? "#ffffff"}
+      style={{ width: "100%", height: "100%", border: "none", padding: 0, background: "transparent", cursor: "pointer" }}
+      onChange={async (event) => {
+        await api.setEditCellValue({ id, field, value: event.target.value });
+        api.stopCellEditMode({ id, field });
+      }}
+    />
+  );
+}
+
+function ColourSwatch({ colour }: { colour: string | null }) {
+  return (
+    <Box
+      sx={{
+        width: 14,
+        height: 14,
+        mx: "auto",
+        borderRadius: "2px",
+        border: "1px solid rgba(0,0,0,0.3)",
+        bgcolor: colour ?? "#fff",
+      }}
+    />
+  );
+}
+
+// ManagePeoplePlan.md §4.3 — Name and Login up front (both needed before a
+// new Person is usable for anything); is_organisation_admin/colour left at
+// their server-side defaults, editable afterward in the grid.
+function CreatePersonDialog({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [login, setLogin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const createPerson = useCreatePerson();
+
+  async function handleConfirm() {
+    if (!name.trim()) {
+      setError("A name must be specified.");
+      return;
+    }
+    try {
+      await createPerson.mutateAsync({ name: name.trim(), external_login: login.trim() || null });
+      onClose();
+    } catch (err) {
+      setError(formatApiError(err, "please try again."));
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Enter") handleConfirm();
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Add New Person</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Name"
+          fullWidth
+          margin="normal"
+          autoFocus
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={handleKeyDown}
+          error={!!error}
+          helperText={error ?? undefined}
+        />
+        <TextField
+          label="Login"
+          fullWidth
+          margin="normal"
+          value={login}
+          onChange={(event) => setLogin(event.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleConfirm} disabled={createPerson.isPending}>
+          Create
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ManagePeoplePlan.md §4.4 — one dialog/action for both a brand-new
+// Person's first password and resetting an existing one later; admin-driven
+// only (D1.4-83), the admin communicates it out of band afterward.
+function SetPasswordDialog({ person, onClose }: { person: PersonRecord; onClose: () => void }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const setPersonPassword = useSetPersonPassword();
+
+  async function handleConfirm() {
+    if (password.length < 8) {
+      setError("The password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("The two passwords don't match.");
+      return;
+    }
+    try {
+      await setPersonPassword.mutateAsync({ personId: person.person_id, newPassword: password });
+      onClose();
+    } catch (err) {
+      setError(formatApiError(err, "please try again."));
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Enter") handleConfirm();
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Set Password — {person.name}</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="New Password"
+          type="password"
+          fullWidth
+          margin="normal"
+          autoFocus
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <TextField
+          label="Confirm Password"
+          type="password"
+          fullWidth
+          margin="normal"
+          value={confirm}
+          onChange={(event) => {
+            setConfirm(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={handleKeyDown}
+          error={!!error}
+          helperText={error ?? undefined}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleConfirm} disabled={setPersonPassword.isPending}>
+          Set Password
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ManagePeoplePlan.md §4 — organisation-admin-only, org-wide Person
+// management: create, edit every Person-level field in place, set/reset a
+// password, deactivate, or (narrowly, D-DM-12) delete.
+export function ManagePeoplePage() {
+  useDocumentTitle("Manage People");
+  useSingletonWindowIdentity("people-list");
+  const { person: caller } = useAuth();
+  const apiRef = useGridApiRef();
+
+  const { data: people } = usePeople();
+  const updatePersonField = useUpdatePersonField();
+  const deletePerson = useDeletePerson();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<PersonRecord | null>(null);
+  const [snackbarError, setSnackbarError] = useState<string | null>(null);
+
+  const { withFilter, getFilteredRows, filterVisible, setFilterVisible, resetFilters, onColumnResize } =
+    useDenseGridColumns<PersonRecord>({
+      rows: people ?? [],
+      getRowId: (row) => row.person_id,
+      showFilters: false,
+      apiRef,
+    });
+
+  // §4.6 — an admin may demote a *different* admin, but never remove their
+  // own flag; enforced authoritatively server-side (update_person), this is
+  // just the client-side UX half so the rejection is never actually hit in
+  // the normal case.
+  function isEditableCell(row: PersonRecord, field: string): boolean {
+    if (field === "is_organisation_admin" && row.person_id === caller?.person_id) return false;
+    return true;
+  }
+
+  async function handleDeletePerson(target: PersonRecord) {
+    if (!window.confirm(`Delete Person "${target.name}"? This cannot be undone.`)) return;
+    try {
+      await deletePerson.mutateAsync(target.person_id);
+    } catch (err) {
+      setSnackbarError(formatApiError(err, "please try again."));
+    }
+  }
+
+  async function processRowUpdate(newRow: PersonRecord, oldRow: PersonRecord): Promise<PersonRecord> {
+    const changedField = (Object.keys(newRow) as (keyof PersonRecord)[]).find(
+      (key) => newRow[key] !== oldRow[key],
+    );
+    if (!changedField) return oldRow;
+    return updatePersonField.mutateAsync({
+      personId: oldRow.person_id,
+      body: { [changedField]: newRow[changedField] },
+    });
+  }
+
+  const actionsColumn: GridColDef<PersonRecord> = {
+    field: "__actions",
+    type: "actions",
+    headerName: "",
+    width: DENSE_ROW_HEIGHT * 2,
+    minWidth: DENSE_ROW_HEIGHT * 2,
+    maxWidth: DENSE_ROW_HEIGHT * 2,
+    sortable: false,
+    filterable: false,
+    hideSortIcons: true,
+    getActions: (params: GridRowParams<PersonRecord>) => [
+      <GridActionsCellItem
+        key="password"
+        icon={<VpnKeyIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
+        label="Set Password"
+        onClick={() => setPasswordTarget(params.row)}
+      />,
+      <GridActionsCellItem
+        key="delete"
+        icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
+        label="Delete"
+        onClick={() => handleDeletePerson(params.row)}
+      />,
+    ],
+  };
+
+  // Every data column is always editable (governed elsewhere: this whole
+  // screen is already gated on is_organisation_admin, §4.1's access check
+  // below, so there's no "reachable but read-only" viewer to design a
+  // per-cell grey-out for the way TaskGrid's own governed columns need —
+  // only the self-demotion exception, handled by isEditableCell above).
+  const dataColumns: GridColDef<PersonRecord>[] = [
+    withFilter({ field: "name", headerName: "Name" }, (row) => [row.name], "string"),
+    withFilter(
+      { field: "is_active", headerName: "Is Active", type: "boolean", align: "center", headerAlign: "center" },
+      (row) => [row.is_active ? "✓" : ""],
+      "string",
+    ),
+    withFilter({ field: "external_login", headerName: "Login" }, (row) => [row.external_login ?? ""], "string"),
+    withFilter(
+      {
+        field: "is_organisation_admin",
+        headerName: "Is Organisation Admin",
+        type: "boolean",
+        align: "center",
+        headerAlign: "center",
+      },
+      (row) => [row.is_organisation_admin ? "✓" : ""],
+      "string",
+    ),
+    // flex: 1 (last argument) — this has to be the *trailing* column
+    // (DenseDataGrid.tsx's own withFilter doc comment): without a flex
+    // column, MUI DataGrid leaves whatever width the fixed columns don't
+    // use as dead space after the last one (its own "filler" element),
+    // which reads as a genuine extra, unlabelled column once the window is
+    // wider than the grid's own content — exactly what SearchPage.tsx's
+    // Description column already fixed the same way (D1.4-78).
+    withFilter(
+      {
+        field: "colour",
+        headerName: "Colour",
+        align: "center",
+        sortable: false,
+        renderCell: (params) => <ColourSwatch colour={params.row.colour} />,
+        renderEditCell: (params) => <ColourEditCell {...params} />,
+      },
+      (row) => [row.colour ?? ""],
+      "string",
+      undefined,
+      1,
+    ),
+  ].map((col) => ({ ...col, editable: true }));
+
+  const columns: GridColDef<PersonRecord>[] = [actionsColumn, ...dataColumns];
+
+  const filteredPeople = getFilteredRows();
+
+  if (!caller?.is_organisation_admin) {
+    return (
+      <Box sx={{ p: 2, fontSize: 13 }}>You don't have access to this page.</Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: "6px", boxSizing: "border-box", height: "100%", display: "flex", flexDirection: "column" }}>
+      <Box
+        sx={{
+          bgcolor: "#fff",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: "8px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          p: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box sx={{ fontSize: 14, fontWeight: 600 }}>Manage People</Box>
+          <Button size="small" variant="contained" onClick={() => setCreateOpen(true)}>
+            New Person
+          </Button>
+        </Box>
+
+        <DenseDataGrid<PersonRecord>
+          apiRef={apiRef}
+          rows={filteredPeople}
+          columns={columns}
+          getRowId={(row) => row.person_id}
+          onColumnResize={onColumnResize}
+          defaultSort={[{ field: "name", sort: "asc" }]}
+          filtering={{
+            filterVisible,
+            onToggleFilterVisible: () => setFilterVisible((prev) => !prev),
+            onResetFilters: resetFilters,
+          }}
+          processRowUpdate={processRowUpdate}
+          onProcessRowUpdateError={(err) => setSnackbarError(formatApiError(err, "please try again."))}
+          isCellEditable={(params: GridCellParams<PersonRecord>) =>
+            isEditableCell(params.row, params.field)
+          }
+          onCellClick={(params) => {
+            if (params.field === "__actions") return;
+            if (!isEditableCell(params.row, params.field)) return;
+            if (apiRef.current.getCellMode(params.id, params.field) === "edit") return;
+            apiRef.current.startCellEditMode({ id: params.id, field: params.field });
+          }}
+        />
+      </Box>
+
+      {createOpen && <CreatePersonDialog onClose={() => setCreateOpen(false)} />}
+      {passwordTarget && (
+        <SetPasswordDialog person={passwordTarget} onClose={() => setPasswordTarget(null)} />
+      )}
+
+      <Snackbar open={!!snackbarError} autoHideDuration={6000} onClose={() => setSnackbarError(null)}>
+        <Alert severity="error" onClose={() => setSnackbarError(null)}>
+          {snackbarError}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+}

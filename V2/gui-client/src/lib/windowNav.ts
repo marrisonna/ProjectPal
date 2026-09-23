@@ -164,11 +164,19 @@ const COMPONENT_DETAIL_WINDOW_FEATURES = "width=728,height=900";
 // horizontal room), shorter (a search screen wants less vertical room).
 const SEARCH_WINDOW_FEATURES = "width=900,height=600";
 
+// ManagePeoplePage.tsx/TeamManagementPage.tsx (ManagePeoplePlan.md §4.1/
+// §5.1) — the same shape as Search's own window: a results/members grid
+// wants horizontal room, neither needs much vertical room.
+const PEOPLE_WINDOW_FEATURES = "width=900,height=600";
+const TEAM_MANAGEMENT_WINDOW_FEATURES = "width=900,height=600";
+
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
   if (entityType === "projects") return PROJECT_DETAIL_WINDOW_FEATURES;
   if (entityType === "components") return COMPONENT_DETAIL_WINDOW_FEATURES;
   if (entityType === "search") return SEARCH_WINDOW_FEATURES;
+  if (entityType === "people") return PEOPLE_WINDOW_FEATURES;
+  if (entityType === "team-management") return TEAM_MANAGEMENT_WINDOW_FEATURES;
   return undefined;
 }
 

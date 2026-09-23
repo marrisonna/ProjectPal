@@ -311,6 +311,7 @@ export function SearchPage() {
     onColumnResize,
   } = useDenseGridColumns<SearchDisplayRow>({
     rows: displayRows,
+    getRowId: (row) => row.rowKey,
     apiRef,
     // Hidden by default (unlike TaskGrid) — the search box/type checkboxes/
     // Include Closed checkbox already narrow the row set before it reaches

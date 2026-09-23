@@ -10,6 +10,7 @@ import type {
   ProjectRecord,
   RemarkRecord,
   TaskRecord,
+  TeamRecord,
 } from "./types";
 
 function unwrap<T>(result: { data?: unknown; error?: unknown }): T {
@@ -213,6 +214,153 @@ export function usePersonRoles() {
   return useQuery({
     queryKey: ["person-roles"],
     queryFn: async () => unwrap<PersonRoleRecord[]>(await apiClient.GET("/person-role")),
+  });
+}
+
+export function useTeams() {
+  return useQuery({
+    queryKey: ["teams"],
+    queryFn: async () => unwrap<TeamRecord[]>(await apiClient.GET("/team")),
+  });
+}
+
+// --- Manage People / Team Management (ManagePeoplePlan.md) ------------------
+
+export function useCreatePerson() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: CreatePersonRequest has a required field (name) a
+    // loosely-typed Record<string, unknown> can't structurally satisfy —
+    // same cast useCreateProject already uses for the same reason.
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<PersonRecord>(await apiClient.POST("/person", { body: body as never })),
+    onSuccess: () => invalidateEverywhere(queryClient, ["people"]),
+  });
+}
+
+// No fixed id, unlike useUpdateProject — ManagePeoplePage.tsx's own grid
+// edits a different row on every call, the same shape useUpdateTaskField
+// already uses for the same reason.
+//
+// Deliberately plain `invalidateEverywhere`, NOT the optimistic
+// beginOptimisticUpdate/updateEverywhere pattern useUpdateTaskField uses —
+// tried that first here and it made the real problem worse. The actual
+// slowness (confirmed by the DataGrid window freezing solid, not just
+// feeling laggy — a genuine network wait never blocks the main thread) is
+// `useDenseGridColumns`'s own per-render column-width text measurement:
+// every render of this page's `columns` re-measures every row's content via
+// a real, live DOM element (`measureTextWidth`, DenseDataGrid.tsx), which
+// forces a synchronous layout reflow per cell measured — expensive, and
+// unavoidable here without touching that shared, deliberately-chosen
+// measurement strategy (see its own comment on why canvas measureText was
+// rejected). The optimistic pattern's `onMutate` *and* `onSuccess` each
+// write the query cache once — two full, expensive column rebuilds per
+// edit instead of one (three, counting React StrictMode's dev-only double-
+// invocation of every render). Plain invalidateEverywhere still triggers a
+// visible update via its own background refetch, but only once.
+export function useUpdatePersonField() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ personId, body }: { personId: number; body: Record<string, unknown> }) =>
+      unwrap<PersonRecord>(
+        await apiClient.PATCH("/person/{person_id}", {
+          params: { path: { person_id: personId } },
+          body,
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["people"]),
+  });
+}
+
+// Admin-set only for Level 1 (D1.4-83) — no self-service password change, so
+// this is always called against someone else's row (or the admin's own, but
+// never as a "change my password" flow).
+export function useSetPersonPassword() {
+  return useMutation({
+    mutationFn: async ({ personId, newPassword }: { personId: number; newPassword: string }) =>
+      unwrap<void>(
+        await apiClient.POST("/person/{person_id}/password", {
+          params: { path: { person_id: personId } },
+          body: { new_password: newPassword },
+        }),
+      ),
+  });
+}
+
+// D-DM-12 — narrow Person deletion, reference-checked server-side; the 409
+// rejection's detail message is surfaced to the user as-is (ManagePeoplePlan.md §4.5).
+export function useDeletePerson() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (personId: number) =>
+      unwrap<void>(
+        await apiClient.DELETE("/person/{person_id}", {
+          params: { path: { person_id: personId } },
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["people"]),
+  });
+}
+
+export function useCreatePersonRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: WritePersonRoleRequest has required fields (person_id,
+    // team_id, role) a loosely-typed Record<string, unknown> can't
+    // structurally satisfy — same cast useCreateProject already uses.
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<PersonRoleRecord>(await apiClient.POST("/person-role", { body: body as never })),
+    onSuccess: () => invalidateEverywhere(queryClient, ["person-roles"]),
+  });
+}
+
+// No fixed id, unlike a bound useUpdateProject-style hook — TeamManagementPage.tsx's
+// own grid edits a different (person_id, team_id) row on every call.
+//
+// Deliberately plain `invalidateEverywhere`, not an optimistic update — see
+// useUpdatePersonField's own comment just above for why: the real cost here
+// is the DataGrid's own per-render column-width text measurement (a
+// synchronous, layout-reflow-forcing DOM read per cell), and an optimistic
+// onMutate/onSuccess pair triggers that expensive rebuild twice per edit
+// instead of once. Doubly true here — a hand-rolled version of this was
+// tried and made three renders happen per edit, not two, since PersonRole's
+// compound (person_id, team_id) identity means it can't safely reuse
+// beginOptimisticUpdate/updateEverywhere (those match on a single idField;
+// a Person on more than one Team has multiple rows sharing the same
+// person_id, so matching on that alone would clobber every one of their
+// Team memberships with whichever one was just edited).
+export function useUpdatePersonRoleField() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      personId,
+      teamId,
+      body,
+    }: {
+      personId: number;
+      teamId: number;
+      body: Record<string, unknown>;
+    }) =>
+      unwrap<PersonRoleRecord>(
+        await apiClient.PATCH("/person-role/{person_id}/{team_id}", {
+          params: { path: { person_id: personId, team_id: teamId } },
+          body,
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["person-roles"]),
+  });
+}
+
+export function useDeletePersonRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ personId, teamId }: { personId: number; teamId: number }) =>
+      unwrap<void>(
+        await apiClient.DELETE("/person-role/{person_id}/{team_id}", {
+          params: { path: { person_id: personId, team_id: teamId } },
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["person-roles"]),
   });
 }
 

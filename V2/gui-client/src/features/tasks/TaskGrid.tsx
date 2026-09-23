@@ -280,7 +280,13 @@ export function TaskGrid({
     setFilterVisible,
     resetFilters,
     onColumnResize,
-  } = useDenseGridColumns<TaskRecord>({ rows: tasks, initialFilterState, showFilters, apiRef });
+  } = useDenseGridColumns<TaskRecord>({
+    rows: tasks,
+    getRowId: (row) => row.task_id,
+    initialFilterState,
+    showFilters,
+    apiRef,
+  });
 
   const projectsById = useMemo(() => byId(projects, "project_id"), [projects]);
   const componentsById = useMemo(() => byId(components, "component_id"), [components]);

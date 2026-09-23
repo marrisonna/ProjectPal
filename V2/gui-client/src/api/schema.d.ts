@@ -119,7 +119,8 @@ export interface paths {
         get: operations["get_person_person__person_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Person */
+        delete: operations["delete_person_person__person_id__delete"];
         options?: never;
         head?: never;
         /** Update Person */
@@ -709,6 +710,8 @@ export interface components {
             is_resource?: boolean | null;
             /** Role */
             role?: string | null;
+            /** Nickname */
+            nickname?: string | null;
         };
         /** UpdateProjectRequest */
         UpdateProjectRequest: {
@@ -792,6 +795,8 @@ export interface components {
              * @default NormalUser
              */
             role: string;
+            /** Nickname */
+            nickname?: string | null;
         };
     };
     responses: never;
@@ -1046,6 +1051,35 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_person_person__person_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
