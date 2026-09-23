@@ -18,10 +18,17 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import {
+  useAllAttachments,
+  useAllRemarks,
+  useAllTaskResources,
+  useComponents,
   useCreatePerson,
   useDeletePerson,
   usePeople,
+  usePersonRoles,
+  useProjects,
   useSetPersonPassword,
+  useTasks,
   useUpdatePersonField,
 } from "../../api/hooks";
 import type { PersonRecord } from "../../api/types";
@@ -178,6 +185,21 @@ export function ManagePeoplePage() {
   const apiRef = useGridApiRef();
 
   const { data: people } = usePeople();
+  // D-DM-12's own eight-table reference check, replicated client-side
+  // (§4.5's own delete gate) so the trash icon only shows for a Person it
+  // will actually succeed for, rather than always showing it and
+  // explaining a rejection after the fact — the same "hide it, don't just
+  // reject it" convention TaskGrid's own delete icon already uses
+  // (canDeleteRow). The server's own check remains the authoritative
+  // backstop (handleDeletePerson's own catch below) for the rare case
+  // where this client-side snapshot is stale by the time the click lands.
+  const { data: tasks } = useTasks();
+  const { data: allTaskResources } = useAllTaskResources();
+  const { data: projects } = useProjects();
+  const { data: components } = useComponents();
+  const { data: allRemarks } = useAllRemarks();
+  const { data: allAttachments } = useAllAttachments();
+  const { data: personRoles } = usePersonRoles();
   const updatePersonField = useUpdatePersonField();
   const deletePerson = useDeletePerson();
   const [createOpen, setCreateOpen] = useState(false);
@@ -201,6 +223,22 @@ export function ManagePeoplePage() {
     return true;
   }
 
+  // Mirrors teams.py's own _PERSON_REFERENCE_CHECKS exactly (same eight
+  // tables, same columns) — see the useX() calls above for where each list
+  // comes from.
+  function isPersonDeletable(personId: number): boolean {
+    if ((tasks ?? []).some((t) => t.owner_person_id === personId || t.requestor_person_id === personId)) {
+      return false;
+    }
+    if ((allTaskResources ?? []).some((r) => r.person_id === personId)) return false;
+    if ((projects ?? []).some((p) => p.owner_person_id === personId)) return false;
+    if ((components ?? []).some((c) => c.owner_person_id === personId)) return false;
+    if ((allRemarks ?? []).some((r) => r.created_by_person_id === personId)) return false;
+    if ((allAttachments ?? []).some((a) => a.owner_person_id === personId)) return false;
+    if ((personRoles ?? []).some((pr) => pr.person_id === personId)) return false;
+    return true;
+  }
+
   async function handleDeletePerson(target: PersonRecord) {
     if (!window.confirm(`Delete Person "${target.name}"? This cannot be undone.`)) return;
     try {
@@ -221,30 +259,61 @@ export function ManagePeoplePage() {
     });
   }
 
+  // Two icons side by side need more room than TaskGrid's own single-icon
+  // actions column (DENSE_ROW_HEIGHT alone) — that was clipping both icons
+  // against the cell's own edges (MUI centres an actions cell's content and
+  // clips whatever doesn't fit). Icon buttons also get a tighter inline
+  // `style` padding below for the same reason (GridActionsCellItemProps
+  // doesn't expose `sx` in its own TS types, even though the runtime
+  // component happily forwards it — `style` is both typed and sufficient
+  // here), rather than widening the column to fit MUI's own default
+  // IconButton padding.
+  const ACTIONS_COLUMN_WIDTH = DENSE_ROW_HEIGHT * 2 + 14;
+
   const actionsColumn: GridColDef<PersonRecord> = {
     field: "__actions",
     type: "actions",
-    headerName: "",
-    width: DENSE_ROW_HEIGHT * 2,
-    minWidth: DENSE_ROW_HEIGHT * 2,
-    maxWidth: DENSE_ROW_HEIGHT * 2,
+    headerName: "Actions",
+    headerAlign: "center",
+    width: ACTIONS_COLUMN_WIDTH,
+    minWidth: ACTIONS_COLUMN_WIDTH,
+    maxWidth: ACTIONS_COLUMN_WIDTH,
     sortable: false,
     filterable: false,
     hideSortIcons: true,
-    getActions: (params: GridRowParams<PersonRecord>) => [
-      <GridActionsCellItem
-        key="password"
-        icon={<VpnKeyIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
-        label="Set Password"
-        onClick={() => setPasswordTarget(params.row)}
-      />,
-      <GridActionsCellItem
-        key="delete"
-        icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
-        label="Delete"
-        onClick={() => handleDeletePerson(params.row)}
-      />,
-    ],
+    getActions: (params: GridRowParams<PersonRecord>) => {
+      const actions = [
+        // Darker than the muted rgba(0,0,0,0.28) row-action icons used
+        // elsewhere (TaskGrid/Team Management's delete, Project/Component's
+        // row icons) — deliberately so: those sit beside other content
+        // (a name, a row) they're secondary to, while here the icon *is*
+        // the whole cell, so it should read as the primary content rather
+        // than a muted afterthought.
+        <GridActionsCellItem
+          key="password"
+          icon={<VpnKeyIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.87)" }} />}
+          label="Set Password"
+          style={{ padding: "2px" }}
+          onClick={() => setPasswordTarget(params.row)}
+        />,
+      ];
+      // §4.5 — the delete button only shows for a Person it will actually
+      // succeed for (D-DM-12's own reference check, mirrored client-side
+      // above), rather than always showing it and explaining a 409
+      // afterward — matching TaskGrid's own canDeleteRow convention.
+      if (isPersonDeletable(params.row.person_id)) {
+        actions.push(
+          <GridActionsCellItem
+            key="delete"
+            icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.87)" }} />}
+            label="Delete"
+            style={{ padding: "2px" }}
+            onClick={() => handleDeletePerson(params.row)}
+          />,
+        );
+      }
+      return actions;
+    },
   };
 
   // Every data column is always editable (governed elsewhere: this whole

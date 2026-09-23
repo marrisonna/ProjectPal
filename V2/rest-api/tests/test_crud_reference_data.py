@@ -84,3 +84,78 @@ def test_team_creation_bootstraps_team_lead_user(api, admin_token, alice_person_
 def test_team_creation_requires_initial_lead(api, admin_token):
     resp = api.post("/team", json={"name": "Leaderless Team"}, headers=auth(admin_token))
     assert resp.status_code == 422  # missing required field
+
+
+# --- Team deletion (D-DM-14/D1.4-90) ----------------------------------------
+
+
+def test_delete_team_with_no_projects_or_components_succeeds(api, admin_token, alice_person_id):
+    new_team = api.post(
+        "/team",
+        json={"name": f"Scratch Empty Team {uuid.uuid4().hex[:8]}", "initial_team_lead_person_id": alice_person_id},
+        headers=auth(admin_token),
+    )
+    assert new_team.status_code == 201, new_team.text
+    team_id = new_team.json()["team_id"]
+
+    # Confirmed present before deleting — a freshly created Team is never
+    # actually memberless (create_team's own atomic TeamLeadUser bootstrap),
+    # which is exactly what this deletion has to tolerate (see teams.py's
+    # own module docstring): membership alone must not block it.
+    roles_before = api.get(f"/person-role?team_id={team_id}", headers=auth(admin_token)).json()
+    assert len(roles_before) == 1
+
+    resp = api.delete(f"/team/{team_id}", headers=auth(admin_token))
+    assert resp.status_code == 204, resp.text
+
+    assert not any(t["team_id"] == team_id for t in api.get("/team", headers=auth(admin_token)).json())
+    # Cascaded away, not left dangling.
+    assert api.get(f"/person-role?team_id={team_id}", headers=auth(admin_token)).json() == []
+
+
+def test_delete_team_with_a_project_is_rejected(api, admin_token, alice_person_id):
+    new_team = api.post(
+        "/team",
+        json={"name": f"Scratch Team With Project {uuid.uuid4().hex[:8]}", "initial_team_lead_person_id": alice_person_id},
+        headers=auth(admin_token),
+    )
+    assert new_team.status_code == 201, new_team.text
+    team_id = new_team.json()["team_id"]
+
+    # A fresh login, not the cached alice_token fixture — its own JWT
+    # team_roles is a snapshot taken at login time, before this Team's
+    # TeamLeadUser role existed (same reasoning as
+    # test_team_lead_cannot_write_person_role_for_other_team above).
+    login = api.post(
+        "/auth/login", json={"external_login": "alice.chen@example.com", "password": "alice-pass1"}
+    )
+    fresh_alice_token = login.json()["token"]
+    project = api.post(
+        "/project",
+        json={"team_id": team_id, "name": "Scratch Project"},
+        headers=auth(fresh_alice_token),
+    )
+    assert project.status_code == 201, project.text
+
+    resp = api.delete(f"/team/{team_id}", headers=auth(admin_token))
+    assert resp.status_code == 409
+    assert "Project" in resp.json()["detail"]
+
+    # Rejected, not half-deleted.
+    assert any(t["team_id"] == team_id for t in api.get("/team", headers=auth(admin_token)).json())
+
+
+def test_delete_team_requires_org_admin(api, bob_token, admin_token, alice_person_id):
+    new_team = api.post(
+        "/team",
+        json={"name": f"Scratch Team {uuid.uuid4().hex[:8]}", "initial_team_lead_person_id": alice_person_id},
+        headers=auth(admin_token),
+    )
+    assert new_team.status_code == 201, new_team.text
+    team_id = new_team.json()["team_id"]
+
+    resp = api.delete(f"/team/{team_id}", headers=auth(bob_token))
+    assert resp.status_code == 403
+
+    # Cleanup — not the point of the test, just avoids littering scratch rows.
+    api.delete(f"/team/{team_id}", headers=auth(admin_token))

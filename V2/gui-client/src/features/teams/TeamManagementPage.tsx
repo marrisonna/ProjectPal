@@ -22,16 +22,23 @@ import {
   type GridRowParams,
 } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import IconButton from "@mui/material/IconButton";
 import {
+  useAllTaskResources,
   useCreatePersonRole,
+  useCreateTeam,
   useDeletePersonRole,
+  useDeleteTeam,
   usePeople,
   usePersonRoles,
+  useProjects,
+  useRenameTeam,
   useTasks,
   useTeams,
   useUpdatePersonRoleField,
 } from "../../api/hooks";
-import type { PersonRecord, PersonRoleRecord } from "../../api/types";
+import type { PersonRecord, PersonRoleRecord, TeamRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import {
   DenseDataGrid,
@@ -195,6 +202,140 @@ function AddTeamMemberDialog({
   );
 }
 
+// The same muted row-icon treatment Project.tsx's own rename affordance
+// uses (its ROW_ICON_SX/ROW_ICON_BUTTON_SX aren't exported, so redefined
+// here rather than reached into).
+const ROW_ICON_SX = { fontSize: 15, color: "rgba(0,0,0,0.28)" };
+const ROW_ICON_BUTTON_SX = { p: "3px", "&:hover .MuiSvgIcon-root": { color: "primary.main" } };
+
+// org-admin-only create/rename (create_team/rename_team both call
+// require_org_admin) — dual-purpose the same way
+// CreateOrRenameProjectDialog.tsx already is, since a fresh Team needs an
+// initial Team Lead (mode "create") while renaming one doesn't touch
+// membership at all (mode "rename"). No prior GUI entry point called either
+// endpoint at all before this.
+function CreateOrRenameTeamDialog({
+  mode,
+  team,
+  people,
+  onClose,
+}: {
+  mode: "create" | "rename";
+  /** Required, and only its name read, for mode "create". */
+  team?: TeamRecord;
+  /** Only used for mode "create" — who can be picked as the new Team's initial Team Lead. */
+  people: PersonRecord[];
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(mode === "rename" ? (team?.name ?? "") : "");
+  const [leadPersonId, setLeadPersonId] = useState<number | "">("");
+  const [error, setError] = useState<string | null>(null);
+  const createTeam = useCreateTeam();
+  const renameTeam = useRenameTeam(team?.team_id ?? -1);
+  const pending = createTeam.isPending || renameTeam.isPending;
+
+  async function handleConfirm() {
+    if (!name.trim()) {
+      setError("A name must be specified.");
+      return;
+    }
+    if (mode === "create" && leadPersonId === "") {
+      setError("Choose an initial Team Lead.");
+      return;
+    }
+    try {
+      if (mode === "create") {
+        await createTeam.mutateAsync({ name: name.trim(), initial_team_lead_person_id: leadPersonId });
+      } else {
+        await renameTeam.mutateAsync(name.trim());
+      }
+      onClose();
+    } catch (err) {
+      setError(formatApiError(err, "please try again."));
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>{mode === "create" ? "New Team" : "Rename Team"}</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Name"
+          fullWidth
+          margin="normal"
+          autoFocus
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setError(null);
+          }}
+        />
+        {mode === "create" && (
+          <TextField
+            select
+            label="Initial Team Lead"
+            fullWidth
+            margin="normal"
+            value={leadPersonId}
+            onChange={(event) => {
+              setLeadPersonId(Number(event.target.value));
+              setError(null);
+            }}
+          >
+            {people.map((p) => (
+              <MenuItem key={p.person_id} value={p.person_id}>
+                {p.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+        {error && (
+          <Box sx={{ fontSize: 12, color: "error.main", mt: "4px" }}>{error}</Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleConfirm} disabled={pending}>
+          {mode === "create" ? "Create" : "Rename"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// The second, more pointed step of removing a member who still has active
+// Tasks (§5.4) — a real Dialog, not another window.confirm, specifically so
+// its own confirm button can say what it actually does rather than a bare
+// "OK" for something this consequential.
+function ActiveTasksWarningDialog({
+  name,
+  count,
+  onConfirm,
+  onClose,
+}: {
+  name: string;
+  count: number;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Remove Team Member?</DialogTitle>
+      <DialogContent>
+        <Box sx={{ fontSize: 13 }}>
+          Are you sure — "{name}" is still assigned to {count} active Task{count === 1 ? "" : "s"}.
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" color="error" onClick={onConfirm}>
+          Remove user with Active Tasks
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // ManagePeoplePlan.md §5 — Team-Lead-facing (or organisation-admin, for any
 // Team) membership management, scoped to one Team at a time. Routes mirror
 // ProjectDetailPage.tsx's own no-id/with-id duality, but the "no id" mode
@@ -213,6 +354,8 @@ export function TeamManagementPage() {
   const { data: people } = usePeople();
   const { data: personRoles } = usePersonRoles();
   const { data: tasks } = useTasks();
+  const { data: projects } = useProjects();
+  const { data: allTaskResources } = useAllTaskResources();
 
   const isAdmin = !!caller?.is_organisation_admin;
   const ledTeamIds = useMemo(
@@ -243,7 +386,13 @@ export function TeamManagementPage() {
 
   const updatePersonRoleField = useUpdatePersonRoleField();
   const deletePersonRole = useDeletePersonRole();
+  const deleteTeam = useDeleteTeam();
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<TeamRecord | null>(null);
+  const [activeTasksWarning, setActiveTasksWarning] = useState<{ row: TeamMemberRow; count: number } | null>(
+    null,
+  );
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
   const apiRef = useGridApiRef();
 
@@ -269,29 +418,69 @@ export function TeamManagementPage() {
   }, [people, teamMembers]);
 
   // §5.4 — removing a member is a soft warning, not a hard block: how many
-  // open Tasks on this Team still name them as owner, requestor, or
-  // resource, so the confirmation is informative rather than just "are you
-  // sure?" with no context.
-  function openReferenceCount(personId: number): number {
-    if (id == null || !tasks) return 0;
+  // open Tasks on *this Team* still name them as owner, requestor, or
+  // assigned Resource, so the confirmation is informative rather than just
+  // "are you sure?" with no context. Scoped via each Task's own Project's
+  // team_id — a bare `t.owner_person_id === personId` check across every
+  // Task org-wide (tried first) counted a Person's *other* Teams' Tasks
+  // too, which is what made removing a brand-new Team's own lone member
+  // wrongly warn about Tasks that had nothing to do with this Team at all.
+  function activeTaskCount(personId: number): number {
+    if (id == null || !tasks || !projects || !allTaskResources) return 0;
+    const teamProjectIds = new Set(projects.filter((p) => p.team_id === id).map((p) => p.project_id));
+    const resourceTaskIds = new Set(
+      allTaskResources.filter((r) => r.person_id === personId).map((r) => r.task_id),
+    );
     let count = 0;
     for (const t of tasks) {
+      if (!teamProjectIds.has(t.project_id)) continue;
       if (!isTaskVisible(t, "Open")) continue;
-      if (t.owner_person_id === personId || t.requestor_person_id === personId) count++;
+      if (t.owner_person_id === personId || t.requestor_person_id === personId || resourceTaskIds.has(t.task_id)) {
+        count++;
+      }
     }
     return count;
   }
 
+  // Two steps, not one: a plain "are you sure?" always comes first: if the
+  // Person has no active Tasks on this Team, that's the end of it. Only
+  // when they do does a second, more pointed dialog appear — deliberately
+  // not another window.confirm (its OK/Cancel can't be relabelled), since
+  // the whole point here is a button that says what it actually does
+  // rather than a generic "OK" for something this consequential.
   async function handleRemoveMember(row: TeamMemberRow) {
     if (id == null) return;
-    const refCount = openReferenceCount(row.person_id);
-    const warning =
-      refCount > 0
-        ? ` They still own or requested ${refCount} open Task${refCount === 1 ? "" : "s"} on this Team.`
-        : "";
-    if (!window.confirm(`Remove "${row.name}" from this Team?${warning}`)) return;
+    if (!window.confirm(`Remove "${row.name}" from this Team?`)) return;
+    const count = activeTaskCount(row.person_id);
+    if (count > 0) {
+      setActiveTasksWarning({ row, count });
+      return;
+    }
+    await removeMember(row);
+  }
+
+  async function removeMember(row: TeamMemberRow) {
+    if (id == null) return;
     try {
       await deletePersonRole.mutateAsync({ personId: row.person_id, teamId: id });
+    } catch (err) {
+      setSnackbarError(formatApiError(err, "please try again."));
+    }
+  }
+
+  // D-DM-14/D1.4-90 — rejected server-side if the Team has any Project or
+  // Component; membership itself is cascaded away, not blocking (see
+  // teams.py's own module docstring for why — a Team is created *with* a
+  // bootstrap TeamLeadUser that can never be fully removed, so blocking on
+  // membership would make this unusable for its own stated purpose). Named
+  // here in the confirmation, the same "soft warning" shape as removing a
+  // single member.
+  async function handleDeleteTeam(team: TeamRecord) {
+    const memberCount = (personRoles ?? []).filter((pr) => pr.team_id === team.team_id).length;
+    const warning = memberCount > 0 ? ` This will also remove ${memberCount} member${memberCount === 1 ? "" : "s"} from it.` : "";
+    if (!window.confirm(`Delete Team "${team.name}"?${warning} This cannot be undone.`)) return;
+    try {
+      await deleteTeam.mutateAsync(team.team_id);
     } catch (err) {
       setSnackbarError(formatApiError(err, "please try again."));
     }
@@ -381,7 +570,7 @@ export function TeamManagementPage() {
   const columns: GridColDef<TeamMemberRow>[] = [actionsColumn, ...dataColumns];
   const filteredMembers = getFilteredRows();
 
-  if (!teams || !people || !personRoles || !tasks) {
+  if (!teams || !people || !personRoles || !tasks || !projects || !allTaskResources) {
     return <CircularProgress sx={{ m: 2 }} />;
   }
 
@@ -409,18 +598,53 @@ export function TeamManagementPage() {
             maxWidth: 320,
           }}
         >
-          <Box sx={{ fontSize: 14, fontWeight: 600 }}>Team Management</Box>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box sx={{ fontSize: 14, fontWeight: 600 }}>Team Management</Box>
+            {isAdmin && (
+              <Button size="small" variant="contained" onClick={() => setCreateTeamOpen(true)}>
+                New Team
+              </Button>
+            )}
+          </Box>
           {availableTeams.map((t) => (
-            <Button
-              key={t.team_id}
-              variant="outlined"
-              onClick={() => navigate(`/team-management/${t.team_id}`)}
-              sx={{ justifyContent: "flex-start" }}
-            >
-              {t.name}
-            </Button>
+            <Box key={t.team_id} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate(`/team-management/${t.team_id}`)}
+                sx={{ justifyContent: "flex-start", flex: 1 }}
+              >
+                {t.name}
+              </Button>
+              {isAdmin && (
+                <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => setRenameTarget(t)}>
+                  <EditIcon sx={ROW_ICON_SX} />
+                </IconButton>
+              )}
+              {isAdmin && (
+                <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => handleDeleteTeam(t)}>
+                  <DeleteIcon sx={ROW_ICON_SX} />
+                </IconButton>
+              )}
+            </Box>
           ))}
         </Box>
+
+        {createTeamOpen && (
+          <CreateOrRenameTeamDialog
+            mode="create"
+            people={people.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name))}
+            onClose={() => setCreateTeamOpen(false)}
+          />
+        )}
+        {renameTarget && (
+          <CreateOrRenameTeamDialog mode="rename" team={renameTarget} people={[]} onClose={() => setRenameTarget(null)} />
+        )}
+
+        <Snackbar open={!!snackbarError} autoHideDuration={6000} onClose={() => setSnackbarError(null)}>
+          <Alert severity="error" onClose={() => setSnackbarError(null)}>
+            {snackbarError}
+          </Alert>
+        </Snackbar>
       </Box>
     );
   }
@@ -503,6 +727,18 @@ export function TeamManagementPage() {
           candidates={addCandidates}
           existingColours={teamMembers.map((m) => m.colour)}
           onClose={() => setAddMemberOpen(false)}
+        />
+      )}
+      {activeTasksWarning && (
+        <ActiveTasksWarningDialog
+          name={activeTasksWarning.row.name}
+          count={activeTasksWarning.count}
+          onConfirm={() => {
+            const { row } = activeTasksWarning;
+            setActiveTasksWarning(null);
+            void removeMember(row);
+          }}
+          onClose={() => setActiveTasksWarning(null)}
         />
       )}
 

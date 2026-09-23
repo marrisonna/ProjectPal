@@ -14,6 +14,21 @@ atomically bootstraps the new Team's first PersonRole, granting some
 existing Person TeamLeadUser — and PersonRole's own writes (update/remove)
 now guard the same invariant afterwards too (D1.4-87): a Team is never left
 leaderless, not just at creation (Requirements/UseCases.md §12).
+
+Team deletion (D-DM-14/D1.4-90) is is_organisation_admin-only and rejected
+if the Team has any Project or Component — real work that would otherwise
+be silently orphaned. Deliberately narrower than Person's own reference
+check: PersonRole rows are *not* a blocking reference here, only cascaded
+away with the Team itself. Blocking on them (the naive mirror of Person's
+own check) would make this feature unusable for its own stated purpose —
+every Team is created *with* a bootstrap TeamLeadUser (create_team, above),
+and the never-leaderless guard on PersonRole writes permanently forbids
+removing a Team's last remaining one, so a Team could never actually reach
+zero PersonRole rows through the ordinary app flow. Membership is treated
+as intrinsic to the Team, not an external reference to it: deleting a Team
+naturally ends everyone's membership in it, and no actual work is lost by
+that (unlike a Project/Component, or unlike Person's own PersonRole rows,
+which represent that *Person's* standing on other Teams that must survive).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -78,6 +93,39 @@ def rename_team(
         if team is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Team")
         return team
+
+
+# D-DM-14/D1.4-90 — real work only; PersonRole is deliberately excluded
+# (see this module's own docstring for why) and cascaded away instead,
+# below.
+_TEAM_REFERENCE_CHECKS = [
+    ("project", "team_id", "has {n} Project(s)"),
+    ("component", "team_id", "has {n} Component(s)"),
+]
+
+
+@router.delete("/team/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_team(team_id: int, caller: CurrentPerson = Depends(get_current_person)):
+    require_org_admin(caller)
+    with get_conn() as conn:
+        blocking = []
+        for table, column, description in _TEAM_REFERENCE_CHECKS:
+            row = one(conn.execute(f"SELECT count(*) AS n FROM {table} WHERE {column} = %s", (team_id,)))
+            count = row["n"] if row else 0
+            if count > 0:
+                blocking.append(description.format(n=count))
+        if blocking:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Cannot delete this Team because it: " + "; ".join(blocking),
+            )
+        with conn.transaction():
+            conn.execute("DELETE FROM person_role WHERE team_id = %s", (team_id,))
+            deleted = one(
+                conn.execute("DELETE FROM team WHERE team_id = %s RETURNING team_id", (team_id,))
+            )
+        if deleted is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "No such Team")
 
 
 # --- Person ---------------------------------------------------------------

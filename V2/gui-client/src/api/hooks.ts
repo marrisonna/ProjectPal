@@ -224,6 +224,67 @@ export function useTeams() {
   });
 }
 
+// org-admin-only (create_team/rename_team both call require_org_admin) —
+// TeamManagementPage.tsx's own "no id" picker view is the one place both
+// are reachable from (no prior GUI entry point called either at all).
+export function useCreateTeam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // as never: CreateTeamRequest has required fields (name,
+    // initial_team_lead_person_id) a loosely-typed Record<string, unknown>
+    // can't structurally satisfy — same cast useCreateProject already uses.
+    mutationFn: async (body: Record<string, unknown>) =>
+      unwrap<TeamRecord>(await apiClient.POST("/team", { body: body as never })),
+    // create_team's own atomic bootstrap (teams.py) also inserts a
+    // person_role row for the initial Team Lead — invalidating only
+    // ["teams"] left that row invisible to usePersonRoles() until something
+    // else (a hard reload) happened to bust the whole cache, which is why
+    // a freshly created Team's own Team Management view showed no members
+    // until Ctrl+Shift+R.
+    onSuccess: () => {
+      invalidateEverywhere(queryClient, ["teams"]);
+      invalidateEverywhere(queryClient, ["person-roles"]);
+    },
+  });
+}
+
+// Bound to one Team per dialog open, matching CreateOrRenameProjectDialog's
+// own useUpdateProject(projectId ?? -1) shape — this dialog is only ever
+// mounted while actually renaming one specific Team.
+export function useRenameTeam(teamId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) =>
+      unwrap<TeamRecord>(
+        await apiClient.PATCH("/team/{team_id}", {
+          params: { path: { team_id: teamId } },
+          body: { name },
+        }),
+      ),
+    onSuccess: () => invalidateEverywhere(queryClient, ["teams"]),
+  });
+}
+
+// D-DM-14/D1.4-90 — narrow, reference-checked (Project/Component only —
+// see teams.py's own module docstring for why PersonRole is deliberately
+// excluded and cascaded instead); the 409 rejection's detail message is
+// surfaced to the user as-is, matching useDeletePerson's own convention.
+// No fixed id, unlike useRenameTeam — TeamManagementPage.tsx's own picker
+// deletes a different Team on every call.
+export function useDeleteTeam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (teamId: number) =>
+      unwrap<void>(
+        await apiClient.DELETE("/team/{team_id}", { params: { path: { team_id: teamId } } }),
+      ),
+    onSuccess: () => {
+      invalidateEverywhere(queryClient, ["teams"]);
+      invalidateEverywhere(queryClient, ["person-roles"]);
+    },
+  });
+}
+
 // --- Manage People / Team Management (ManagePeoplePlan.md) ------------------
 
 export function useCreatePerson() {
