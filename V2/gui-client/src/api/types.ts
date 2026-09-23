@@ -51,7 +51,6 @@ export interface PersonRecord {
   is_active: boolean;
   is_organisation_admin: boolean;
   external_login: string;
-  colour: string | null;
 }
 
 // GET /team has no response_model server-side either (rest-api/app/routes/
@@ -72,8 +71,11 @@ export interface PersonRoleRecord {
   role: string;
   // A shorter name this Person is known by on this Team — shown instead of
   // person.name wherever the GUI displays a name in this Team's context
-  // (D1.4-21). Read-only in Level 1: only ever set via seed data for now.
+  // (D1.4-21). Editable via the Team Management screen (D1.4-87).
   nickname: string | null;
+  // Gantt bar colour, per-Person *per-Team* (D-DM-13/D1.4-88) — moved here
+  // from PersonRecord, which used to have one org-wide colour per Person.
+  colour: string | null;
 }
 
 export interface RemarkRecord {

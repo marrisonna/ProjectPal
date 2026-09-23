@@ -576,8 +576,6 @@ export interface components {
              * @default false
              */
             is_organisation_admin: boolean;
-            /** Colour */
-            colour?: string | null;
         };
         /** CreateProjectRequest */
         CreateProjectRequest: {
@@ -701,8 +699,6 @@ export interface components {
             is_organisation_admin?: boolean | null;
             /** Is Active */
             is_active?: boolean | null;
-            /** Colour */
-            colour?: string | null;
         };
         /** UpdatePersonRoleRequest */
         UpdatePersonRoleRequest: {
@@ -712,6 +708,8 @@ export interface components {
             role?: string | null;
             /** Nickname */
             nickname?: string | null;
+            /** Colour */
+            colour?: string | null;
         };
         /** UpdateProjectRequest */
         UpdateProjectRequest: {
@@ -797,6 +795,8 @@ export interface components {
             role: string;
             /** Nickname */
             nickname?: string | null;
+            /** Colour */
+            colour?: string | null;
         };
     };
     responses: never;

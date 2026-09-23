@@ -13,7 +13,6 @@ import {
   useGridApiRef,
   type GridCellParams,
   type GridColDef,
-  type GridRenderEditCellParams,
   type GridRowParams,
 } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -32,48 +31,11 @@ import { formatApiError } from "../../lib/apiErrors";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { useSingletonWindowIdentity } from "../../lib/windowNav";
 
-// A native <input type="color"> edit cell (this app's own "native controls"
-// convention, DenseField.tsx) — the one HTML control that naturally
-// constrains input to a valid colour, and the first editor for `colour`
-// anywhere in this app (ManagePeoplePlan.md §4.2). Commits immediately on
-// change, the same shape DenseSingleSelectEditCell already uses, and for
-// the same reason: `props.api` is the grid's own live API, passed straight
-// in — not `useGridApiRef()`, which called fresh here would just be a new,
-// disconnected `useRef(null)`.
-function ColourEditCell(props: GridRenderEditCellParams<PersonRecord>) {
-  const { id, field, value, api } = props;
-  return (
-    <input
-      type="color"
-      autoFocus
-      value={(value as string | null) ?? "#ffffff"}
-      style={{ width: "100%", height: "100%", border: "none", padding: 0, background: "transparent", cursor: "pointer" }}
-      onChange={async (event) => {
-        await api.setEditCellValue({ id, field, value: event.target.value });
-        api.stopCellEditMode({ id, field });
-      }}
-    />
-  );
-}
-
-function ColourSwatch({ colour }: { colour: string | null }) {
-  return (
-    <Box
-      sx={{
-        width: 14,
-        height: 14,
-        mx: "auto",
-        borderRadius: "2px",
-        border: "1px solid rgba(0,0,0,0.3)",
-        bgcolor: colour ?? "#fff",
-      }}
-    />
-  );
-}
-
 // ManagePeoplePlan.md §4.3 — Name and Login up front (both needed before a
-// new Person is usable for anything); is_organisation_admin/colour left at
-// their server-side defaults, editable afterward in the grid.
+// new Person is usable for anything); is_organisation_admin left at its
+// server-side default, editable afterward in the grid. (colour used to be
+// mentioned here too — it moved to PersonRole/Team Management, D-DM-13/
+// D1.4-88, since it's no longer a Person-level field at all.)
 function CreatePersonDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [login, setLogin] = useState("");
@@ -298,6 +260,15 @@ export function ManagePeoplePage() {
       "string",
     ),
     withFilter({ field: "external_login", headerName: "Login" }, (row) => [row.external_login ?? ""], "string"),
+    // flex: 1 (last argument) — this has to be the *trailing* column
+    // (DenseDataGrid.tsx's own withFilter doc comment): without a flex
+    // column, MUI DataGrid leaves whatever width the fixed columns don't
+    // use as dead space after the last one (its own "filler" element),
+    // which reads as a genuine extra, unlabelled column once the window is
+    // wider than the grid's own content — exactly what SearchPage.tsx's
+    // Description column already fixed the same way (D1.4-78). Colour used
+    // to be this trailing column; it moved to Team Management (D-DM-13/
+    // D1.4-88), so Is Organisation Admin takes over the role instead.
     withFilter(
       {
         field: "is_organisation_admin",
@@ -307,25 +278,6 @@ export function ManagePeoplePage() {
         headerAlign: "center",
       },
       (row) => [row.is_organisation_admin ? "✓" : ""],
-      "string",
-    ),
-    // flex: 1 (last argument) — this has to be the *trailing* column
-    // (DenseDataGrid.tsx's own withFilter doc comment): without a flex
-    // column, MUI DataGrid leaves whatever width the fixed columns don't
-    // use as dead space after the last one (its own "filler" element),
-    // which reads as a genuine extra, unlabelled column once the window is
-    // wider than the grid's own content — exactly what SearchPage.tsx's
-    // Description column already fixed the same way (D1.4-78).
-    withFilter(
-      {
-        field: "colour",
-        headerName: "Colour",
-        align: "center",
-        sortable: false,
-        renderCell: (params) => <ColourSwatch colour={params.row.colour} />,
-        renderEditCell: (params) => <ColourEditCell {...params} />,
-      },
-      (row) => [row.colour ?? ""],
       "string",
       undefined,
       1,

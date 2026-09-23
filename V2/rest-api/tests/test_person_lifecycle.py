@@ -85,10 +85,17 @@ def test_admin_cannot_remove_own_admin_flag(api, admin_token):
 
 def test_admin_can_update_own_other_fields(api, admin_token):
     # The guard is scoped to is_organisation_admin specifically, not a
-    # blanket "can't edit your own row" rule.
-    resp = api.patch("/person/7", json={"colour": "#123456"}, headers=auth(admin_token))
+    # blanket "can't edit your own row" rule. colour used to live on Person
+    # and was the field this test exercised; it moved to PersonRole
+    # (D-DM-13/D1.4-88). `name` stands in for "some other, unrelated field"
+    # now — set to its own already-current value (conftest.py's own Nadia
+    # Fischer) rather than a new one, since the DB isn't reset between test
+    # runs (Claude/Guidelines/ImplementationApproach.md §5) and this Person's
+    # own external_login is other tests' own login fixture — a genuinely
+    # different value here would corrupt those on every re-run.
+    resp = api.patch("/person/7", json={"name": "Nadia Fischer"}, headers=auth(admin_token))
     assert resp.status_code == 200
-    assert resp.json()["colour"] == "#123456"
+    assert resp.json()["name"] == "Nadia Fischer"
 
 
 # --- PersonRole nickname (D1.4-87) ------------------------------------------
@@ -104,6 +111,41 @@ def test_person_role_nickname_write_and_read(api, admin_token, bob_person_id):
 
     roles = api.get("/person-role?team_id=1", headers=auth(admin_token)).json()
     assert any(r["person_id"] == bob_person_id and r["nickname"] == nickname for r in roles)
+
+
+# --- PersonRole colour (D-DM-13/D1.4-88) ------------------------------------
+
+
+def test_person_role_colour_write_and_read(api, admin_token, bob_person_id):
+    resp = api.patch(
+        f"/person-role/{bob_person_id}/1", json={"colour": "#123456"}, headers=auth(admin_token)
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["colour"] == "#123456"
+
+    roles = api.get("/person-role?team_id=1", headers=auth(admin_token)).json()
+    assert any(r["person_id"] == bob_person_id and r["colour"] == "#123456" for r in roles)
+
+
+def test_person_role_colour_set_on_create(api, admin_token):
+    person_id = _create_person(api, admin_token, f"Scratch Coloured Person {uuid.uuid4().hex[:8]}")
+    resp = api.post(
+        "/person-role",
+        json={"person_id": person_id, "team_id": 1, "role": "NormalUser", "colour": "#abcdef"},
+        headers=auth(admin_token),
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["colour"] == "#abcdef"
+
+
+def test_person_no_longer_has_a_colour_field(api, admin_token, bob_person_id):
+    # D-DM-13/D1.4-88 — colour moved off Person entirely; PATCH /person no
+    # longer recognises it (a Pydantic model with no such field just drops
+    # an unknown key rather than erroring, so this checks the *response*
+    # shape, not that the write itself is rejected).
+    resp = api.get(f"/person/{bob_person_id}", headers=auth(admin_token))
+    assert resp.status_code == 200
+    assert "colour" not in resp.json()
 
 
 # --- Never-leaderless guard (D1.4-87) ---------------------------------------

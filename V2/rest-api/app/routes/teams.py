@@ -87,7 +87,6 @@ class CreatePersonRequest(BaseModel):
     name: str
     external_login: str | None = None
     is_organisation_admin: bool = False
-    colour: str | None = None
 
 
 class UpdatePersonRequest(BaseModel):
@@ -95,10 +94,9 @@ class UpdatePersonRequest(BaseModel):
     external_login: str | None = None
     is_organisation_admin: bool | None = None
     is_active: bool | None = None
-    colour: str | None = None
 
 
-_PERSON_COLUMNS = "person_id, name, is_active, is_organisation_admin, external_login, colour"
+_PERSON_COLUMNS = "person_id, name, is_active, is_organisation_admin, external_login"
 
 
 @router.get("/person")
@@ -124,9 +122,9 @@ def create_person(body: CreatePersonRequest, caller: CurrentPerson = Depends(get
     with get_conn() as conn:
         return one(
             conn.execute(
-                "INSERT INTO person (name, external_login, is_organisation_admin, colour) "
-                f"VALUES (%s, %s, %s, %s) RETURNING {_PERSON_COLUMNS}",
-                (body.name, body.external_login, body.is_organisation_admin, body.colour),
+                "INSERT INTO person (name, external_login, is_organisation_admin) "
+                f"VALUES (%s, %s, %s) RETURNING {_PERSON_COLUMNS}",
+                (body.name, body.external_login, body.is_organisation_admin),
             )
         )
 
@@ -247,6 +245,17 @@ class WritePersonRoleRequest(BaseModel):
     is_resource: bool = False
     role: str = "NormalUser"
     nickname: str | None = None
+    # D-DM-13/D1.4-88 — colour moved here from Person: the same Person can
+    # show up in a different Gantt-bar colour on each Team they belong to.
+    colour: str | None = None
+
+
+# One shared constant, not inlined by hand at each of the four call sites
+# below (list_person_roles' two branches, add_person_role's INSERT+
+# RETURNING, update_person_role's RETURNING) — added here rather than left
+# as four separate edits when colour joined nickname (D1.4-88), the same way
+# Person's own _PERSON_COLUMNS already avoids that repetition.
+_PERSON_ROLE_COLUMNS = "person_id, team_id, is_resource, role, nickname, colour"
 
 
 def _require_admin_or_team_lead(caller: CurrentPerson, team_id: int) -> None:
@@ -285,16 +294,13 @@ def list_person_roles(
         if team_id is not None:
             return many(
                 conn.execute(
-                    "SELECT person_id, team_id, is_resource, role, nickname FROM person_role "
+                    f"SELECT {_PERSON_ROLE_COLUMNS} FROM person_role "
                     "WHERE team_id = %s ORDER BY person_id",
                     (team_id,),
                 )
             )
         return many(
-            conn.execute(
-                "SELECT person_id, team_id, is_resource, role, nickname FROM person_role "
-                "ORDER BY team_id, person_id"
-            )
+            conn.execute(f"SELECT {_PERSON_ROLE_COLUMNS} FROM person_role ORDER BY team_id, person_id")
         )
 
 
@@ -306,10 +312,10 @@ def add_person_role(
     with get_conn() as conn:
         return one(
             conn.execute(
-                "INSERT INTO person_role (person_id, team_id, is_resource, role, nickname) "
-                "VALUES (%s, %s, %s, %s, %s) "
-                "RETURNING person_id, team_id, is_resource, role, nickname",
-                (body.person_id, body.team_id, body.is_resource, body.role, body.nickname),
+                "INSERT INTO person_role (person_id, team_id, is_resource, role, nickname, colour) "
+                "VALUES (%s, %s, %s, %s, %s, %s) "
+                f"RETURNING {_PERSON_ROLE_COLUMNS}",
+                (body.person_id, body.team_id, body.is_resource, body.role, body.nickname, body.colour),
             )
         )
 
@@ -318,6 +324,7 @@ class UpdatePersonRoleRequest(BaseModel):
     is_resource: bool | None = None
     role: str | None = None
     nickname: str | None = None
+    colour: str | None = None
 
 
 @router.patch("/person-role/{person_id}/{team_id}")
@@ -352,7 +359,7 @@ def update_person_role(
         row = one(
             conn.execute(
                 f"UPDATE person_role SET {set_clause} WHERE person_id = %s AND team_id = %s "
-                "RETURNING person_id, team_id, is_resource, role, nickname",
+                f"RETURNING {_PERSON_ROLE_COLUMNS}",
                 (*fields.values(), person_id, team_id),
             )
         )

@@ -68,8 +68,7 @@ Key attributes are:
 - `IsResource` — whether this Person can be assigned to work items (independent of whether they can log in).
 - `UserType`/role — TeamLeadUser / LeadUser / NormalUser / ReadOnlyUser for V2 (renamed from the old app's SuperUser / PowerUser / NormalUser / ReadOnlyUser — see `Claude/Requirements/UseCases.md`'s Annex A for the V1.2 behavior these were based on), scoped per-Team via this table (see `KeyConcepts.md`'s Role / Permission Level entry, and Decisions item `D-DM-4` for how this combines with the organisation-level admin role on Person).
 - `Nickname` — a shorter name this Person is known by on this Team (e.g. "Alice" rather than "Alice Chen"), nullable, shown instead of Person's own name wherever a screen displays a name in this Team's context. Has no equivalent in the old app. See Decisions (`D-DM-11`).
-
-The Gantt bar colour assigned to a Person should be a generic per-Person, per-Organisation setting.
+- `Colour` — the Gantt bar colour this Person shows as on this Team, nullable. Per-Team, not per-Person-per-Organisation as originally framed — see Decisions (`D-DM-13`).
 
 <a id="project"></a>
 ### 2.5 Project
@@ -185,6 +184,9 @@ None currently open — every question originally raised for this document has a
 - **D-DM-12**<br>
   **Question:** `D-DM-4` settled that `IsOrganisationAdmin` exclusively creates/edits/deletes Person records, but the actual Level 1 API (`Claude/Level1_Implementation/2_RestApi/Plan.md` §2.1) went further and built no delete route for Person at all — "People are never hard-deleted; `is_active = false` is how someone leaving is represented." Reopened while designing `ManagePeoplePlan.md`: should a delete capability come back, given the plan's real motivating case (undoing an accidental creation, soon after it happens)?<br>
   **Decision:** yes, narrowly — a real `DELETE` route for Person, gated the same `IsOrganisationAdmin`-only way `D-DM-4` already established, but rejecting the delete (with a message naming what's still attached) unless the Person is referenced *nowhere at all* — across every table that can reference one, including `PersonRole` itself (Team membership counts as a reference too, not just Task/Project/Remark/Attachment). This is deliberately not a time-based rule ("only within N minutes of creation"): the reference check alone naturally only ever succeeds for a Person who hasn't been used for anything yet, which in practice is precisely the "soon after creation, undo a mistake" case, without needing to track how soon. `is_active = false` remains the primary, always-safe removal mechanism for every other case — this doesn't reopen general Person deletion, only a narrow, self-limiting one. Full detail in `ManagePeoplePlan.md` §4.5/§6.
+- **D-DM-13**<br>
+  **Question:** §2.4 originally framed the Gantt bar `Colour` as "a generic per-Person, per-Organisation setting" — one colour for a Person everywhere. Should it instead be per-Team, the same way `Nickname`/`UserType`/`IsResource` already are (`D-DM-4`)?<br>
+  **Decision:** yes — `Colour` moves from `Person` to `PersonRole`, nullable, editable via the Team Management screen the same way `Nickname` is. A Person who belongs to more than one Team can show up in a different colour on each; there is no longer one org-wide colour for a Person at all. Migrated by carrying each Person's existing single colour over to their (single, in every seeded case) existing `PersonRole` row. Full detail in `4_GuiClient/Plan.md` `D1.4-88`.
 
 <a id="future-extensions"></a>
 ## 7. Future Extensions (Beyond Level 1)

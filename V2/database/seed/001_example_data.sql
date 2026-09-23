@@ -35,17 +35,17 @@ SELECT setval('team_team_id_seq', 1);
 --   grace.liu@example.com    -> grace-pass1
 --   sam.patel@example.com    -> sam-pass1
 --   nadia.fischer@example.com -> nadia-pass1
-INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, password_hash, colour) VALUES
-    (1, 'Alice Chen',    true, true,  'alice.chen@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$0O5rQdfv3RCoDwtKV1nfjQ$7w7ozK6gJOqKpZ2n0rWIbn3NNfh92P8/01rKLl/uwK0', '#4C72B0'),
-    (2, 'Ben Okafor',    true, false, 'ben.okafor@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$FJGnjluuO0fXrmoQRZVy1w$8dRyZfr2NgXJGGPU5/02WpxROcmfZg1UuAC7xOfPEj8', '#DD8452'),
-    (3, 'Priya Sharma',  true, false, 'priya.sharma@example.com',  '$argon2id$v=19$m=65536,t=3,p=4$hXq1ad/jWceucoj3z1S4kw$nFmGHWCrf5lYZfwtIb0QdvGWVEVbOjpwYgA7fIyTQXA', '#55A868'),
-    (4, 'Tom Baxter',    true, false, 'tom.baxter@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$flxkFZZ8TglUurQGSDtoRA$X4s2G+EMTBsfRTfM0oTAP6OXj5gjCOLGwW/vLkl3OUQ', '#C44E52'),
-    (5, 'Grace Liu',     true, false, 'grace.liu@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$NTFt89RCMOn+C9e6iSepRg$Yok6sknL5t7u438TEfhF3SRubOlzAfhm4tWBRG78h00', '#8172B2'),
-    (6, 'Sam Patel',     true, false, 'sam.patel@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$4DcFfvPchaM+C2yCRVq+jg$XjrZz17FYpmjLA8ooHJJLTarMr9mCgY+b6BfGQ0Cogs', NULL),
-    (7, 'Nadia Fischer', true, true,  'nadia.fischer@example.com', '$argon2id$v=19$m=65536,t=3,p=4$WdSa5nXa0rfisSET0ENBSQ$6WMwXkDJajexjS2rZWBGqCliKJetCWbfvVUpn3t2BQU', NULL);
+INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, password_hash) VALUES
+    (1, 'Alice Chen',    true, true,  'alice.chen@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$0O5rQdfv3RCoDwtKV1nfjQ$7w7ozK6gJOqKpZ2n0rWIbn3NNfh92P8/01rKLl/uwK0'),
+    (2, 'Ben Okafor',    true, false, 'ben.okafor@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$FJGnjluuO0fXrmoQRZVy1w$8dRyZfr2NgXJGGPU5/02WpxROcmfZg1UuAC7xOfPEj8'),
+    (3, 'Priya Sharma',  true, false, 'priya.sharma@example.com',  '$argon2id$v=19$m=65536,t=3,p=4$hXq1ad/jWceucoj3z1S4kw$nFmGHWCrf5lYZfwtIb0QdvGWVEVbOjpwYgA7fIyTQXA'),
+    (4, 'Tom Baxter',    true, false, 'tom.baxter@example.com',    '$argon2id$v=19$m=65536,t=3,p=4$flxkFZZ8TglUurQGSDtoRA$X4s2G+EMTBsfRTfM0oTAP6OXj5gjCOLGwW/vLkl3OUQ'),
+    (5, 'Grace Liu',     true, false, 'grace.liu@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$NTFt89RCMOn+C9e6iSepRg$Yok6sknL5t7u438TEfhF3SRubOlzAfhm4tWBRG78h00'),
+    (6, 'Sam Patel',     true, false, 'sam.patel@example.com',     '$argon2id$v=19$m=65536,t=3,p=4$4DcFfvPchaM+C2yCRVq+jg$XjrZz17FYpmjLA8ooHJJLTarMr9mCgY+b6BfGQ0Cogs'),
+    (7, 'Nadia Fischer', true, true,  'nadia.fischer@example.com', '$argon2id$v=19$m=65536,t=3,p=4$WdSa5nXa0rfisSET0ENBSQ$6WMwXkDJajexjS2rZWBGqCliKJetCWbfvVUpn3t2BQU');
 SELECT setval('person_person_id_seq', 7);
 
--- PersonRole: Team membership + per-Team role/resource flag.
+-- PersonRole: Team membership + per-Team role/resource flag/nickname/colour.
 -- Collapsed from two Teams into one: Tom was TeamLeadUser of the old Team 2
 -- and an ordinary member of Team 1 — merged into a single LeadUser row
 -- (Alice already holds Team 1's one TeamLeadUser slot, so Tom can't also
@@ -54,16 +54,20 @@ SELECT setval('person_person_id_seq', 7);
 -- (ordinary, non-resource) and just dedupe to one.
 -- nickname (D1.4-21): populated for a few of Team 1's People to demonstrate
 -- the "shorter name known within a team" feature; left null for the rest of
--- Team 1 and for all of Team 2 (002_team2_from_v1.sql) — nickname is
--- read-only in Level 1, seed data is the only way to set one for now.
-INSERT INTO person_role (person_id, team_id, is_resource, role, nickname) VALUES
-    (1, 1, true,  'TeamLeadUser', 'Alice'),
-    (2, 1, true,  'LeadUser',     NULL),
-    (3, 1, true,  'NormalUser',   'Priya'),
-    (4, 1, true,  'LeadUser',     NULL),
-    (5, 1, true,  'NormalUser',   NULL),
-    (6, 1, false, 'ReadOnlyUser', NULL),
-    (7, 1, false, 'NormalUser',   'Nadia');
+-- Team 1 and for all of Team 2 (002_team2_from_v1.sql) — both fields are
+-- editable via the Team Management screen (D1.4-87/D1.4-88).
+-- colour (D-DM-13/D1.4-88): carried over verbatim from where each of these
+-- Persons' single, org-wide colour used to live (on `person` itself, a
+-- seaborn-style categorical palette) — Sam/Nadia never had one under that
+-- scheme either, hence NULL here too.
+INSERT INTO person_role (person_id, team_id, is_resource, role, nickname, colour) VALUES
+    (1, 1, true,  'TeamLeadUser', 'Alice', '#4C72B0'),
+    (2, 1, true,  'LeadUser',     NULL,    '#DD8452'),
+    (3, 1, true,  'NormalUser',   'Priya', '#55A868'),
+    (4, 1, true,  'LeadUser',     NULL,    '#C44E52'),
+    (5, 1, true,  'NormalUser',   NULL,    '#8172B2'),
+    (6, 1, false, 'ReadOnlyUser', NULL,    NULL),
+    (7, 1, false, 'NormalUser',   'Nadia', NULL);
 
 -- ---------------------------------------------------------------------------
 -- Components (classification tree, independent of Project; each belongs to

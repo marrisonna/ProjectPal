@@ -18,6 +18,7 @@ import {
   useGridApiRef,
   type GridCellParams,
   type GridColDef,
+  type GridRenderEditCellParams,
   type GridRowParams,
 } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -39,6 +40,7 @@ import {
   useDenseGridColumns,
 } from "../../components/DenseDataGrid";
 import { formatApiError } from "../../lib/apiErrors";
+import { suggestNextColour } from "../../lib/colourPalette";
 import { isTeamLead } from "../../lib/permissions";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { useSingletonWindowIdentity } from "../../lib/windowNav";
@@ -52,21 +54,69 @@ interface TeamMemberRow extends PersonRoleRecord {
   name: string;
 }
 
+// A native <input type="color"> edit cell (this app's own "native controls"
+// convention, DenseField.tsx) — the one HTML control that naturally
+// constrains input to a valid colour. Commits immediately on change, the
+// same shape DenseSingleSelectEditCell already uses, and for the same
+// reason: `props.api` is the grid's own live API, passed straight in — not
+// `useGridApiRef()`, which called fresh here would just be a new,
+// disconnected `useRef(null)`. Moved here from ManagePeoplePage.tsx
+// (D-DM-13/D1.4-88) — colour is no longer a Person-level field.
+function ColourEditCell(props: GridRenderEditCellParams<TeamMemberRow>) {
+  const { id, field, value, api } = props;
+  return (
+    <input
+      type="color"
+      autoFocus
+      value={(value as string | null) ?? "#ffffff"}
+      style={{ width: "100%", height: "100%", border: "none", padding: 0, background: "transparent", cursor: "pointer" }}
+      onChange={async (event) => {
+        await api.setEditCellValue({ id, field, value: event.target.value });
+        api.stopCellEditMode({ id, field });
+      }}
+    />
+  );
+}
+
+function ColourSwatch({ colour }: { colour: string | null }) {
+  return (
+    <Box
+      sx={{
+        width: 14,
+        height: 14,
+        mx: "auto",
+        borderRadius: "2px",
+        border: "1px solid rgba(0,0,0,0.3)",
+        bgcolor: colour ?? "#fff",
+      }}
+    />
+  );
+}
+
 // ManagePeoplePlan.md §5.3 — a Team Lead cannot create Person records at
 // all (D-DM-4); this dialog only ever picks among People who already exist
-// and aren't already on this Team.
+// and aren't already on this Team. `existingColours` (D-DM-13/D1.4-88) is
+// every current member's own colour on this Team — used to pre-fill a
+// sensible, not-already-used default (suggestNextColour), still fully
+// editable before confirming.
 function AddTeamMemberDialog({
   teamId,
   candidates,
+  existingColours,
   onClose,
 }: {
   teamId: number;
   candidates: PersonRecord[];
+  existingColours: (string | null)[];
   onClose: () => void;
 }) {
   const [personId, setPersonId] = useState<number | "">("");
   const [role, setRole] = useState("NormalUser");
   const [isResource, setIsResource] = useState(false);
+  // Computed once, from the Team's membership as it stood when this dialog
+  // opened — not re-suggested on every render, so it doesn't change out
+  // from under someone who's already looked at or edited it.
+  const [colour, setColour] = useState(() => suggestNextColour(existingColours));
   const [error, setError] = useState<string | null>(null);
   const createPersonRole = useCreatePersonRole();
 
@@ -81,6 +131,7 @@ function AddTeamMemberDialog({
         team_id: teamId,
         role,
         is_resource: isResource,
+        colour,
       });
       onClose();
     } catch (err) {
@@ -129,6 +180,10 @@ function AddTeamMemberDialog({
           control={<Checkbox checked={isResource} onChange={(event) => setIsResource(event.target.checked)} />}
           label="Is Resource"
         />
+        <Box sx={{ display: "flex", alignItems: "center", gap: "10px", mt: "16px" }}>
+          <Box sx={{ fontSize: 13 }}>Colour</Box>
+          <Box component="input" type="color" value={colour} onChange={(event) => setColour(event.target.value)} />
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
@@ -276,11 +331,26 @@ export function TeamManagementPage() {
     ],
   };
 
-  const editableFields = new Set(["nickname", "role", "is_resource"]);
+  const editableFields = new Set(["nickname", "colour", "role", "is_resource"]);
 
   const dataColumns: GridColDef<TeamMemberRow>[] = [
     withFilter({ field: "name", headerName: "Name" }, (row) => [row.name], "string"),
     withFilter({ field: "nickname", headerName: "Nickname" }, (row) => [row.nickname ?? ""], "string"),
+    // D-DM-13/D1.4-88 — moved here from Manage People: colour is per-Person
+    // *per-Team*, not org-wide, the same way nickname/role/is_resource
+    // already are.
+    withFilter(
+      {
+        field: "colour",
+        headerName: "Colour",
+        align: "center",
+        sortable: false,
+        renderCell: (params) => <ColourSwatch colour={params.row.colour} />,
+        renderEditCell: (params) => <ColourEditCell {...params} />,
+      },
+      (row) => [row.colour ?? ""],
+      "string",
+    ),
     withFilter(
       {
         field: "role",
@@ -428,7 +498,12 @@ export function TeamManagementPage() {
       </Box>
 
       {addMemberOpen && (
-        <AddTeamMemberDialog teamId={id} candidates={addCandidates} onClose={() => setAddMemberOpen(false)} />
+        <AddTeamMemberDialog
+          teamId={id}
+          candidates={addCandidates}
+          existingColours={teamMembers.map((m) => m.colour)}
+          onClose={() => setAddMemberOpen(false)}
+        />
       )}
 
       <Snackbar open={!!snackbarError} autoHideDuration={6000} onClose={() => setSnackbarError(null)}>

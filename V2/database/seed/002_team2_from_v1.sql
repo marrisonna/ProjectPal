@@ -32,95 +32,101 @@ SELECT setval('team_team_id_seq', 2);
 -- People (43, from V1.2's Person table)
 -- ---------------------------------------------------------------------------
 
-INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, password_hash, colour) VALUES
-    (10033, 'Rahul', true, false, 'rahul@example.com', '$argon2id$v=19$m=65536,t=3,p=4$+XQMPjTaFZUN2FuDJt0wXA$rdaAYmIKi59KUXsTy+/fzo1acKX6C3vLfGzRrkKGY1o', 'Orchid'),
-    (10034, 'Ron', true, false, 'ron@example.com', '$argon2id$v=19$m=65536,t=3,p=4$fwqMuWGmw0B/Na2XPa+aAA$JCTsIUozUz3pL/HmI0XBBQ+43R67+ZS5/TnOm0650v4', 'Yellow'),
-    (10003, 'David', true, false, NULL, NULL, 'Red'),
-    (10036, 'Rizwan', true, false, 'rizwan@example.com', '$argon2id$v=19$m=65536,t=3,p=4$nzgoBa+Y/ERsUgELLVcjUQ$C0QZY5VAhFQx5lEhkYThQ8LnCQJAnU5WvSOsU0Z1Nyc', NULL),
-    (10001, 'ABS Strategy', true, false, NULL, NULL, NULL),
-    (10002, 'Danny', true, false, 'danny@example.com', '$argon2id$v=19$m=65536,t=3,p=4$642vWee1Na2oU8KCdrXIdQ$K3JLsrczkk3HLcmPRRwiX3Wyc28VkDRuupiviTE7AOI', 'YellowGreen'),
-    (10004, 'Fingal', true, false, NULL, NULL, NULL),
-    (10005, 'Friedel', true, false, NULL, NULL, NULL),
-    (10006, 'Gerald', true, false, NULL, NULL, NULL),
-    (10007, 'Juan', true, false, NULL, NULL, NULL),
-    (10008, 'Kundan', true, false, NULL, NULL, NULL),
-    (10009, 'MiddleOffice', true, false, NULL, NULL, NULL),
-    (10010, 'Neil', true, true, 'neil@example.com', '$argon2id$v=19$m=65536,t=3,p=4$NyQyCLBTSZmHTt4oHXhbKw$hm4nIMTfzxwhsTs4UOwNf7NGv4kWYwb25F4Tsmx0pyY', 'Yellow'),
-    (10011, 'NomuraNow', true, false, NULL, NULL, NULL),
-    (10012, 'Paresh', true, false, 'paresh@example.com', '$argon2id$v=19$m=65536,t=3,p=4$4KR3naCFmlKDfLVdtM0DjQ$grf3dB9PT6cY4NwZxmv9XceXh61GBhBrTmW3UEiy6J4', 'Red'),
-    (10013, 'Parth', true, false, 'parth@example.com', '$argon2id$v=19$m=65536,t=3,p=4$KhF3pYKcD2YNyGeBpZYXrg$jPxewRcTM4FjzoqEn1Mh0nNWRDaPr2+huI3L9weAg2c', NULL),
-    (10014, 'Pramendra', true, false, NULL, NULL, NULL),
-    (10015, 'Radial', true, false, NULL, NULL, NULL),
-    (10016, 'RDM', true, false, NULL, NULL, NULL),
-    (10017, 'Reneesh', true, false, NULL, NULL, NULL),
-    (10018, 'Ruth', true, false, 'ruth@example.com', '$argon2id$v=19$m=65536,t=3,p=4$HhWVPsfD619w9nT7HEoT5A$dH8vHjS/TnpFM4CaWodNsTBy9H6HCCkmvSaF6WrQha4', NULL),
-    (10019, 'Sachin', true, false, 'sachin@example.com', '$argon2id$v=19$m=65536,t=3,p=4$g9KeHf6FJ8OKnI921IWn1g$UTnJW/Vgst05cZqsSYP1BMMcct7jOR8+4fjAVdHvZcw', NULL),
-    (10020, 'Shubh', true, false, NULL, NULL, NULL),
-    (10021, 'Sreevani', true, false, 'sreevani@example.com', '$argon2id$v=19$m=65536,t=3,p=4$thWpKIxuLjVcVa0clyu7ZQ$ehkxkZrkBrs3l7rf0nAWGQ2laxlMFUtdDVeDqLkFJ0E', NULL),
-    (10022, 'Unassigned', true, false, NULL, NULL, NULL),
-    (10023, 'Zhuu', true, false, NULL, NULL, NULL),
-    (10024, 'Ajay', true, false, NULL, NULL, NULL),
-    (10025, 'Pawan', true, false, NULL, NULL, NULL),
-    (10026, 'Khilan', true, false, NULL, NULL, NULL),
-    (10027, 'Ed', true, false, NULL, NULL, NULL),
-    (10028, 'Giang', true, false, NULL, NULL, NULL),
-    (10029, 'QDB', true, false, NULL, NULL, NULL),
-    (10030, 'FI-Support', true, false, NULL, NULL, NULL),
-    (10031, 'Erik', true, false, NULL, NULL, NULL),
-    (10032, 'Nick', true, false, NULL, NULL, NULL),
-    (10037, 'Other', true, false, NULL, NULL, NULL),
-    (10038, 'Other', true, false, NULL, NULL, NULL),
-    (10039, 'Other', true, false, NULL, NULL, NULL),
-    (10040, 'will', true, false, NULL, NULL, 'SlateGray'),
-    (10041, 'Other', false, false, NULL, NULL, 'SlateGray'),
-    (10042, 'Other', false, false, NULL, NULL, 'SlateGray'),
-    (10043, 'Other', false, false, NULL, NULL, 'SlateGray'),
-    (10044, 'Other', false, false, NULL, NULL, 'SlateGray');
+INSERT INTO person (person_id, name, is_active, is_organisation_admin, external_login, password_hash) VALUES
+    (10033, 'Rahul', true, false, 'rahul@example.com', '$argon2id$v=19$m=65536,t=3,p=4$+XQMPjTaFZUN2FuDJt0wXA$rdaAYmIKi59KUXsTy+/fzo1acKX6C3vLfGzRrkKGY1o'),
+    (10034, 'Ron', true, false, 'ron@example.com', '$argon2id$v=19$m=65536,t=3,p=4$fwqMuWGmw0B/Na2XPa+aAA$JCTsIUozUz3pL/HmI0XBBQ+43R67+ZS5/TnOm0650v4'),
+    (10003, 'David', true, false, NULL, NULL),
+    (10036, 'Rizwan', true, false, 'rizwan@example.com', '$argon2id$v=19$m=65536,t=3,p=4$nzgoBa+Y/ERsUgELLVcjUQ$C0QZY5VAhFQx5lEhkYThQ8LnCQJAnU5WvSOsU0Z1Nyc'),
+    (10001, 'ABS Strategy', true, false, NULL, NULL),
+    (10002, 'Danny', true, false, 'danny@example.com', '$argon2id$v=19$m=65536,t=3,p=4$642vWee1Na2oU8KCdrXIdQ$K3JLsrczkk3HLcmPRRwiX3Wyc28VkDRuupiviTE7AOI'),
+    (10004, 'Fingal', true, false, NULL, NULL),
+    (10005, 'Friedel', true, false, NULL, NULL),
+    (10006, 'Gerald', true, false, NULL, NULL),
+    (10007, 'Juan', true, false, NULL, NULL),
+    (10008, 'Kundan', true, false, NULL, NULL),
+    (10009, 'MiddleOffice', true, false, NULL, NULL),
+    (10010, 'Neil', true, true, 'neil@example.com', '$argon2id$v=19$m=65536,t=3,p=4$NyQyCLBTSZmHTt4oHXhbKw$hm4nIMTfzxwhsTs4UOwNf7NGv4kWYwb25F4Tsmx0pyY'),
+    (10011, 'NomuraNow', true, false, NULL, NULL),
+    (10012, 'Paresh', true, false, 'paresh@example.com', '$argon2id$v=19$m=65536,t=3,p=4$4KR3naCFmlKDfLVdtM0DjQ$grf3dB9PT6cY4NwZxmv9XceXh61GBhBrTmW3UEiy6J4'),
+    (10013, 'Parth', true, false, 'parth@example.com', '$argon2id$v=19$m=65536,t=3,p=4$KhF3pYKcD2YNyGeBpZYXrg$jPxewRcTM4FjzoqEn1Mh0nNWRDaPr2+huI3L9weAg2c'),
+    (10014, 'Pramendra', true, false, NULL, NULL),
+    (10015, 'Radial', true, false, NULL, NULL),
+    (10016, 'RDM', true, false, NULL, NULL),
+    (10017, 'Reneesh', true, false, NULL, NULL),
+    (10018, 'Ruth', true, false, 'ruth@example.com', '$argon2id$v=19$m=65536,t=3,p=4$HhWVPsfD619w9nT7HEoT5A$dH8vHjS/TnpFM4CaWodNsTBy9H6HCCkmvSaF6WrQha4'),
+    (10019, 'Sachin', true, false, 'sachin@example.com', '$argon2id$v=19$m=65536,t=3,p=4$g9KeHf6FJ8OKnI921IWn1g$UTnJW/Vgst05cZqsSYP1BMMcct7jOR8+4fjAVdHvZcw'),
+    (10020, 'Shubh', true, false, NULL, NULL),
+    (10021, 'Sreevani', true, false, 'sreevani@example.com', '$argon2id$v=19$m=65536,t=3,p=4$thWpKIxuLjVcVa0clyu7ZQ$ehkxkZrkBrs3l7rf0nAWGQ2laxlMFUtdDVeDqLkFJ0E'),
+    (10022, 'Unassigned', true, false, NULL, NULL),
+    (10023, 'Zhuu', true, false, NULL, NULL),
+    (10024, 'Ajay', true, false, NULL, NULL),
+    (10025, 'Pawan', true, false, NULL, NULL),
+    (10026, 'Khilan', true, false, NULL, NULL),
+    (10027, 'Ed', true, false, NULL, NULL),
+    (10028, 'Giang', true, false, NULL, NULL),
+    (10029, 'QDB', true, false, NULL, NULL),
+    (10030, 'FI-Support', true, false, NULL, NULL),
+    (10031, 'Erik', true, false, NULL, NULL),
+    (10032, 'Nick', true, false, NULL, NULL),
+    (10037, 'Other', true, false, NULL, NULL),
+    (10038, 'Other', true, false, NULL, NULL),
+    (10039, 'Other', true, false, NULL, NULL),
+    (10040, 'will', true, false, NULL, NULL),
+    (10041, 'Other', false, false, NULL, NULL),
+    (10042, 'Other', false, false, NULL, NULL),
+    (10043, 'Other', false, false, NULL, NULL),
+    (10044, 'Other', false, false, NULL, NULL);
 
-INSERT INTO person_role (person_id, team_id, is_resource, role) VALUES
-    (10033, 2, true, 'NormalUser'),
-    (10034, 2, false, 'ReadOnlyUser'),
-    (10003, 2, false, 'ReadOnlyUser'),
-    (10036, 2, true, 'NormalUser'),
-    (10001, 2, false, 'ReadOnlyUser'),
-    (10002, 2, false, 'ReadOnlyUser'),
-    (10004, 2, false, 'ReadOnlyUser'),
-    (10005, 2, false, 'ReadOnlyUser'),
-    (10006, 2, false, 'ReadOnlyUser'),
-    (10007, 2, false, 'ReadOnlyUser'),
-    (10008, 2, false, 'ReadOnlyUser'),
-    (10009, 2, false, 'ReadOnlyUser'),
-    (10010, 2, true, 'TeamLeadUser'),
-    (10011, 2, false, 'ReadOnlyUser'),
-    (10012, 2, true, 'LeadUser'),
-    (10013, 2, true, 'NormalUser'),
-    (10014, 2, true, 'ReadOnlyUser'),
-    (10015, 2, false, 'ReadOnlyUser'),
-    (10016, 2, false, 'ReadOnlyUser'),
-    (10017, 2, false, 'ReadOnlyUser'),
-    (10018, 2, true, 'NormalUser'),
-    (10019, 2, true, 'NormalUser'),
-    (10020, 2, false, 'ReadOnlyUser'),
-    (10021, 2, true, 'NormalUser'),
-    (10022, 2, true, 'ReadOnlyUser'),
-    (10023, 2, false, 'ReadOnlyUser'),
-    (10024, 2, false, 'ReadOnlyUser'),
-    (10025, 2, false, 'ReadOnlyUser'),
-    (10026, 2, false, 'ReadOnlyUser'),
-    (10027, 2, false, 'ReadOnlyUser'),
-    (10028, 2, false, 'ReadOnlyUser'),
-    (10029, 2, false, 'ReadOnlyUser'),
-    (10030, 2, false, 'ReadOnlyUser'),
-    (10031, 2, false, 'ReadOnlyUser'),
-    (10032, 2, true, 'ReadOnlyUser'),
-    (10037, 2, false, 'ReadOnlyUser'),
-    (10038, 2, false, 'ReadOnlyUser'),
-    (10039, 2, false, 'ReadOnlyUser'),
-    (10040, 2, false, 'ReadOnlyUser'),
-    (10041, 2, false, 'ReadOnlyUser'),
-    (10042, 2, false, 'ReadOnlyUser'),
-    (10043, 2, false, 'ReadOnlyUser'),
-    (10044, 2, false, 'ReadOnlyUser');
+-- colour (D-DM-13/D1.4-88): carried over from where it used to live (on
+-- `person`) — converted from the original V1.2 import's CSS colour *names*
+-- (Orchid/Yellow/Red/YellowGreen/SlateGray) to their equivalent hex values,
+-- since the edit control (a native <input type="color">) only understands
+-- hex and would otherwise coerce these oddly the first time someone edited
+-- one.
+INSERT INTO person_role (person_id, team_id, is_resource, role, colour) VALUES
+    (10033, 2, true, 'NormalUser', '#DA70D6'),
+    (10034, 2, false, 'ReadOnlyUser', '#FFFF00'),
+    (10003, 2, false, 'ReadOnlyUser', '#FF0000'),
+    (10036, 2, true, 'NormalUser', NULL),
+    (10001, 2, false, 'ReadOnlyUser', NULL),
+    (10002, 2, false, 'ReadOnlyUser', '#9ACD32'),
+    (10004, 2, false, 'ReadOnlyUser', NULL),
+    (10005, 2, false, 'ReadOnlyUser', NULL),
+    (10006, 2, false, 'ReadOnlyUser', NULL),
+    (10007, 2, false, 'ReadOnlyUser', NULL),
+    (10008, 2, false, 'ReadOnlyUser', NULL),
+    (10009, 2, false, 'ReadOnlyUser', NULL),
+    (10010, 2, true, 'TeamLeadUser', '#FFFF00'),
+    (10011, 2, false, 'ReadOnlyUser', NULL),
+    (10012, 2, true, 'LeadUser', '#FF0000'),
+    (10013, 2, true, 'NormalUser', NULL),
+    (10014, 2, true, 'ReadOnlyUser', NULL),
+    (10015, 2, false, 'ReadOnlyUser', NULL),
+    (10016, 2, false, 'ReadOnlyUser', NULL),
+    (10017, 2, false, 'ReadOnlyUser', NULL),
+    (10018, 2, true, 'NormalUser', NULL),
+    (10019, 2, true, 'NormalUser', NULL),
+    (10020, 2, false, 'ReadOnlyUser', NULL),
+    (10021, 2, true, 'NormalUser', NULL),
+    (10022, 2, true, 'ReadOnlyUser', NULL),
+    (10023, 2, false, 'ReadOnlyUser', NULL),
+    (10024, 2, false, 'ReadOnlyUser', NULL),
+    (10025, 2, false, 'ReadOnlyUser', NULL),
+    (10026, 2, false, 'ReadOnlyUser', NULL),
+    (10027, 2, false, 'ReadOnlyUser', NULL),
+    (10028, 2, false, 'ReadOnlyUser', NULL),
+    (10029, 2, false, 'ReadOnlyUser', NULL),
+    (10030, 2, false, 'ReadOnlyUser', NULL),
+    (10031, 2, false, 'ReadOnlyUser', NULL),
+    (10032, 2, true, 'ReadOnlyUser', NULL),
+    (10037, 2, false, 'ReadOnlyUser', NULL),
+    (10038, 2, false, 'ReadOnlyUser', NULL),
+    (10039, 2, false, 'ReadOnlyUser', NULL),
+    (10040, 2, false, 'ReadOnlyUser', '#708090'),
+    (10041, 2, false, 'ReadOnlyUser', '#708090'),
+    (10042, 2, false, 'ReadOnlyUser', '#708090'),
+    (10043, 2, false, 'ReadOnlyUser', '#708090'),
+    (10044, 2, false, 'ReadOnlyUser', '#708090');
 
 -- ---------------------------------------------------------------------------
 -- Components (201) -- inserted with no parent first, linked in a second pass
@@ -554,10 +560,10 @@ INSERT INTO project (project_id, team_id, name, priority, detailed_description, 
     (10183, 2, 'Use Foward Curves for Matrix Pricing and Cheat Sheet', 'Low', NULL, 10010, date '2012-08-29', NULL),
     (10185, 2, 'RatePath Algorithm - Implemented for UKNC Model', 'MedHigh', NULL, 10010, date '2012-01-25', NULL),
     (10186, 2, 'Scrape Intex Trigger Info', 'Med', NULL, 10010, date '2010-01-01', NULL),
-    (10192, 2, 'Fix Halifax HPI Issue', 'Med', 'This problem causes loans to silently change LTV buckets because 
-a) HPI data is missing from the DB (PP 2135) and
-b) Inflation is assumed to be zero if data is missing (PP 2129)
-
+    (10192, 2, 'Fix Halifax HPI Issue', 'Med', 'This problem causes loans to silently change LTV buckets because 
+a) HPI data is missing from the DB (PP 2135) and
+b) Inflation is assumed to be zero if data is missing (PP 2129)
+
 See attachment which shows why this needs to be fixed.', 10010, date '2012-02-08', NULL),
     (10193, 2, 'LEEK Data Format Changes', 'Med', NULL, 10012, date '2012-01-29', NULL),
     (10189, 2, 'Extensions to Trade Blotter', 'Closed', 'Additions to Trade Blotter uggested by Juan', 10010, date '2012-01-19', NULL),
@@ -568,25 +574,25 @@ See attachment which shows why this needs to be fixed.', 10010, date '2012-02-08
     (10069, 2, 'Apr 2011 Mumbai Trip', 'Closed', NULL, 10010, date '2011-04-04', NULL),
     (10070, 2, 'Production - Various tasks and items to roll out', 'Med', NULL, 10010, date '2011-03-27', NULL),
     (10071, 2, 'AVR Report', 'Closed', NULL, 10010, date '2011-03-28', NULL),
-    (10194, 2, 'Daily Personalised Trade Notification', 'Med', 'Requested by Zhuu, David and Friedel.
-
-The aim is to provide functionality that allows a user to specify a collection of ''sets'' of bonds that they which to recieve notification on.
-
-Each ''set'' will:-
-a)  Have a name
-b) Contain a list of conditions (to be ''OR'' ed) used to match bonds
-    - e.g., shelf, deal name, ISIN, bond name or sector classification
-c) A indication of whether to match Nomura Real Trades, Nomura Colour Trades or Xtrakter trades
-d) A list of email address that will recieve notifications.
-
-A user can specify any number of ''sets'' as described above. 
-
-A daily, end of day (after Xtrakter loader has completed) batch job will check all new trades against all ''sets'' set up by all users. 
-
-It will send out a single email per mail recipient.  
-
-The mail will contain a section for each ''set'' where that recpient has been added.
-
+    (10194, 2, 'Daily Personalised Trade Notification', 'Med', 'Requested by Zhuu, David and Friedel.
+
+The aim is to provide functionality that allows a user to specify a collection of ''sets'' of bonds that they which to recieve notification on.
+
+Each ''set'' will:-
+a)  Have a name
+b) Contain a list of conditions (to be ''OR'' ed) used to match bonds
+    - e.g., shelf, deal name, ISIN, bond name or sector classification
+c) A indication of whether to match Nomura Real Trades, Nomura Colour Trades or Xtrakter trades
+d) A list of email address that will recieve notifications.
+
+A user can specify any number of ''sets'' as described above. 
+
+A daily, end of day (after Xtrakter loader has completed) batch job will check all new trades against all ''sets'' set up by all users. 
+
+It will send out a single email per mail recipient.  
+
+The mail will contain a section for each ''set'' where that recpient has been added.
+
 Each section will list details of all the trade activity relevent to that ''set'', if there are no trades, it will state there are no trades.', 10010, date '2012-04-04', NULL),
     (10148, 2, 'Nomura Mandated Changes', NULL, NULL, 10010, date '2012-01-04', NULL),
     (10149, 2, 'BBS Infrastrcuture Changes', 'Closed', NULL, 10010, date '2011-09-13', NULL),
@@ -595,11 +601,11 @@ Each section will list details of all the trade activity relevent to that ''set'
     (10162, 2, 'Share calculation components', 'Closed', NULL, 10010, date '2011-08-26', NULL),
     (10197, 2, 'Load Lansdowne data', 'Med', NULL, 10010, date '2012-06-28', NULL),
     (10156, 2, 'US Collaboration', 'Closed', NULL, 10010, date '2012-01-23', NULL),
-    (10187, 2, 'Retire BBG API for Rate data', 'Closed', 'Need to stop using the BBG API and BBG Bridge for rate data and use QDB  instead.
-
+    (10187, 2, 'Retire BBG API for Rate data', 'Closed', 'Need to stop using the BBG API and BBG Bridge for rate data and use QDB  instead.
+
 See attachment ', 10010, date '2012-01-18', NULL),
-    (10188, 2, 'Retire BBG API for Bond Static data', 'Closed', 'Need to stop using BBG Bridge for bond static data.
-
+    (10188, 2, 'Retire BBG API for Bond Static data', 'Closed', 'Need to stop using BBG Bridge for bond static data.
+
 See requirement doc.', 10012, date '2012-01-19', NULL),
     (10190, 2, 'Cheat Sheet #1', 'Closed', NULL, 10010, date '2011-05-19', NULL),
     (10191, 2, 'Cheat Sheet #2 - Capital Structure', 'MedHigh', 'The scope of this is to add Intex data to the cheat sheet report.', 10010, date '2011-09-23', NULL),
@@ -672,7 +678,7 @@ See requirement doc.', 10012, date '2012-01-19', NULL),
     (10135, 2, 'CoveredBondsDatabase', 'Closed', NULL, 10010, date '2011-07-21', NULL),
     (10138, 2, 'Data Centre Migration', 'Closed', NULL, 10010, date '2011-06-10', NULL),
     (10139, 2, 'Totoro Bond Query App for End of Day', 'Closed', NULL, 10010, date '2011-07-01', NULL),
-    (10140, 2, 'BBG BVAL Feed', 'Cancelled', 'Develop a feed of Matrix Prices to be sent to BBG on a daily basis for their BVAL service.
+    (10140, 2, 'BBG BVAL Feed', 'Cancelled', 'Develop a feed of Matrix Prices to be sent to BBG on a daily basis for their BVAL service.
 Seems no requirement any longer', 10010, date '2011-07-12', NULL),
     (10141, 2, 'Expand Deals DB for CMBS', 'Closed', NULL, 10010, date '2011-07-19', NULL),
     (10142, 2, 'Build CMBS News filtering mechanism', 'Low', 'Filter News for external web sites and add this to the database', 10010, date '2011-11-30', NULL),
@@ -706,12 +712,12 @@ Seems no requirement any longer', 10010, date '2011-07-12', NULL),
     (10101, 2, 'DatabaseMaintainer', 'Closed', NULL, 10010, date '2011-05-05', NULL),
     (10123, 2, 'Make Commentator Comments available in other apps', 'MedLow', 'Make Comment Viewer fit well into Strategies work flow.', 10010, date '2011-09-28', NULL),
     (10168, 2, 'Develop DealScenarioAnalyticGenerator', 'Closed', NULL, 10010, date '2011-07-29', NULL),
-    (10169, 2, 'Production Management', 'Med', 'We should generally be aware of production capacity limitations, how close we are to those limits and when we expect to breach them, e.g., disk space, database space, CPU requirements etc.
-
+    (10169, 2, 'Production Management', 'Med', 'We should generally be aware of production capacity limitations, how close we are to those limits and when we expect to breach them, e.g., disk space, database space, CPU requirements etc.
+
 The purpose of this project is to avoid issues before they occur, so we can plan and put in place increased capacity without impacting business.', 10010, date '2011-09-22', NULL),
     (10199, 2, 'ABSNet Feed V6', 'MedLow', NULL, 10010, date '2012-09-18', NULL),
-    (10200, 2, 'Allow Files to be saved in ABSConfig', 'MedLow', 'Allows files to be saved into and accessed from ABSConfig.  That is, for a Key-Value in ABSConfig, the Value may be a file.
-The Config GUI needs to enable us to save and retrieve a file into ABSConfig DB.
+    (10200, 2, 'Allow Files to be saved in ABSConfig', 'MedLow', 'Allows files to be saved into and accessed from ABSConfig.  That is, for a Key-Value in ABSConfig, the Value may be a file.
+The Config GUI needs to enable us to save and retrieve a file into ABSConfig DB.
 The ABSConfig class needs to support applications requesting the value as file.  In this case, a relative file name is passed to ABSConfig, and it will save the file from the database to the ''applications temp folder'' + ''relative file name''.  It will return the full filename of the location of the file.', 10010, date '2012-04-08', NULL),
     (10201, 2, 'Radial Installer Migration - Mandated by IT', 'Med', NULL, 10010, date '2012-03-15', NULL),
     (10202, 2, 'Live Issues', 'High', NULL, 10010, date '2012-03-04', NULL),
@@ -919,22 +925,22 @@ UPDATE project SET parent_project_id = 10227 WHERE project_id = 10229;
 INSERT INTO task (task_id, project_id, component_id, priority, description, detailed_description, external_reference_url, requestor_person_id, owner_person_id, date_added, effort_in_days, effort_type, percentage_allocation, task_type, status, status_date, tentative_resource_assignment, start_relative_days_to_project) VALUES
     (11796, 10073, 10384, 'Closed', 'Retire this appliaction', '', NULL, 10010, 10010, timestamptz '2011-07-05T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-07-20T00:00:00', false, 57),
     (11807, 10108, 10386, 'Closed', 'Clean up loan data between Prod + QA', '', NULL, 10002, 10010, timestamptz '2011-07-13T00:00:00', NULL, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-08-11T00:00:00', false, 39),
-    (11819, 10070, 10238, 'Closed', 'Issue with TMAN 6 - Bloomberg Name missing causes Trade Blotter issues', 'Discovered that the record in StaticData.BloombergDealIds table had been deleted.
-Restored the record from Audit table, but need to understand how this happened.
-Erik used DealsDB tool to edit it, he says he edited the comment.  We also hit the ''Add Bond'' button, but then cancelled it.
-
+    (11819, 10070, 10238, 'Closed', 'Issue with TMAN 6 - Bloomberg Name missing causes Trade Blotter issues', 'Discovered that the record in StaticData.BloombergDealIds table had been deleted.
+Restored the record from Audit table, but need to understand how this happened.
+Erik used DealsDB tool to edit it, he says he edited the comment.  We also hit the ''Add Bond'' button, but then cancelled it.
+
 Issue was caused by any deal save.  Fixed bug SP [DealsDbOOLayer].[SaveDealIds] and released to prod.  Also modified code so that it doesn''t save DealIdId changes when in reality, nothing has changed.', NULL, 10010, 10010, timestamptz '2011-07-18T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-18T00:00:00', false, 113),
     (11809, 10058, 10338, 'Cancelled', 'Migrate to Autosys', 'This will be retired as BBG Bond Londer now does it''s job', NULL, 10010, 10010, timestamptz '2011-07-13T00:00:00', NULL, 'PersonDays', 1.0, 'Maintenance', 'Cancelled', timestamptz '2011-10-04T00:00:00', false, 133),
     (11816, 10067, 10260, 'Closed', 'Get SAS install restored', 'HPD000001483640 / IAC0267450', NULL, 10010, 10010, timestamptz '2011-07-15T00:00:00', NULL, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-19T00:00:00', false, 113),
     (11822, 10209, 10220, 'Med', 'Add Autosys box web link to emails automatically.', 'For an autosys job, somehow, get error emails to include a web link to the Autosys page for the job or box.  See ''Brilliant idea'' in attachment.', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 252),
-    (11823, 10135, 10389, 'Closed', 'Formulate plan for covered Bond Support in Deals DB
+    (11823, 10135, 10389, 'Closed', 'Formulate plan for covered Bond Support in Deals DB
 Go to David C for details.', 'Sachin is to do this.', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-29T00:00:00', false, 1),
     (11824, 10130, 10399, 'Closed', 'Spec app to accept position feed from Euroclear/Novus', '', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-14T00:00:00', false, 105),
-    (11825, 10220, 10309, 'Med', 'Enhance Dashboard for user to use to better support credit enhancement', 'Support DashBoard and Batch will look into ‘Userconfig.CalculationWarnings’ to determine if there are any warnings that the users should be aware of.
-
+    (11825, 10220, 10309, 'Med', 'Enhance Dashboard for user to use to better support credit enhancement', 'Support DashBoard and Batch will look into ‘Userconfig.CalculationWarnings’ to determine if there are any warnings that the users should be aware of.
+
 See PP 2208', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'InProgress', timestamptz '2012-05-03T09:30:34.143', false, 20),
     (11826, 10133, 10388, 'Med', 'Get addin for section editing in wiki', '', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-03-23T13:27:59.577', false, 517),
-    (11827, 10071, 10332, 'Closed', 'Produce monthly feed for controllers', 'Need to get more detail on requirements and figure out a solution.
+    (11827, 10071, 10332, 'Closed', 'Produce monthly feed for controllers', 'Need to get more detail on requirements and figure out a solution.
 See SQL file attachment for example of report data.', NULL, 10010, 10010, timestamptz '2011-07-20T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-20T00:00:00', false, 114),
     (11842, 10108, 10373, 'Cancelled', 'Rewrite and rename rule - FixPrepaymentPenalty ', 'Duplicate of 1849', NULL, 10010, 10010, timestamptz '2011-08-01T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-08-10T00:00:00', false, 60),
     (11843, 10068, 10260, 'Closed', 'Sreevani to share knowledge with Mumbai', '', NULL, 10010, 10010, timestamptz '2011-08-01T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-01T00:00:00', false, 205),
@@ -947,7 +953,7 @@ See SQL file attachment for example of report data.', NULL, 10010, 10010, timest
     (11867, 10158, 10260, 'Closed', 'Share libraries with Mahesh', 'Share Common.Utilities and IntexWrapper and gather feedback', NULL, 10010, 10010, timestamptz '2011-08-10T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-26T00:00:00', false, 0),
     (11868, 10169, 10220, 'Med', 'Implement StopWatch manager in Common.Utilities', '', NULL, 10010, 10010, timestamptz '2011-08-11T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 245),
     (11869, 10169, 10220, 'Cancelled', 'Record all app start and stop time in the database', 'Duplicate of 1292', NULL, 10010, 10010, timestamptz '2011-08-11T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-01-27T14:52:29.290', true, 122),
-    (11881, 10105, 10174, 'MedLow', 'Avoid exception when deleting new deal', 'See email 16-Aug-2011
+    (11881, 10105, 10174, 'MedLow', 'Avoid exception when deleting new deal', 'See email 16-Aug-2011
 This may be fixed - need to check (Jan 2012)', NULL, 10010, 10010, timestamptz '2011-08-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 449),
     (11882, 10105, 10174, 'MedLow', 'Force FX rate = 1 if bond and deal currency match', '', NULL, 10010, 10010, timestamptz '2011-08-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 440),
     (11894, 10135, 10341, 'Closed', 'Implement Covered Bond Analytics', 'Waiting for Zhuu to confirm KCurve', NULL, 10023, 10010, timestamptz '2011-08-30T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-08T00:00:00', false, 35),
@@ -962,8 +968,8 @@ This may be fixed - need to check (Jan 2012)', NULL, 10010, 10010, timestamptz '
     (11919, 10064, 10361, 'Closed', 'Add new BoE series, test first', 'A test of the series resulted in an XML parsing error.', NULL, 10006, 10010, timestamptz '2011-09-14T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-03T00:00:00', false, 124),
     (11920, 10079, 10288, 'Closed', 'Add 10Y and 15Y GBR interest (Swap) rates to rate loader from QDB', 'Required for SATO calculation for fixed for life loans', NULL, 10002, 10010, timestamptz '2011-09-15T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 176),
     (11821, 10060, 10361, 'Closed', 'Make app retry when there are XML parsing errors', '', NULL, 10010, 10010, timestamptz '2011-07-19T00:00:00', NULL, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-10T00:00:00', false, 180),
-    (11835, 10123, 10271, 'Cancelled', 'Need to show what type a comment is, i.e., Shelf, Deal or Bond.', 'The New Comment Viewer will address this.
-
+    (11835, 10123, 10271, 'Cancelled', 'Need to show what type a comment is, i.e., Shelf, Deal or Bond.', 'The New Comment Viewer will address this.
+
 In the attachment Erik created a Shelf comment by mistake, but there is no way to tell this afterwards, hence his confusion.', NULL, 10010, 10010, timestamptz '2011-07-22T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-01-05T00:00:00', false, 0),
     (11847, 10108, 10373, 'Closed', 'Calculate Monthly Payment Second level rule – Specification change', '', NULL, 10010, 10010, timestamptz '2011-08-03T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-20T00:00:00', false, 130),
     (11900, 10058, 10287, 'Closed', 'Release to production', '', NULL, 10010, 10010, timestamptz '2011-09-01T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-07T00:00:00', false, 139),
@@ -976,17 +982,17 @@ In the attachment Erik created a Shelf comment by mistake, but there is no way t
     (11853, 10073, 10371, 'Closed', 'Fix Unit Test', '', NULL, 10010, 10010, timestamptz '2011-08-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-06T07:28:57.833', false, 234),
     (11907, 10070, 10379, 'Closed', 'Investigate issue with ALBA_20061', 'Error occured while calculating roll rates for loan with loankey = 271609', NULL, 10010, 10010, timestamptz '2011-09-09T00:00:00', NULL, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-04T00:00:00', false, 166),
     (11855, 10096, 10233, 'Closed', 'Fix SvnManager merge issues', '', NULL, 10010, 10010, timestamptz '2011-08-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-27T09:10:09.950', false, 223),
-    (11856, 10147, 10299, 'MedHigh', 'Test regression test approach works in reality', 'The recalibration will result in totally new results and we will need another change to the model to verify  the regression feature.
-Was Jira: EABS-006
+    (11856, 10147, 10299, 'MedHigh', 'Test regression test approach works in reality', 'The recalibration will result in totally new results and we will need another change to the model to verify  the regression feature.
+Was Jira: EABS-006
 ', NULL, 10010, 10010, timestamptz '2011-08-04T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Ready', timestamptz '2012-05-07T05:27:21.563', false, 0),
-    (11857, 10191, 10409, 'Med', 'Design and develop Cheat Sheet generator appliaction # 2', 'Aim to to add even more data to the cheat sheet report.  zzz
-
-Need to move the ''CheatSheet'' library by Sreevani to be a part of DealAnalyticReport.  That is, the ''CheatSheet'' library needs to be deleted and the code in it move to be within the application itself.
-
+    (11857, 10191, 10409, 'Med', 'Design and develop Cheat Sheet generator appliaction # 2', 'Aim to to add even more data to the cheat sheet report.  zzz
+
+Need to move the ''CheatSheet'' library by Sreevani to be a part of DealAnalyticReport.  That is, the ''CheatSheet'' library needs to be deleted and the code in it move to be within the application itself.
+
 Need to add a new field ''ModelRunDate'' to the top of each sheet.  In the event that the model fails on a specific deal, the ''ModelRunDate'' will refer to an earlier run that was successful.  If the ''ModelRunDate'' for a deal is less that the max ''ModelRunDate''  for all deals, then this should be highlighted on the sheet so seomone looking at it can clearly see that it is showing out of date data', NULL, 10040, 10010, timestamptz '2011-08-04T00:00:00', 6.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2014-11-07T17:46:27.207', false, 0),
     (11858, 10190, 10409, 'Closed', 'Design and develop Cheat Sheet Report application # 1', 'The scope is to email an Excel with only the Deal Scenario data + Matrix Price Analytics', NULL, 10010, 10010, timestamptz '2011-08-04T00:00:00', 7.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-04T00:00:00', false, 134),
-    (11859, 10185, 10373, 'Closed', 'Add SATO to ESF_Static', 'Value of Sato to be set by second level rules.
-
+    (11859, 10185, 10373, 'Closed', 'Add SATO to ESF_Static', 'Value of Sato to be set by second level rules.
+
 This task does not include replacing SATO usage in the UKNC Model (see PP2156)', NULL, 10002, 10010, timestamptz '2011-08-04T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-23T11:39:48.540', false, 0),
     (11864, 10168, 10391, 'Closed', 'Peer Review', '', NULL, 10010, 10010, timestamptz '2011-08-10T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-01T00:00:00', false, 56),
     (11924, 10060, 10395, 'Closed', 'Add Audit Trigger functionality to Config Tables - Remove ''X'' tables', 'Need to modify SPs to remove ''X'' tables.', NULL, 10010, 10010, timestamptz '2011-09-16T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-04T00:00:00', false, 187),
@@ -998,9 +1004,9 @@ This task does not include replacing SATO usage in the UKNC Model (see PP2156)',
     (11971, 10093, 10299, 'Med', 'Add Resloc Rate Info to Model', '', NULL, 10010, 10010, timestamptz '2011-10-05T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-21T09:10:32.530', false, 520),
     (11972, 10225, 10309, 'Cancelled', 'Add ability to report on Market in the Totoro DB', 'Matrix Pricing is now more robust', NULL, 10010, 10010, timestamptz '2011-10-06T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 932),
     (11981, 10130, 10399, 'Closed', 'Peer Review Novus Price Feed Retriever', '', NULL, 10010, 10010, timestamptz '2011-10-13T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-07T00:00:00', false, 143),
-    (11982, 10105, 10289, 'Closed', 'Add access to Trade Marks', 'Be able to easily access a brief history of Marks for a given bond from Blotter sheet.
+    (11982, 10105, 10289, 'Closed', 'Add access to Trade Marks', 'Be able to easily access a brief history of Marks for a given bond from Blotter sheet.
 e.g.,  right click grid, or hint', NULL, 10007, 10010, timestamptz '2011-10-13T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-24T00:00:00', false, 62),
-    (11984, 10073, 10189, 'Closed', 'Matrix to report failure if not enough bonds are priced.', 'Persist all results and then fail (without a rollback) is f actual priced bonds persistent is less than 90% of previous day.
+    (11984, 10073, 10189, 'Closed', 'Matrix to report failure if not enough bonds are priced.', 'Persist all results and then fail (without a rollback) is f actual priced bonds persistent is less than 90% of previous day.
 Fail means return non-zero and send error email.', NULL, 10010, 10010, timestamptz '2011-10-14T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-12-06T00:00:00', false, 142),
     (11989, 10070, 10322, 'Closed', 'Resolve issues with BloombergBondLoader failing', '', NULL, 10010, 10010, timestamptz '2011-10-18T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-19T00:00:00', false, 189),
     (11990, 10105, 10332, 'Med', 'Make output to users in HTML format to cope with Outlook 2010 default format.', '', NULL, 10010, 10010, timestamptz '2011-10-19T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 422),
@@ -1010,13 +1016,13 @@ Fail means return non-zero and send error email.', NULL, 10010, 10010, timestamp
     (12000, 10105, 10398, 'Closed', 'Change Intex Reporter to report expired and Esail deals as ''na''', '', NULL, 10010, 10010, timestamptz '2011-10-25T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-31T00:00:00', false, 74),
     (12001, 10116, 10342, 'Closed', 'Develop Plan for GUI to all Prime data tapes to be loaded into DB', '', NULL, 10012, 10012, timestamptz '2011-10-25T00:00:00', 7.0, 'PersonDays', 0.05, 'NewDevelopment', 'Closed', timestamptz '2012-04-26T13:11:27.370', false, 155),
     (12002, 10123, 10271, 'Closed', 'Make Comment Viewer fit well into Strategies work flow.', '', NULL, 10010, 10010, timestamptz '2011-10-27T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-05T00:00:00', false, 59),
-    (12004, 10073, 10332, 'Closed', 'Retry if opening runs data is missing', 'If only opening runs data is missing, the app should not fail.  Instead it should issue the eamil to Strategy and retry every five minutes.  At 7am and every 1 hour after that, it should re-send the email to Strategy.  At 10:30 am, if it has still not arrived, it should fail.
+    (12004, 10073, 10332, 'Closed', 'Retry if opening runs data is missing', 'If only opening runs data is missing, the app should not fail.  Instead it should issue the eamil to Strategy and retry every five minutes.  At 7am and every 1 hour after that, it should re-send the email to Strategy.  At 10:30 am, if it has still not arrived, it should fail.
 When it starts up, if opening runs are missing and time is already after 10:30am, it should send email and immediately fail.  (This is with the Autosys retry functionality in mind).', NULL, 10010, 10010, timestamptz '2011-10-28T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-31T08:17:30.997', false, 251),
     (12005, 10059, 10234, 'Closed', 'Install .Net 4 on Windows Servers', 'CRQ000000145104 has been raised for this.', NULL, 10010, 10010, timestamptz '2011-10-30T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-11-21T00:00:00', false, 220),
     (12006, 10121, 10347, 'Closed', 'Make BBG bridge timeout if on response comes back on connection', '', NULL, 10010, 10010, timestamptz '2011-10-30T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-11-21T00:00:00', false, 169),
-    (12011, 10071, 10332, 'Closed', 'Enhance AVR report', 'Add ability to handle 
-1 VeryHigh and VeryLow from Blotter Colour
-2 Bid off spread from Matrix Results
+    (12011, 10071, 10332, 'Closed', 'Enhance AVR report', 'Add ability to handle 
+1 VeryHigh and VeryLow from Blotter Colour
+2 Bid off spread from Matrix Results
 3 Price quality from DealsDB', NULL, 10023, 10010, timestamptz '2011-10-31T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-12-06T00:00:00', false, 214),
     (12012, 10172, 10389, 'Closed', 'Figure out Xtrakter requirements', 'Need to get FTP credentials from Radial', NULL, 10003, 10010, timestamptz '2011-11-01T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-12T00:00:00', false, 0),
     (12013, 10173, 10389, 'Closed', 'Figure out requirements', 'Speak to BRett', NULL, 10003, 10010, timestamptz '2011-11-01T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-16T17:55:28.433', false, 0),
@@ -1025,9 +1031,9 @@ When it starts up, if opening runs are missing and time is already after 10:30am
     (11902, 10071, 10332, 'Closed', 'Change filter definition', '', NULL, 10010, 10010, timestamptz '2011-09-06T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-09-16T00:00:00', false, 162),
     (11903, 10071, 10332, 'Closed', 'Run test with new Intex CLO ', '', NULL, 10023, 10010, timestamptz '2011-09-06T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-24T00:00:00', false, 161),
     (11904, 10071, 10332, 'Closed', 'Take account of Totoro bid ask speads', '', NULL, 10010, 10010, timestamptz '2011-09-06T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-16T00:00:00', false, 162),
-    (11829, 10096, 10377, 'Closed', 'Enhancements to code base checker', '1) Look to see why Unit Test log files have the appliaction name appended to them.
-2) Define a set of components that are ''key'', if one does not pass everything, an error is reported.
-3) Improve email when a specified solution is not found (see attachement)
+    (11829, 10096, 10377, 'Closed', 'Enhancements to code base checker', '1) Look to see why Unit Test log files have the appliaction name appended to them.
+2) Define a set of components that are ''key'', if one does not pass everything, an error is reported.
+3) Improve email when a specified solution is not found (see attachement)
 3) ', NULL, 10010, 10010, timestamptz '2011-07-21T00:00:00', NULL, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-06T00:00:00', false, 212),
     (11870, 10161, 10260, 'Closed', 'Diagram to show high level entities', '', NULL, 10010, 10010, timestamptz '2011-08-11T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-28T00:00:00', false, 0),
     (11871, 10162, 10260, 'Closed', 'Figure out how to start this discussion', '', NULL, 10010, 10010, timestamptz '2011-08-11T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-26T00:00:00', false, 0),
@@ -1043,9 +1049,9 @@ When it starts up, if opening runs are missing and time is already after 10:30am
     (11934, 10209, 10181, 'Med', 'Improve Logging', 'See email and log file attached (in two parts)', NULL, 10010, 10010, timestamptz '2011-09-17T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-01-25T08:01:13.180', false, 243),
     (11935, 10209, 10396, 'MedLow', 'Improve Logging and error handlng', 'Fix errors and improve logging/error handling', NULL, 10010, 10010, timestamptz '2011-09-17T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-03-23T11:19:52.200', false, 278),
     (11936, 10073, 10396, 'Closed', 'Check if Done.  Fix errors and improve error handling/logging', 'See attachments', NULL, 10010, 10010, timestamptz '2011-09-17T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-02-20T11:14:14.290', false, 227),
-    (11937, 10169, 10338, 'Closed', 'Retire BloombergPerformanceDataLoader', 'See if this can be retired.
-Turn off app.
-Delete tables no longer required.
+    (11937, 10169, 10338, 'Closed', 'Retire BloombergPerformanceDataLoader', 'See if this can be retired.
+Turn off app.
+Delete tables no longer required.
 Ensure PerformanceData lib is removed from CE generator app.', NULL, 10010, 10010, timestamptz '2011-09-17T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-02-07T17:24:15.743', false, 120),
     (11977, 10073, 10224, 'Closed', 'Add notification to email if non-standard location is used for log files.', '', NULL, 10010, 10010, timestamptz '2011-10-10T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-10T00:00:00', false, 139),
     (11942, 10141, 10174, 'Closed', 'Modify Deals DB GUI to be able to view and then modify Loan and new attribute tables.', 'Do this by extending DealsDB OO Layer', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-12-01T00:00:00', false, 119),
@@ -1053,20 +1059,20 @@ Ensure PerformanceData lib is removed from CE generator app.', NULL, 10010, 1001
     (11944, 10141, 10341, 'Cancelled', 'Populate attributes for Talisman from Trepp on Prod', 'Going for full population for European Deals, not just Talisman', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-11-14T00:00:00', false, 115),
     (11945, 10141, 10397, 'Closed', 'Put in place Trepp schema and tables on Surveilance DB', '', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-12-01T00:00:00', false, 120),
     (11946, 10141, 10341, 'Cancelled', 'Deploy Trepp raw table populator.', '', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-11-14T00:00:00', false, 115),
-    (11947, 10073, 10322, 'Closed', 'Improve log and modify timeouts to use minutes rather than seconds', 'Parameters for timeouts are currently in seconds - make these minutes.
+    (11947, 10073, 10322, 'Closed', 'Improve log and modify timeouts to use minutes rather than seconds', 'Parameters for timeouts are currently in seconds - make these minutes.
 Log messages showing wait times are in seconds - make these minutes.', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-31T12:35:37.970', false, 244),
-    (11948, 10180, 10341, 'MedLow', 'Bucketing Report Project from Zhuu to compare bond prices between Blotter and similar Bonds on the Matrix', 'For each position, find the spread difference between it and similar bonds from the Matrix.  Use that to calculate a new price for the position bond and produce a report to show this.  More below.....
-
+    (11948, 10180, 10341, 'MedLow', 'Bucketing Report Project from Zhuu to compare bond prices between Blotter and similar Bonds on the Matrix', 'For each position, find the spread difference between it and similar bonds from the Matrix.  Use that to calculate a new price for the position bond and produce a report to show this.  More below.....
+
 The details of the algorithm are sketchy and probably need more thought before Zhuu can produce a spec.', NULL, 10023, 10010, timestamptz '2011-09-20T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Tentative', timestamptz '2012-01-09T00:00:00', false, 553),
-    (12007, 10079, 10299, 'Closed', 'Jira: EABS-008: Changes for Model Re-estimation / calibration', 'To be completed and released before the end of the year.
+    (12007, 10079, 10299, 'Closed', 'Jira: EABS-008: Changes for Model Re-estimation / calibration', 'To be completed and released before the end of the year.
 Paresh to provide details, Sreevani to carry out changes.', NULL, 10010, 10010, timestamptz '2011-10-30T00:00:00', 5.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-05T00:00:00', false, 267),
     (12015, 10083, 10401, 'Closed', 'Check If Done. Tidy ''string'' based parameters on classes to provide easier, simpler more strongly typed variants too.', 'Is this done yet?', NULL, 10010, 10010, timestamptz '2011-11-02T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-02T17:26:34.373', false, 98),
     (12016, 10068, 10260, 'Closed', 'Renew Totoro access', '', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-11-21T00:00:00', false, 304),
     (12017, 10153, 10394, 'Closed', 'Enable Autosys jobs', '', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-06T00:00:00', false, 76),
     (12018, 10141, 10405, 'Closed', 'UAT First CMBS Solution', '', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-17T00:00:00', false, 107),
     (12025, 10168, 10391, 'Closed', 'Make DSA Generator use CurrentBatchDate and not Datetime.Now', '', NULL, 10010, 10010, timestamptz '2011-11-07T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-12-01T00:00:00', false, 101),
-    (12027, 10176, 10389, 'Closed', 'Make plan to retire BBG API and BBG Bridge Accessors', 'Developed requirements + spec for two projects:
-a)  Retire BBG API for Bond Static data
+    (12027, 10176, 10389, 'Closed', 'Make plan to retire BBG API and BBG Bridge Accessors', 'Developed requirements + spec for two projects:
+a)  Retire BBG API for Bond Static data
 b)  Retire BBG API for Rate data', NULL, 10010, 10010, timestamptz '2011-11-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-01-12T00:00:00', false, 0),
     (12029, 10073, 10402, 'Cancelled', 'Fix warnings in BondPriceDownloader', 'BondPriceDownloader has been turned off due to BBG api being turned off', NULL, 10010, 10010, timestamptz '2011-11-08T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Cancelled', timestamptz '2012-03-12T10:03:34.957', false, 246),
     (12030, 10135, 10403, 'Closed', 'Release Covered Bonds', '', NULL, 10010, 10010, timestamptz '2011-11-14T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-21T00:00:00', false, 114),
@@ -1083,37 +1089,37 @@ b)  Retire BBG API for Rate data', NULL, 10010, 10010, timestamptz '2011-11-08T0
     (11875, 10183, 10370, 'Med', 'Use Fingal fwd curve in calls to Intex', 'Need to use ''curved curves'' to generate Intex derived cashflows.', NULL, 10023, 10010, timestamptz '2011-08-11T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-27T14:51:09.137', true, 0),
     (11883, 10116, 10389, 'Closed', 'Find out more about 3 prime load data tapes that David C mentioned', '', NULL, 10003, 10010, timestamptz '2011-08-24T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-09-19T00:00:00', false, 48),
     (11905, 10071, 10189, 'Closed', 'Add bid-offer spread into Matrix', 'Add a new field to each element of the Matrix and add the last matching bid-offer spread to the pricing results.', NULL, 10010, 10010, timestamptz '2011-09-06T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-03T00:00:00', false, 169),
-    (11965, 10169, 10242, 'Med', 'Figure out what support users / groups are needed for production', 'Things to think about....
-
-Make the existing ''Support'' user ''ReadOnly'' and make the new ''SupportRW''  ''ReadWrite''
-
-Add a group/role EUROPE\EABS-ABSIT-Support-APP-LON - what permissions should this have?
+    (11965, 10169, 10242, 'Med', 'Figure out what support users / groups are needed for production', 'Things to think about....
+
+Make the existing ''Support'' user ''ReadOnly'' and make the new ''SupportRW''  ''ReadWrite''
+
+Add a group/role EUROPE\EABS-ABSIT-Support-APP-LON - what permissions should this have?
 ', NULL, 10010, 10010, timestamptz '2011-10-04T00:00:00', 7.0, 'PersonDays', 0.35, 'Infrastructure', 'NotStarted', timestamptz '2012-05-10T14:19:03.243', false, 224),
-    (11970, 10083, 10288, 'Closed', 'Get QDB to rename Rate file to reflect the business date', 'Was Jira : EABS-013
+    (11970, 10083, 10288, 'Closed', 'Get QDB to rename Rate file to reflect the business date', 'Was Jira : EABS-013
 Need to keep chasing them.', NULL, 10010, 10010, timestamptz '2011-10-05T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-31T12:35:42.767', false, 121),
     (11983, 10076, 10173, 'Closed', 'Need to process all possible bonds if running in Bloomberg back office mode', 'Need to only save+send data (to Radial/QDB) if a bond has actually changed changed.', NULL, 10010, 10010, timestamptz '2011-10-13T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-17T00:00:00', false, 77),
     (11988, 10073, 10387, 'Cancelled', 'Add ability to send an email to ABS Mumbai for load tape updates', 'Not sure if this is appropriate', NULL, 10010, 10010, timestamptz '2011-10-17T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-01-08T00:00:00', false, 229),
     (12008, 10093, 10372, 'Med', 'Allow GUI to save and check PSS template files', '', NULL, 10010, 10010, timestamptz '2011-10-30T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-27T08:11:39.210', false, 534),
     (12014, 10121, 10396, 'Closed', 'Allow ''Pricing Filter'' to take mutlple inputs (e.g. a list of ISINS)', '', NULL, 10005, 10010, timestamptz '2011-11-01T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-12-06T00:00:00', false, 172),
     (12046, 10190, 10391, 'Closed', 'Resolve DQ/Trigger issue with DSAG', 'Was Jira : EABS-9', NULL, 10010, 10010, timestamptz '2011-11-21T00:00:00', 4.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-16T17:56:31.630', false, 236),
-    (12047, 10116, 10407, 'Closed', 'Develop Darrowby Loan Loader', 'Need to figure out design approach for this.
-
-Note: That the fields orders are as in the database but some of the field names has changed slightly.
+    (12047, 10116, 10407, 'Closed', 'Develop Darrowby Loan Loader', 'Need to figure out design approach for this.
+
+Note: That the fields orders are as in the database but some of the field names has changed slightly.
 ', NULL, 10010, 10010, timestamptz '2011-11-21T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-28T00:00:00', false, 133),
     (12049, 10044, 10341, 'Closed', 'Develop loan loading service', '', NULL, 10010, 10010, timestamptz '2011-11-28T00:00:00', 10.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-08T09:33:07.730', false, 624),
     (12050, 10044, 10212, 'Closed', 'Implement basic, but effective messaging system', '', NULL, 10010, 10010, timestamptz '2011-11-28T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-08T00:00:00', false, 599),
-    (12053, 10093, 10408, 'Med', 'Improve Backtester logging', 'The mail sends a warning and reports errors, but log doesnot log it.
-
-The contents like below
-------------------------------
-BackTest results (PoolId: Eurosail-UK 2006-1):
-
-   1. Success : 45881
-   2. Error : 2
-   3. Skipped : 0
-      Total : 45883
-      ------------------------------
-
+    (12053, 10093, 10408, 'Med', 'Improve Backtester logging', 'The mail sends a warning and reports errors, but log doesnot log it.
+
+The contents like below
+------------------------------
+BackTest results (PoolId: Eurosail-UK 2006-1):
+
+   1. Success : 45881
+   2. Error : 2
+   3. Skipped : 0
+      Total : 45883
+      ------------------------------
+
 ', NULL, 10021, 10010, timestamptz '2011-12-01T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-01-27T09:16:10.017', false, 525),
     (12055, 10179, 10404, 'Closed', 'Locate missing Trepp files and get downloads from Trepp or US', '', NULL, 10010, 10010, timestamptz '2011-12-01T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-21T08:56:06.073', false, 62),
     (12056, 10217, 10405, 'Med', 'Enhance Trepp to DealsDB Mapping', 'Danny and Erik need to define a specificatation.', NULL, 10010, 10010, timestamptz '2011-12-01T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-20T14:47:10.530', false, 30),
@@ -1126,32 +1132,32 @@ BackTest results (PoolId: Eurosail-UK 2006-1):
     (12063, 10083, 10381, 'Closed', 'Bond Analytic GUI fails to build due to Fingal issues', '', NULL, 10010, 10010, timestamptz '2011-12-07T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-12T00:00:00', false, 99),
     (12064, 10181, 10234, 'High', 'Plan DR Testing', '', '', 10022, 10033, timestamptz '2011-12-15T00:00:00', 2.0, 'PersonDays', 1.0, 'Infrastructure', 'NotStarted', timestamptz '2019-10-30T11:15:06.920', false, 0),
     (12065, 10070, 10250, 'Med', 'Review all bonds in issuance analyser', 'Review all bonds in issuance analyser and look for ones that haven''t been updated and figure out why (we don''t want to show stale data in IA).', NULL, 10003, 10010, timestamptz '2011-12-15T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-03-19T17:52:02.130', false, 435),
-    (12066, 10169, 10345, 'MedHigh', 'Understand DB disk space usage.', '1) Figure out how much space we currently have.
+    (12066, 10169, 10345, 'MedHigh', 'Understand DB disk space usage.', '1) Figure out how much space we currently have.
 2) Figure out a plan of what we need to do to monitor this going forward.', NULL, 10010, 10010, timestamptz '2011-12-21T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'InProgress', timestamptz '2013-05-31T06:55:00.827', false, 213),
     (12068, 10044, 10420, 'Closed', 'Develop GUI for UKNC Load Loading Service', '', NULL, 10010, 10010, timestamptz '2012-01-03T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-16T11:11:29.717', false, 623),
     (12069, 10182, 10371, 'Closed', 'Copy ''MacroScenarios.xls'' to output location.', 'Place a copy of ''MacroScenarios.xls'' in the batch model output location.  The source used for the file should be as used by the main model batch processing.', NULL, 10010, 10010, timestamptz '2012-01-03T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-26T10:45:22.153', false, 9),
-    (12070, 10111, 10260, 'Closed', 'Evaluate Sonic', 'Conclusion:
-Sonic will require some significant effort to get up to speed with it and to be able to use it effectively.
-However, Sonic will need to be wrapped somehow to make it more easily used across our applications.
-Sonic does not help with transaction boundries.
+    (12070, 10111, 10260, 'Closed', 'Evaluate Sonic', 'Conclusion:
+Sonic will require some significant effort to get up to speed with it and to be able to use it effectively.
+However, Sonic will need to be wrapped somehow to make it more easily used across our applications.
+Sonic does not help with transaction boundries.
 We can use Sonic if we need to communicate with external system, but for communication between our application it is over the top and doesn''t work in a way that is suitable.', NULL, 10010, 10010, timestamptz '2012-01-03T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-03-16T13:03:45.627', false, 77),
     (12089, 10083, 10332, 'Med', 'Modify to use Excel Functions in Common Libraries', '', NULL, 10010, 10010, timestamptz '2012-01-06T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-23T13:23:39.853', false, 303),
     (12090, 10184, 10389, 'Med', 'Determine all apps and libraries that use the Business Object Layer and plan to modify them.', '', NULL, 10010, 10010, timestamptz '2012-01-06T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 0),
     (11887, 10155, 10202, 'Closed', 'Release to Prod', '', NULL, 10010, 10010, timestamptz '2011-08-25T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-10-06T00:00:00', false, 17),
     (11888, 10116, 10389, 'Closed', 'Analyse Skipton Building Society loans', '', NULL, 10010, 10010, timestamptz '2011-08-25T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-09-19T00:00:00', false, 56),
     (11889, 10161, 10260, 'Closed', 'Get Feedback from US', 'See PP 1870', NULL, 10010, 10010, timestamptz '2011-08-25T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-06T00:00:00', false, 99),
-    (11890, 10162, 10260, 'Closed', 'Get Feedback from US', 'See PP 1871
+    (11890, 10162, 10260, 'Closed', 'Get Feedback from US', 'See PP 1871
 Got no response - given up.', NULL, 10010, 10010, timestamptz '2011-08-25T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-12-06T00:00:00', false, 0),
     (12108, 10187, 10288, 'Closed', 'Get new rates from QDB', 'Liaise with the QDB to get rates added to feed file.', NULL, 10010, 10010, timestamptz '2012-01-12T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-02-22T17:15:19.587', false, 3),
-    (11996, 10059, 10377, 'Closed', 'Fix ''SupportDashBoardUI'' and ''UKNCForecaster''', 'CodeBaseChecker on Stage fails to build ‘SupportDashBoardUI’ and ‘UKNCForecaster’ when it is run from TaskScheduler.  
-
-When it is run directly (double clicking on bat) it works fine.
-
-A quick browse of the interweb reveals this is a common problem and is to be “fixed in the next C1 release” (as at Sep 2010).
-
-Our current version is release 1 from 2009
-
-Need to upgrade to the latest version
+    (11996, 10059, 10377, 'Closed', 'Fix ''SupportDashBoardUI'' and ''UKNCForecaster''', 'CodeBaseChecker on Stage fails to build ‘SupportDashBoardUI’ and ‘UKNCForecaster’ when it is run from TaskScheduler.  
+
+When it is run directly (double clicking on bat) it works fine.
+
+A quick browse of the interweb reveals this is a common problem and is to be “fixed in the next C1 release” (as at Sep 2010).
+
+Our current version is release 1 from 2009
+
+Need to upgrade to the latest version
 ', NULL, 10010, 10010, timestamptz '2011-10-20T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-08T00:00:00', false, 209),
     (12054, 10179, 10404, 'Closed', 'Modify Trepp file loader to only load up changed data', 'See what code Nick wrote to do this', NULL, 10010, 10010, timestamptz '2011-12-01T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-06T07:14:17.890', false, 0),
     (12091, 10116, 10389, 'Med', 'Develop Prime Load Plan', 'Need more reobust requirements from business. ', NULL, 10010, 10012, timestamptz '2012-01-08T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-04-26T08:03:55.393', false, 304),
@@ -1166,8 +1172,8 @@ Need to upgrade to the latest version
     (12101, 10221, 10195, 'Med', 'Develop two Covered Bond Loan Loaders', '', NULL, 10010, 10012, timestamptz '2012-01-10T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-30T15:28:37.877', true, 46),
     (12103, 10059, 10226, 'Closed', 'Document implementation design guidelines', 'This is a level up from coding standards, but a level down from systemdesign', NULL, 10010, 10010, timestamptz '2012-01-12T00:00:00', 3.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-03-02T07:38:21.803', false, 315),
     (11909, 10071, 10189, 'Closed', 'Set ''PriceQuality'' field in results', '', NULL, 10010, 10010, timestamptz '2011-09-13T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-03T00:00:00', false, 172),
-    (12104, 10074, 10396, 'MedLow', 'Reimplement 2nd Level rules', 'The implementation of 2nd Level rules has evolved and is currently disjointed.
-This is to re-implement the 2nd Level rules so that new, arbitrarily complex rules can be add to both GUI and pricing batch by the addition of a single class.  That is, each ''rule'' essentially becomes a ''function'' with ''parameters''.  Each ''function'' is implemented by a single class (one to one mapping). 
+    (12104, 10074, 10396, 'MedLow', 'Reimplement 2nd Level rules', 'The implementation of 2nd Level rules has evolved and is currently disjointed.
+This is to re-implement the 2nd Level rules so that new, arbitrarily complex rules can be add to both GUI and pricing batch by the addition of a single class.  That is, each ''rule'' essentially becomes a ''function'' with ''parameters''.  Each ''function'' is implemented by a single class (one to one mapping). 
 Based on discusstion between Neil and Ruth - 12-Jan-2012', NULL, 10023, 10010, timestamptz '2012-01-12T00:00:00', 15.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-04-26T08:10:51.277', true, 694),
     (12105, 10105, 10289, 'Closed', 'Bond activity notification email', 'The idea is that a TradeBlotter user can register interest in specific bonds.  Whenever there is an update on one of the bonds, by any TradeBlotter user, any registered users will recieve an email.', NULL, 10005, 10010, timestamptz '2012-01-12T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-30T11:04:26.673', false, 166),
     (12106, 10068, 10229, 'Closed', 'Check Component One license are up to date.', '', NULL, 10012, 10010, timestamptz '2012-01-12T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-06T17:22:41.803', false, 381),
@@ -1187,24 +1193,24 @@ Based on discusstion between Neil and Ruth - 12-Jan-2012', NULL, 10023, 10010, t
     (11973, 10178, 10260, 'Closed', 'Make sure Visual Studio 2010 is ok to use', '', NULL, 10010, 10010, timestamptz '2011-10-10T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-11-28T00:00:00', false, 0),
     (11992, 10105, 10289, 'Closed', 'Add Position report to Trade Blotter', 'Could just be begining of day position, or include trades so far today too.', NULL, 10007, 10010, timestamptz '2011-10-20T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 61),
     (12019, 10059, 10226, 'Closed', 'Get Purify license', '', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-11-29T00:00:00', false, 224),
-    (12020, 10070, 10342, 'MedLow', 'Find out cause of Zhuu''s connection timeout problems', 'Release new trade blotter that will reconnect on a time out.  
+    (12020, 10070, 10342, 'MedLow', 'Find out cause of Zhuu''s connection timeout problems', 'Release new trade blotter that will reconnect on a time out.  
 As at 15-Nov, the problem seems to have gone away.', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'InProgress', timestamptz '2012-03-19T12:55:24.337', false, 448),
     (11910, 10071, 10174, 'Closed', 'Allow a ''PriceQuality'' flag to be set on Bonds in Deals DB', '', NULL, 10010, 10010, timestamptz '2011-09-13T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-21T00:00:00', false, 169),
     (11918, 10141, 10169, 'Closed', 'Add Loan and attribuite tables to Deals DB on Prod', '', NULL, 10031, 10010, timestamptz '2011-09-14T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-12-01T00:00:00', false, 120),
-    (12022, 10083, 10348, 'Closed', 'Jira: EABS-008: Move GetPoolIdSourceTable to ESFData Library.', 'SP [ModelCollateral_EsfTables].[GetPoolIdSourceTable] is right now is used both by model, dealscenarioanalytic(DSA) generator and is now part of ModelCollateral_EsfTables library. 
-
+    (12022, 10083, 10348, 'Closed', 'Jira: EABS-008: Move GetPoolIdSourceTable to ESFData Library.', 'SP [ModelCollateral_EsfTables].[GetPoolIdSourceTable] is right now is used both by model, dealscenarioanalytic(DSA) generator and is now part of ModelCollateral_EsfTables library. 
+
 For DSA, its not relevant to add this library because of its dependencies on modelcollateral_base. So the plan is to move this to ESFData library. So the impact would be on all model components and DSA. So i want this change all at one shot because of its dependencies. ', NULL, 10021, 10010, timestamptz '2011-11-03T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-03T00:00:00', false, 30),
-    (12023, 10214, 10342, 'MedLow', 'Calculator 101 requirements and design', 'Calculator101 a new GUI built for getting analytics on the fly. Need to extract some library out of the DSA generator to support for both GUI and batch.
+    (12023, 10214, 10342, 'MedLow', 'Calculator 101 requirements and design', 'Calculator101 a new GUI built for getting analytics on the fly. Need to extract some library out of the DSA generator to support for both GUI and batch.
 Excluse ESAIL deals for the time being (as they need 2 calculations)', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 20.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-02-21T14:17:04.643', false, 0),
     (12024, 10141, 10404, 'Closed', 'Restructure Trepp Tables for SAS', '', NULL, 10010, 10010, timestamptz '2011-11-03T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-14T00:00:00', false, 107),
     (12026, 10153, 10394, 'Closed', 'Add two missing series to TS Plotter menu', '', NULL, 10023, 10010, timestamptz '2011-11-07T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-11-28T00:00:00', false, 80),
     (12087, 10157, 10389, 'Closed', 'Determine requirements to use Unity Reference Data rather than QDB', '', NULL, 10010, 10010, timestamptz '2012-01-06T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-19T17:55:21.180', true, 0),
     (10889, 10040, 10178, 'Closed', 'Intex Wrapper: Complete implementation', NULL, NULL, 10010, 10010, timestamptz '2010-02-09T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-01-24T00:00:00', false, 316),
-    (12088, 10148, 10341, 'Cancelled', 'Understand how to get xTrakter files from Unity Market Data', 'The purpose of this is to develop a ''Hello World'' to get data from Unit Market Data.
-
-David Brimley is a source of knowledge on Unity Market Data (aka  ''MDS'').
-There is a page on the confluence wiki ''Unity Market Data'' that describes this.  Apparently (from Carl Brown) there is a .Net DLL that we can link to to get this data from Unity.
-Currently (Jan 2012) not all of the data from Xtrakter is available from MDS as recent changes in the feed have added new fields.
+    (12088, 10148, 10341, 'Cancelled', 'Understand how to get xTrakter files from Unity Market Data', 'The purpose of this is to develop a ''Hello World'' to get data from Unit Market Data.
+
+David Brimley is a source of knowledge on Unity Market Data (aka  ''MDS'').
+There is a page on the confluence wiki ''Unity Market Data'' that describes this.  Apparently (from Carl Brown) there is a .Net DLL that we can link to to get this data from Unity.
+Currently (Jan 2012) not all of the data from Xtrakter is available from MDS as recent changes in the feed have added new fields.
 Xtrakter data can be found in MDS under ''Credit.Xtrakter''', NULL, 10010, 10010, timestamptz '2012-01-06T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-01-18T12:43:39.460', false, 0),
     (11908, 10130, 10380, 'Closed', 'Get a license for Aspose', '', NULL, 10010, 10010, timestamptz '2011-09-12T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-11-29T00:00:00', false, 135),
     (11939, 10116, 10195, 'Closed', 'Develop Headingley loader for Raw Prime data source', 'Precisely which data source and what the app will be called are to be determined.', NULL, 10010, 10010, timestamptz '2011-09-19T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-15T00:00:00', false, 64),
@@ -1218,7 +1224,7 @@ Xtrakter data can be found in MDS under ''Credit.Xtrakter''', NULL, 10010, 10010
     (12040, 10208, 10169, 'Med', 'Correct / Populate ISINs', '', NULL, 10010, 10010, timestamptz '2011-11-18T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'InProgress', timestamptz '2012-04-25T19:29:57.937', false, 0),
     (12072, 10066, 10345, 'Closed', 'Make UKPrimeLoans Auto grow on all servers', '', NULL, 10010, 10010, timestamptz '2012-01-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-01-13T00:00:00', false, 250),
     (12073, 10060, 10234, 'Med', 'Get Sentinel installed on Prod Server', '', NULL, 10010, 10010, timestamptz '2012-01-04T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-02-27T08:26:57.080', false, 430),
-    (12074, 10059, 10226, 'Closed', 'Review WPF usage in Loan Loading GUI', 'Need to build a 2nd GUI with a simplier ''WinForm'' type approach, without Binding / MVVM to compare this with.
+    (12074, 10059, 10226, 'Closed', 'Review WPF usage in Loan Loading GUI', 'Need to build a 2nd GUI with a simplier ''WinForm'' type approach, without Binding / MVVM to compare this with.
 Generally all agreed that the implementation for Loan Loader GUI was OTT', NULL, 10010, 10010, timestamptz '2012-01-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-01-25T08:03:37.120', false, 299),
     (11922, 10167, 10299, 'MedLow', 'Refactor: Plan and design change to split UKNC to several applications', '', NULL, 10010, 10010, timestamptz '2011-09-16T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-27T08:11:04.993', false, 371),
     (11923, 10167, 10299, 'MedLow', 'Implementing spliting UKNC model to several appliactions', '', NULL, 10010, 10010, timestamptz '2011-09-16T00:00:00', 25.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-27T08:11:02.760', false, 384),
@@ -1264,7 +1270,7 @@ Generally all agreed that the implementation for Loan Loader GUI was OTT', NULL,
     (10923, 10225, 10367, 'Closed', 'Merge sub pools into main pool - cant be done', NULL, NULL, 10010, 10010, timestamptz '2009-07-03T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-03T00:00:00', false, 88),
     (10924, 10060, 10367, 'MedLow', 'Add checks to the ABSNet data loader to check for any deals missing from the feed, and to email the result to the group.', NULL, NULL, 10010, 10010, timestamptz '2009-07-07T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 421),
     (12176, 10199, 10367, 'Med', 'Analyse Requirements for ABS Net V6 Feed', '', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 1.0, 'PersonDays', 1.0, 'Infrastructure', 'NotStarted', timestamptz '2012-03-20T10:17:41.747', false, 0),
-    (10925, 10082, 10189, 'MedLow', 'Normalise Matrix Pricing Results data', 'Need result data to be in natural units in the database.
+    (10925, 10082, 10189, 'MedLow', 'Normalise Matrix Pricing Results data', 'Need result data to be in natural units in the database.
 Need to find all users of the data and plan how to change those.', NULL, 10010, 10010, timestamptz '2011-02-16T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-05T08:56:26.083', false, 6),
     (10926, 10083, 10174, 'MedLow', 'Remove dependancy on DealsDbDataAccessLayer from DealsDB App - replace with DealsDbOOLayer.', '', NULL, 10010, 10010, timestamptz '2010-10-19T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-17T14:55:14.547', false, 335),
     (10927, 10199, 10367, 'Med', 'Clean up ABS Net Log and other fixes', '', NULL, 10010, 10010, timestamptz '2010-09-17T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-02-27T08:46:15.110', true, 12),
@@ -1283,8 +1289,8 @@ Need to find all users of the data and plan how to change those.', NULL, 10010, 
     (12178, 10169, 10339, 'Med', 'Get SAS Packaged', '', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-08T13:22:17.177', false, 251),
     (11015, 10225, 10396, 'Closed', 'Price large universe of bonds for Aug month end.', NULL, NULL, 10003, 10010, timestamptz '2009-08-03T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-09-30T00:00:00', false, 177),
     (11016, 10225, 10189, 'Closed', 'Research to review Matrix and fully populate.', NULL, NULL, 10003, 10010, timestamptz '2009-10-28T00:00:00', 4.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-01-24T00:00:00', false, 654),
-    (12179, 10172, 10416, 'Closed', 'Extend Extrakter feed to retieve and save monthly volume Data', 'Initially this could simply extract the file and save it the following location:-
-
+    (12179, 10172, 10416, 'Closed', 'Extend Extrakter feed to retieve and save monthly volume Data', 'Initially this could simply extract the file and save it the following location:-
+
 \\Global.Nomura.Com\GM\EU\ABS_IT_AppData\Strategy\Xtrakter', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-06T13:34:55.870', false, 64),
     (10993, 10225, 10189, 'Closed', 'Implement not (!) as well as and for Level 2 Matrix', NULL, NULL, 10010, 10010, timestamptz '2009-05-27T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-08T00:00:00', false, 63),
     (10994, 10225, 10189, 'Closed', 'Store All intermediate calcs and useful outputs in DB', NULL, NULL, 10010, 10010, timestamptz '2009-06-11T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-14T00:00:00', false, 99),
@@ -1292,30 +1298,30 @@ Need to find all users of the data and plan how to change those.', NULL, 10010, 
     (10996, 10225, 10189, 'Closed', 'Productionise Matrix Pricer Batch', NULL, NULL, 10010, 10010, timestamptz '2009-07-14T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-31T00:00:00', false, 116),
     (10997, 10225, 10189, 'Closed', 'Run Matrix Pricer Batch in QA and get sign off', NULL, NULL, 10010, 10010, timestamptz '2009-07-14T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-31T00:00:00', false, 116),
     (12177, 10199, 10367, 'Med', 'Build ABS Net V6 Feed', '', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 7.0, 'PersonDays', 1.0, 'Infrastructure', 'NotStarted', timestamptz '2012-03-20T10:19:52.200', false, 3),
-    (12149, 10194, 10389, 'Closed', 'Trade notification - determine plan', 'Requested by Zhuu, David and Friedel.
-
-The aim is to provide functionality that allows a user to specify a collection of ''sets'' of bonds that they which to recieve notification on.
-
-Each ''set'' will:-
-a)  Have a name
-b) Contain a list of conditions (to be ''OR'' ed) used to match bonds
-    - e.g., shelf, deal name, ISIN, bond name or sector classification
-c) A indication of whether to match Nomura Real Trades, Nomura Colour Trades or Xtrakter trades
-d) A list of email address that will recieve notifications.
-
-A user can specify any number of ''sets'' as described above. 
-
-A daily, end of day (after Xtrakter loader has completed) batch job will check all new trades against all ''sets'' set up by all users. 
-
-It will send out a single email per mail recipient.  
-
-The mail will contain a section for each ''set'' where that recpient has been added.
-
+    (12149, 10194, 10389, 'Closed', 'Trade notification - determine plan', 'Requested by Zhuu, David and Friedel.
+
+The aim is to provide functionality that allows a user to specify a collection of ''sets'' of bonds that they which to recieve notification on.
+
+Each ''set'' will:-
+a)  Have a name
+b) Contain a list of conditions (to be ''OR'' ed) used to match bonds
+    - e.g., shelf, deal name, ISIN, bond name or sector classification
+c) A indication of whether to match Nomura Real Trades, Nomura Colour Trades or Xtrakter trades
+d) A list of email address that will recieve notifications.
+
+A user can specify any number of ''sets'' as described above. 
+
+A daily, end of day (after Xtrakter loader has completed) batch job will check all new trades against all ''sets'' set up by all users. 
+
+It will send out a single email per mail recipient.  
+
+The mail will contain a section for each ''set'' where that recpient has been added.
+
 Each section will list details of all the trade activity relevent to that ''set'', if there are no trades, it will state there are no trades.', NULL, 10023, 10010, timestamptz '2012-01-31T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-10T17:33:40.723', false, 0),
     (12150, 10195, 10392, 'Med', 'Design and implement LTV for Cheat sheet', '', NULL, 10010, 10010, timestamptz '2012-01-31T00:00:00', 20.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-18T20:48:39.837', false, 0),
-    (12153, 10105, 10409, 'Closed', 'Minor updates to Cheat Sheet Report', '1) Add settle date
-2) Change output file name date format yo YYYYMMDD
-
+    (12153, 10105, 10409, 'Closed', 'Minor updates to Cheat Sheet Report', '1) Add settle date
+2) Change output file name date format yo YYYYMMDD
+
 See attachment', NULL, 10010, 10010, timestamptz '2012-02-03T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-07T16:50:25.853', false, 179),
     (12154, 10073, 10226, 'Closed', 'Get Windows 7 multi monitor working', '', NULL, 10010, 10010, timestamptz '2012-02-05T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-03-23T12:38:27.943', false, 265),
     (12155, 10123, 10271, 'Closed', 'Review Comment Viewer', '', NULL, 10010, 10010, timestamptz '2012-02-05T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-02-10T09:49:43.137', false, 134),
@@ -1324,22 +1330,22 @@ See attachment', NULL, 10010, 10010, timestamptz '2012-02-03T00:00:00', 1.0, 'Pe
     (12161, 10073, 10332, 'Closed', 'Improve logging when Opening Runs are late', '', NULL, 10010, 10010, timestamptz '2012-02-09T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-10T09:53:04.447', false, 262),
     (11007, 10225, 10396, 'Closed', 'Editor - Agree requirements', NULL, NULL, 10010, 10010, timestamptz '2009-05-12T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-02T00:00:00', false, 57),
     (12162, 10209, 10379, 'MedHigh', 'Modify so that no read locks are used when accessing loan data', 'This is to prevent locking and deadlocking with other processes.', NULL, 10010, 10010, timestamptz '2012-02-09T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-02-09T08:23:54.790', true, 260),
-    (12164, 10105, 10289, 'Med', 'Add multi bond Xtrakter report to Trade Blotter.', 'This report will allow a user to specifiy a set of bonds and see the latest Extrakter prices for each bond in the set.
+    (12164, 10105, 10289, 'Med', 'Add multi bond Xtrakter report to Trade Blotter.', 'This report will allow a user to specifiy a set of bonds and see the latest Extrakter prices for each bond in the set.
 The set may be defined by the user specifying a list of ISINs (pasted from Excel) or possibly allowing a shelf or sector to be specified.', NULL, 10003, 10010, timestamptz '2012-02-09T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-02-09T12:02:46.633', false, 431),
     (11017, 10225, 10195, 'Closed', 'Add ALBA loans', NULL, NULL, 10003, 10010, timestamptz '2009-04-08T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2010-08-24T00:00:00', false, 505),
     (11018, 10225, 10195, 'Closed', 'Add Merrill loans - raw data + document', NULL, NULL, 10003, 10010, timestamptz '2010-02-05T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-10-09T00:00:00', false, 186),
-    (12165, 10105, 10289, 'Closed', 'Minor Trade Blotter Fixes', 'When full column is selected on the main blotter screen, prevent Ctrl-V from pasting into every cell since this is a mistake by the user.  Silently ignore the Ctrl-V.
-
+    (12165, 10105, 10289, 'Closed', 'Minor Trade Blotter Fixes', 'When full column is selected on the main blotter screen, prevent Ctrl-V from pasting into every cell since this is a mistake by the user.  Silently ignore the Ctrl-V.
+
 Allow an ISIN to be entered into the Ticker column and automatically resolve this to the ticker name.', NULL, 10028, 10010, timestamptz '2012-02-09T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-21T14:34:08.400', false, 189),
     (12171, 10105, 10244, 'Closed', 'Add Nationwide data to Nomura Now', 'Need to a add to SP and release new XML menu to Nomura Now', NULL, 10010, 10012, timestamptz '2012-02-21T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-02-23T09:59:10.990', false, 196),
     (12172, 10188, 10322, 'Closed', 'Modify Bbg Bond Loader to request QDB on demand', '', NULL, 10010, 10010, timestamptz '2012-02-21T00:00:00', 2.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-02-28T17:01:24.050', false, 34),
     (12173, 10188, 10174, 'Closed', 'Modify DealsDB GUI to work with back office Bloomberg feed', '', NULL, 10010, 10010, timestamptz '2012-02-21T00:00:00', 3.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-02-28T17:01:04.720', false, 33),
-    (12180, 10121, 10289, 'Closed', 'Fix possible stale Factor and Current Rating on Trade Blotter trades', 'The Current Rating and Current Factor - AS AT THE TRADE DATE are stored on the trade table.
-
-The Blotter currently gets these via the DealDBOOLayer.  Because the DealDBOOLayer caches its data, and Current Rating and Current Factor may change from one day to the next.  It is possible for stale Current Rating and Current Factor values to be stored on the Trade Table.
-
-To avoid this, the Trade Blotter needs to be modified to directly query (without using the DealsDBOOLayer) the database for the values for Current Rating and Current Factor at the instant that they are required to be added to the Trade object, when the new trade is being first entered.
-
+    (12180, 10121, 10289, 'Closed', 'Fix possible stale Factor and Current Rating on Trade Blotter trades', 'The Current Rating and Current Factor - AS AT THE TRADE DATE are stored on the trade table.
+
+The Blotter currently gets these via the DealDBOOLayer.  Because the DealDBOOLayer caches its data, and Current Rating and Current Factor may change from one day to the next.  It is possible for stale Current Rating and Current Factor values to be stored on the Trade Table.
+
+To avoid this, the Trade Blotter needs to be modified to directly query (without using the DealsDBOOLayer) the database for the values for Current Rating and Current Factor at the instant that they are required to be added to the Trade object, when the new trade is being first entered.
+
 I picture a new, Stored Proc, specific to TradeBlotter, that will be called with a ''bondId'' and will return the current Rating and Current Factor directly from the Deals database.', NULL, 10012, 10010, timestamptz '2012-02-24T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-02-29T08:20:56.690', false, 289),
     (12181, 10083, 10409, 'Med', 'Fix to not write to the app.config during execution.', '', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Ready', timestamptz '2012-04-26T05:50:47.853', false, 277),
     (12182, 10105, 10409, 'Med', 'Fix scenario ordering on cheat sheet.', 'Modify to show scenarios order by their names as given in the scenarios xls', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Ready', timestamptz '2012-04-24T06:17:33.017', false, 286),
@@ -1347,20 +1353,20 @@ I picture a new, Stored Proc, specific to TradeBlotter, that will be called with
     (12184, 10200, 10400, 'Med', 'Modify Config Editor to handle files as Values.', '', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-02-27T09:02:52.730', false, 120),
     (12186, 10096, 10226, 'Closed', 'Move Danny''s Prime loan data tables to Danny''s DB', '', NULL, 10010, 10010, timestamptz '2012-02-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-04-11T10:12:14.420', false, 267),
     (11008, 10225, 10396, 'Closed', 'Multiple L2 tier match', NULL, NULL, 10003, 10010, timestamptz '2009-08-04T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-09-30T00:00:00', false, 177),
-    (12185, 10200, 10409, 'Med', 'DealAnalyticsReport to get config xml file from ABSConfig', 'Modify DealAnalyticsReport to check ABSConfig for an XML config file, rather than looking on the production share.
-
+    (12185, 10200, 10409, 'Med', 'DealAnalyticsReport to get config xml file from ABSConfig', 'Modify DealAnalyticsReport to check ABSConfig for an XML config file, rather than looking on the production share.
+
 If it isn''t in ABSConfig, then use a default config that is a resource of the application.', NULL, 10010, 10010, timestamptz '2012-02-24T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-02-24T09:29:56.140', false, 245),
     (12189, 10121, 10396, 'Closed', 'Refresh TestForm when Matrices are saved', '', NULL, 10010, 10010, timestamptz '2012-02-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-08T15:49:14.513', false, 293),
     (11019, 10225, 10195, 'Closed', 'Update ESAIL data for March + Add Wiki Notes', NULL, NULL, 10003, 10010, timestamptz '2009-05-05T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-05-06T00:00:00', false, 30),
     (11020, 10225, 10195, 'Closed', 'Add Halifax HPI data', NULL, NULL, 10003, 10010, timestamptz '2009-04-14T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2010-11-23T00:00:00', false, 596),
     (11021, 10225, 10196, 'Closed', 'Add 2 fields to Mapping sheets and data base - not needed', NULL, NULL, 10003, 10010, timestamptz '2009-06-30T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-30T00:00:00', false, 85),
     (11022, 10225, 10196, 'Closed', 'Add 8 critical fields to mapping sheet and database - See 5.5.1 - not needed', NULL, NULL, 10003, 10010, timestamptz '2009-06-30T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2011-01-24T00:00:00', false, 658),
-    (12190, 10121, 10174, 'Med', 'Fix issues spotted by Reneesh', 'Two issues 
-
-Issue 1 X/A
-While saving ‘A’ version of a deal which already has the ‘X’ version in the database, we use an ‘A’ bond ISIN and pull all the ‘A’ bonds from Bloomberg using this. While doing this, the previously saved attributes of the ‘X’ bonds are overwritten (e.g. SubRank, OrigPayPriority, OriginalRetention, CollateralBacked). All of these go back to their blank default values. Then we have to save these attributes for all the bonds in the deal. Can you change this so that the previously saved values for these attributes remain there when the ‘A’ bonds are pulled from Bloomberg and saved.
-
-Issue 2 - see attachement dated 28-Feb-2012
+    (12190, 10121, 10174, 'Med', 'Fix issues spotted by Reneesh', 'Two issues 
+
+Issue 1 X/A
+While saving ‘A’ version of a deal which already has the ‘X’ version in the database, we use an ‘A’ bond ISIN and pull all the ‘A’ bonds from Bloomberg using this. While doing this, the previously saved attributes of the ‘X’ bonds are overwritten (e.g. SubRank, OrigPayPriority, OriginalRetention, CollateralBacked). All of these go back to their blank default values. Then we have to save these attributes for all the bonds in the deal. Can you change this so that the previously saved values for these attributes remain there when the ‘A’ bonds are pulled from Bloomberg and saved.
+
+Issue 2 - see attachement dated 28-Feb-2012
 ', NULL, 10010, 10010, timestamptz '2012-02-28T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'InProgress', timestamptz '2012-04-25T13:14:26.077', false, 331),
     (10986, 10028, 10189, 'Closed', 'Tier by Front Pay / Back Pay', NULL, NULL, 10023, 10010, timestamptz '2010-05-06T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-07-29T00:00:00', false, 1),
     (10987, 10225, 10189, 'Closed', 'Test and make release build', NULL, NULL, 10010, 10010, timestamptz '2009-04-08T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-11T00:00:00', false, 66),
@@ -1463,8 +1469,8 @@ Issue 2 - see attachement dated 28-Feb-2012
     (11098, 10225, 10357, 'Closed', 'CE - Incorporate comments from group review (apr 10)', NULL, NULL, 10010, 10010, timestamptz '2010-05-06T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-12T00:00:00', false, 369),
     (11099, 10225, 10313, 'Closed', 'Design application and database', NULL, NULL, 10010, 10010, timestamptz '2010-03-15T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-05-05T00:00:00', false, 390),
     (11100, 10083, 10224, 'Med', 'Change Fingal wrapper interface so that it does not return any values of type object', '', NULL, 10010, 10010, timestamptz '2010-12-02T00:00:00', 1.0, 'PersonDays', 1.0, 'Infrastructure', 'InProgress', timestamptz '2012-01-27T14:47:42.820', true, 340),
-    (11101, 10100, 10389, 'Closed', 'Design and develop Trigger generator app for Auditing Tables', '1) Need to make the app work for all database environments.
-2) Need to make ''try'' the first line in ''Main''
+    (11101, 10100, 10389, 'Closed', 'Design and develop Trigger generator app for Auditing Tables', '1) Need to make the app work for all database environments.
+2) Need to make ''try'' the first line in ''Main''
 ', NULL, 10010, 10010, timestamptz '2010-04-06T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-06-09T00:00:00', false, 40),
     (11102, 10225, 10214, 'Closed', 'First Release of Config Library', NULL, NULL, 10010, 10010, timestamptz '2009-04-14T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-04-21T00:00:00', false, 15),
     (11103, 10225, 10214, 'Closed', 'GUI to manage config data', NULL, NULL, 10010, 10010, timestamptz '2009-04-21T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-08-06T00:00:00', false, 122),
@@ -1513,14 +1519,14 @@ Issue 2 - see attachement dated 28-Feb-2012
     (11146, 10225, 10231, 'Closed', 'Get dataservers for QA and Stage', NULL, NULL, 10010, 10010, timestamptz '2010-12-08T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2009-04-07T00:00:00', false, 0),
     (11147, 10225, 10231, 'Closed', 'Get individual dev data server for Mumbai', NULL, NULL, 10010, 10010, timestamptz '2010-12-09T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2010-12-20T00:00:00', false, 621),
     (11148, 10059, 10227, 'Closed', 'Move Code Base Checker to Stage', '', NULL, 10010, 10010, timestamptz '2011-02-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2011-03-28T00:00:00', false, 0),
-    (11149, 10060, 10225, 'Closed', 'Make BBS library retry if it fails', 'Done - but needs to be tested.
+    (11149, 10060, 10225, 'Closed', 'Make BBS library retry if it fails', 'Done - but needs to be tested.
 Also made it handle names + paths that contain spaces.', NULL, 10010, 10010, timestamptz '2011-02-15T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-05-05T00:00:00', false, 0),
-    (11150, 10096, 10231, 'Closed', 'Move to Firm SVN repository rather than Radial', 'Spoke with Raji (8-Jun).  He will set up UAT repository today and migrate to it.
+    (11150, 10096, 10231, 'Closed', 'Move to Firm SVN repository rather than Radial', 'Spoke with Raji (8-Jun).  He will set up UAT repository today and migrate to it.
 Tomorrow he will set up empty Prod repository so we can start raising IAC requests, but migration will be later, this weekend or next.', NULL, 10010, 10010, timestamptz '2010-12-09T00:00:00', 5.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-06-28T00:00:00', false, 4),
     (11151, 10225, 10231, 'Closed', 'Recommend Exception usage and document', '', NULL, 10010, 10010, timestamptz '2010-04-15T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 1005),
     (11152, 10225, 10231, 'Closed', 'Review and acquire VS productivity tools', NULL, NULL, 10014, 10010, timestamptz '2010-04-19T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2010-07-27T00:00:00', false, 476),
     (11153, 10029, 10231, 'Closed', 'Find better way to tag libraries', NULL, NULL, 10010, 10010, timestamptz '2010-04-20T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2010-07-01T00:00:00', false, 7),
-    (11154, 10063, 10321, 'Cancelled', 'Feed From Markit: Back populate missing data', 'If this will take more than half a day''s effort then cancel it.
+    (11154, 10063, 10321, 'Cancelled', 'Feed From Markit: Back populate missing data', 'If this will take more than half a day''s effort then cancel it.
 There is no business demand for this, so cancel it.', NULL, 10010, 10010, timestamptz '2011-01-11T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-11-29T00:00:00', false, 0),
     (11155, 10225, 10231, 'Closed', 'Find a good way to patch applications reliably', NULL, NULL, 10010, 10010, timestamptz '2010-07-28T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2010-08-20T00:00:00', false, 499),
     (11156, 10225, 10231, 'Cancelled', 'Extend Release Manager for Review branches', NULL, NULL, 10010, 10010, timestamptz '2010-10-01T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2010-12-08T00:00:00', false, 609),
@@ -1625,26 +1631,26 @@ There is no business demand for this, so cancel it.', NULL, 10010, 10010, timest
     (11600, 10146, 10299, 'Closed', 'Release backtesting application', 'Paresh to figure out plan here', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-04T00:00:00', false, 149),
     (11615, 10081, 10356, 'Closed', 'Tidy old log/tmp files and Alert if space is low.', 'Ensure log files, old tmp files are cleaned up and alert if disk space is low', NULL, 10010, 10010, timestamptz '2011-03-22T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-08T08:09:30.780', false, 263),
     (11602, 10070, 10242, 'Closed', 'Get Prod DB Trace flags set and DB rebooted', 'CRQ000000087663 set for Sat 9-April', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-03-28T00:00:00', false, 1),
-    (11603, 10059, 10262, 'Closed', 'Find out how in install SQL Server for developers.', 'The package required is ''MICROSOFT_SQLSERVER-2008-SP1-BIDEVSTUDIO_EN_01''
-
-This needs to be installed manually on each developers PC.
+    (11603, 10059, 10262, 'Closed', 'Find out how in install SQL Server for developers.', 'The package required is ''MICROSOFT_SQLSERVER-2008-SP1-BIDEVSTUDIO_EN_01''
+
+This needs to be installed manually on each developers PC.
 ', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-05-03T00:00:00', false, 3),
     (11604, 10091, 10299, 'Closed', 'Further fine tuning', '', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-07-08T00:00:00', false, 0),
     (11605, 10093, 10299, 'Cancelled', 'known issues/bugs', 'No details so cancelled this.', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-07-22T00:00:00', false, 76),
-    (11606, 10185, 10299, 'MedHigh', 'Rework current Rate Path functionality', 'Need to complete PP 1856 during this
-
-For Sachin to learn about SAS, understand current Rate Path implementation and algorithm.
+    (11606, 10185, 10299, 'MedHigh', 'Rework current Rate Path functionality', 'Need to complete PP 1856 during this
+
+For Sachin to learn about SAS, understand current Rate Path implementation and algorithm.
 Then, produce design for C# implementation, get it reviewed, implement it, test and release.', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 10.0, 'PersonDays', 1.0, 'Enhancement', 'InProgress', timestamptz '2013-05-01T06:56:47.657', false, 83),
     (11607, 10093, 10299, 'Med', 'More rigourously controlled/managed scenarios, e.g., stored in DB', '', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-26T08:11:13.820', false, 516),
     (11758, 10060, 10378, 'Closed', 'Document ''DBScriptGenerator'' in wiki', '', NULL, 10010, 10010, timestamptz '2011-06-09T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-06-28T00:00:00', false, 77),
-    (11608, 10093, 10299, 'Closed', 'Triggers Phase 1 - Add Delq measures to the deal aggregates file', '
-
-Need to...
-1) Understand requirement - need a more detailed statement of what the requirement is.
-2) Design solution an destimate effort
+    (11608, 10093, 10299, 'Closed', 'Triggers Phase 1 - Add Delq measures to the deal aggregates file', '
+
+Need to...
+1) Understand requirement - need a more detailed statement of what the requirement is.
+2) Design solution an destimate effort
 3) Carry out the development', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 15.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-11T00:00:00', false, 70),
     (11609, 10093, 10299, 'MedLow', 'Handle case when CDU more recent than loan data', 'Need more info', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 573),
-    (11610, 10093, 10299, 'Cancelled', 'Smoothing liquidations
+    (11610, 10093, 10299, 'Cancelled', 'Smoothing liquidations
 ', 'Duplicate of 1757', NULL, 10010, 10010, timestamptz '2011-03-21T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2011-06-22T00:00:00', false, 48),
     (11611, 10093, 10299, 'Med', 'More deals (per originator/shelf)', 'Need details and break this into smaller tasks', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 20.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 547),
     (11616, 10150, 10315, 'MedLow', 'Integrate feed from Client Portal', '', NULL, 10010, 10010, timestamptz '2011-03-22T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 5),
@@ -1667,30 +1673,30 @@ Need to...
     (11638, 10112, 10353, 'Closed', 'Start with a copy of client tracker - renamed to as ''NPL Tracker''', '', NULL, 10007, 10010, timestamptz '2011-04-08T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-05-11T00:00:00', false, 0),
     (11639, 10113, 10354, 'Closed', 'Google Translate called from Excel.', 'Find out how to call Google Translate (SOAP?) from Excel.', NULL, 10007, 10010, timestamptz '2011-04-08T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-05-11T00:00:00', false, 0),
     (11765, 10058, 10281, 'Closed', 'Sign off Autosys checklist', '', NULL, 10010, 10010, timestamptz '2011-06-17T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-08-08T00:00:00', false, 115),
-    (11640, 10113, 10354, 'Closed', 'Write code to translate cell contents', 'The user will select a set of cells,  the values in these cells will be translated to English.  The original values to be stored in each cell''s ''Note''.
+    (11640, 10113, 10354, 'Closed', 'Write code to translate cell contents', 'The user will select a set of cells,  the values in these cells will be translated to English.  The original values to be stored in each cell''s ''Note''.
 The user will be able to reverse this, where the values in ''Notes'' are placed back into the cells.', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-27T00:00:00', false, 1),
     (11641, 10113, 10354, 'Closed', 'Package functionality.', 'Find a suitable way to package this functionality so it can be made easily available to any Excel Spread sheet, e.g.,  Addin?', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-27T00:00:00', false, 5),
     (11642, 10058, 10358, 'Closed', 'Deploy Database Support Scripts apps for TradeBlotter procedure', '', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', NULL, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-05-05T00:00:00', false, 0),
     (11643, 10060, 10299, 'Closed', 'Correct table and schema names', '', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-04T00:00:00', false, 169),
     (11644, 10066, 10373, 'Cancelled', 'Investigate Leek loan failue', 'Problem has gone away.', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Cancelled', timestamptz '2011-10-27T00:00:00', false, 175),
     (11645, 10060, 10332, 'MedLow', 'Make AVR Autosys job dependant on Totoro Autosys job', '', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 0.1, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 447),
-    (11646, 10081, 10357, 'Cancelled', 'Review how this works', 'CE batch still seems to produce bad results, i.e., is missing raw infomation.
-1) What needs to be done to fix this?
-2) Why is it not being picked up by the warning log messages.
-
+    (11646, 10081, 10357, 'Cancelled', 'Review how this works', 'CE batch still seems to produce bad results, i.e., is missing raw infomation.
+1) What needs to be done to fix this?
+2) Why is it not being picked up by the warning log messages.
+
 Refer to the issue that Ruth and Neil had to look into on 6th April', NULL, 10010, 10010, timestamptz '2011-04-08T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 160),
     (11647, 10058, 10356, 'Closed', 'Modify LogFileTidyTool for Autosys', 'Make this work on each environment independantly.', NULL, 10010, 10010, timestamptz '2011-04-11T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-14T08:01:59.627', false, 278),
     (11658, 10071, 10329, 'Closed', 'Handle bid ask expressed as a fraction.', '', NULL, 10023, 10010, timestamptz '2011-04-21T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-04-21T00:00:00', false, 24),
-    (11659, 10116, 10389, 'Closed', 'Determine Plan', 'Waiting for requirements.
+    (11659, 10116, 10389, 'Closed', 'Determine Plan', 'Waiting for requirements.
 Zhuu says this is looking like Nov 2011 now.', NULL, 10010, 10010, timestamptz '2011-04-21T00:00:00', 50.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-09-19T00:00:00', false, 0),
     (11661, 10064, 10244, 'Closed', 'Remove Hacks for CE overrides', '', NULL, 10010, 10010, timestamptz '2011-04-25T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-05-18T00:00:00', false, 0),
     (11662, 10070, 10361, 'Closed', 'Add new BOE Series', '', NULL, 10010, 10010, timestamptz '2011-04-25T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-04T00:00:00', false, 40),
-    (11626, 10081, 10289, 'Closed', 'Make Trade Blotter asks for confirmation if a real trade is modified', 'Trader has accidently modified an existing trade (TradeId = 167422), change the bond and made it a none trade.  
-
-The GUI should ask for confirmation whenever a real trade, with a trade date in the past is changed (but only for the first modification to the trade, reset ''first'' when the trade is saved''.  
-
-Also, even for a trade today, if the bond is changed, it should ask for confirmation.
-
+    (11626, 10081, 10289, 'Closed', 'Make Trade Blotter asks for confirmation if a real trade is modified', 'Trader has accidently modified an existing trade (TradeId = 167422), change the bond and made it a none trade.  
+
+The GUI should ask for confirmation whenever a real trade, with a trade date in the past is changed (but only for the first modification to the trade, reset ''first'' when the trade is saved''.  
+
+Also, even for a trade today, if the bond is changed, it should ask for confirmation.
+
 If a bond is changed on a trade in the past, it should ask for two confirmations.', NULL, 10010, 10010, timestamptz '2011-03-29T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-04-23T00:00:00', false, 0),
     (11656, 10210, 10329, 'Closed', 'Handle ''multiple'' in ask size', '', NULL, 10023, 10010, timestamptz '2011-04-13T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-11T09:53:20.160', false, 1),
     (11657, 10105, 10373, 'Closed', 'Modifiy Merrill rule', '', NULL, 10002, 10010, timestamptz '2011-04-15T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-19T00:00:00', false, 63),
@@ -1700,34 +1706,34 @@ If a bond is changed on a trade in the past, it should ask for two confirmations
     (10942, 10101, 10350, 'Closed', 'Make scripter produce SQL scripts that can be directly run on the server without modification.', '', NULL, 10010, 10010, timestamptz '2010-12-09T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-06T00:00:00', false, 75),
     (11665, 10182, 10299, 'Closed', 'Modify Model to use PSS files from new location', 'Was Jira: EABS-007.  Need to modify model to use ''\\Global.Nomura.Com\GM\EU\ABS_IT_AppData\Pss'' as the default input location for PSS files.', NULL, 10010, 10010, timestamptz '2011-04-26T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-26T10:18:25.637', false, 5),
     (11666, 10119, 10362, 'Closed', 'Determine requirements', 'An application that utilises the Italian Land Registry data in the database to help analyse NPLs', NULL, 10005, 10010, timestamptz '2011-04-27T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-05-23T00:00:00', false, 0),
-    (11667, 10081, 10220, 'Closed', 'Add ''TempFilePath'' property to ABSEnvironment', 'Done by Sachin:
-
-Set the TempFilePath to <path>/<application> where <path> is one of the following (attempted in the following order):-
-"C:\\ABSEurope\\tmp", "C:\\Windows\\temp", "\\uk\\data\\prod\\ABS_IT_Shared\\temp", ".\tmp"
-If the directory doesn''t exist, try creating it, also if directory does exist, ensure a file can be written to that location before deciding if the path is valid.
+    (11667, 10081, 10220, 'Closed', 'Add ''TempFilePath'' property to ABSEnvironment', 'Done by Sachin:
+
+Set the TempFilePath to <path>/<application> where <path> is one of the following (attempted in the following order):-
+"C:\\ABSEurope\\tmp", "C:\\Windows\\temp", "\\uk\\data\\prod\\ABS_IT_Shared\\temp", ".\tmp"
+If the directory doesn''t exist, try creating it, also if directory does exist, ensure a file can be written to that location before deciding if the path is valid.
 If no paths are writeable, throw.', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-07-06T00:00:00', false, 12),
-    (11668, 10058, 10281, 'Closed', 'Code Review', 'Parth to own, Sachin to review
+    (11668, 10058, 10281, 'Closed', 'Code Review', 'Parth to own, Sachin to review
 completed review and review sign off', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-11-21T00:00:00', false, 28),
-    (11669, 10058, 10287, 'Closed', 'Code Review', 'Neil to own, Parth to review.
+    (11669, 10058, 10287, 'Closed', 'Code Review', 'Neil to own, Parth to review.
 Parth has completed review.  see damlepar_ESCBRepoPriceDownloaderForReview_2.11904.', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 70),
     (11670, 10058, 10363, 'Closed', 'Code Review', 'Ruth to own.  Neil to review.', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 91),
     (11703, 10190, 10389, 'Closed', 'Gather requirements', 'The aim is to run the model batch output through Intex to generate analytics and make this available to the desk on a daily basis.', NULL, 10010, 10010, timestamptz '2011-05-16T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-05-23T00:00:00', false, 0),
-    (11672, 10058, 10361, 'Closed', 'Code Review', 'Sachin to own.  Paresh to review.
+    (11672, 10058, 10361, 'Closed', 'Code Review', 'Sachin to own.  Paresh to review.
 Completed implementing review comments from Paresh', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 28),
     (11673, 10058, 10364, 'Closed', 'Code Review', 'Sreevani to own.  Ruth to review.', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-21T00:00:00', false, 76),
     (11674, 10058, 10365, 'Closed', 'Code Review', 'Paresh to own.  Sreevani to review.', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-11-23T00:00:00', false, 76),
     (11675, 10180, 10366, 'Cancelled', 'Carval Feed. Develop Requirements', 'Nothing materialised', NULL, 10010, 10010, timestamptz '2011-04-28T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-03-21T09:43:21.883', false, 249),
-    (11704, 10112, 10353, 'Closed', 'Modification requested by Juan', '- find a way, on the grid, to show the contents of of cells that have a large amount of text (wrap cells, tool tip?)
-- Copy from the tool to be restricted according to user
-- Add attachments to pools
+    (11704, 10112, 10353, 'Closed', 'Modification requested by Juan', '- find a way, on the grid, to show the contents of of cells that have a large amount of text (wrap cells, tool tip?)
+- Copy from the tool to be restricted according to user
+- Add attachments to pools
 - No of borrowers to be split by "secured" and "Unsecured"', NULL, 10007, 10010, timestamptz '2011-05-16T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-07T00:00:00', false, 29),
     (11677, 10209, 10367, 'Med', 'Move download area to temp and purge old files.', 'Move the down load directory to the temp area and tidy it up periodically so that downloads over 1 month old are deleted.', NULL, 10010, 10010, timestamptz '2011-05-03T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-02T09:10:59.697', true, 190),
     (11678, 10225, 10174, 'Closed', 'Modify to be able to use QDB BBG data', '', NULL, 10010, 10010, timestamptz '2011-05-03T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 780),
     (11681, 10123, 10271, 'MedLow', 'Enable images to be pasted into comment viewer', '', NULL, 10020, 10010, timestamptz '2011-05-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-02-27T08:44:02.667', false, 313),
-    (11685, 10150, 10315, 'MedLow', 'Find a way to link with Outlook meetings', 'Posibilities are drag and drop an Outlook Calendar meeting into Client Tracker,
+    (11685, 10150, 10315, 'MedLow', 'Find a way to link with Outlook meetings', 'Posibilities are drag and drop an Outlook Calendar meeting into Client Tracker,
 or create the meeting in Client Tracker first and send it to Outlook.', NULL, 10003, 10010, timestamptz '2011-05-05T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 20),
     (11686, 10068, 10260, 'Closed', 'Get Ruth''s desk moved', '', NULL, 10010, 10010, timestamptz '2011-05-09T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-05-24T00:00:00', false, 141),
-    (11687, 10060, 10234, 'Closed', 'Get more hardware for production', '2 additional CPUs for prod server.
+    (11687, 10060, 10234, 'Closed', 'Get more hardware for production', '2 additional CPUs for prod server.
 Original IP for lonws20134 = 10.81.32.91', NULL, 10010, 10010, timestamptz '2011-05-09T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-07-18T00:00:00', false, 109),
     (11689, 10112, 10353, 'Closed', 'Develop NPLBlotter for Managing Pools only as stage 1', '', NULL, 10010, 10010, timestamptz '2011-05-11T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-05-16T00:00:00', false, 24),
     (11691, 10103, 10371, 'Closed', 'Fix Unit Test', '', NULL, 10010, 10010, timestamptz '2011-05-12T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-07T00:00:00', false, 11),
@@ -1742,19 +1748,19 @@ Original IP for lonws20134 = 10.81.32.91', NULL, 10010, 10010, timestamptz '2011
     (11700, 10066, 10299, 'Cancelled', 'Find cause of numeric difference between UKNC model GUI and Batch', 'Problem seems yo have gone awy or is no longer important', NULL, 10002, 10010, timestamptz '2011-05-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Cancelled', timestamptz '2011-09-16T00:00:00', false, 112),
     (11701, 10060, 10243, 'Closed', 'Investigate Moving Intex Remote PCs to be VMs', '', NULL, 10010, 10010, timestamptz '2011-05-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-06-07T00:00:00', false, 47),
     (11702, 10146, 10371, 'Closed', 'Jira: EABS-007: Copy Intex Inf files to output location', '', NULL, 10010, 10010, timestamptz '2011-05-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-03T00:00:00', false, 81),
-    (11710, 10101, 10350, 'Closed', 'Relocate SVN directory that stores the files.', 'Move the SVN directory from svn\\DatabaseSchemaExtract
-to svn\\trunk\ABSEuropeSystemFiles\DatabaseSchemaExtract for Prod environments
+    (11710, 10101, 10350, 'Closed', 'Relocate SVN directory that stores the files.', 'Move the SVN directory from svn\\DatabaseSchemaExtract
+to svn\\trunk\ABSEuropeSystemFiles\DatabaseSchemaExtract for Prod environments
 For non prod save these to svn\\temp\dev\ABSEuropeSystemFiles\DatabaseSchemaExtract', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-08-26T00:00:00', false, 77),
-    (11712, 10073, 10350, 'Closed', 'Figure out an application to extract Autos Jill and bat files are store them in SVN', 'Files to be stored in svn\\trunk\ABSEuropeSystemFiles\Autosys
+    (11712, 10073, 10350, 'Closed', 'Figure out an application to extract Autos Jill and bat files are store them in SVN', 'Files to be stored in svn\\trunk\ABSEuropeSystemFiles\Autosys
 The directory svn\\trunk\Autosys is to be removed.', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 3.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-12-01T00:00:00', false, 77),
-    (11713, 10044, 10210, 'Closed', 'Relocate the source files in SVN', 'Move from  svn\\trunk\RawLoanData to  from svn\\trunk\ABSEuropeSystemFiles\RawLoanData
+    (11713, 10044, 10210, 'Closed', 'Relocate the source files in SVN', 'Move from  svn\\trunk\RawLoanData to  from svn\\trunk\ABSEuropeSystemFiles\RawLoanData
 Do this with Drag and Drop in Svn Repo Browser to prevent all of the data in the files being duplicated, i.e., just move the folder.', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-08T09:33:28.347', false, 630),
     (11683, 10058, 10288, 'Closed', 'Deploy Rate Loader for FX Rates', '', NULL, 10010, 10010, timestamptz '2011-05-05T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-05-10T00:00:00', false, 21),
     (11684, 10058, 10288, 'Closed', 'Deploy Rate Loader for IR Rates', '', NULL, 10010, 10010, timestamptz '2011-05-05T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-05-10T00:00:00', false, 25),
     (11688, 10124, 10369, 'Closed', 'Ensure facilities at Farnborough work as expected.', '', NULL, 10010, 10010, timestamptz '2011-05-10T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-05-24T00:00:00', false, 0),
     (11690, 10074, 10189, 'Closed', 'Fix to WAL calculation when DateOfPricing is +- 5 days from SettleDate', '', NULL, 10010, 10010, timestamptz '2011-05-11T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-05-24T00:00:00', false, 162),
     (11715, 10070, 10339, 'Closed', 'Install new license', '', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-05-23T00:00:00', false, 57),
-    (11717, 10108, 10195, 'Closed', 'Capture LMS1 and LMS2 data for Lansdowne deals', 'LMS deals are located at ..\trunk\RawLoanData\LoanLoaderKensington
+    (11717, 10108, 10195, 'Closed', 'Capture LMS1 and LMS2 data for Lansdowne deals', 'LMS deals are located at ..\trunk\RawLoanData\LoanLoaderKensington
 ', NULL, 10002, 10010, timestamptz '2011-05-23T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-28T00:00:00', false, 50),
     (11718, 10070, 10374, 'Closed', 'Retire this', 'To be replaced by DatabaseMaintenance app', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-09-06T00:00:00', false, 163),
     (11719, 10044, 10344, 'Closed', 'Determine Requirements', '', NULL, 10010, 10010, timestamptz '2011-05-23T00:00:00', 15.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-28T00:00:00', false, 510),
@@ -1782,8 +1788,8 @@ Do this with Drag and Drop in Svn Repo Browser to prevent all of the data in the
     (11747, 10206, 10209, 'Med', 'Modify mapping for ''LIVE'' loans that are in repossession', '', NULL, 10002, 10010, timestamptz '2011-06-07T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-31T11:05:44.187', true, 9),
     (10943, 10225, 10357, 'Cancelled', 'CE - Extend CE for more esoteric deals', NULL, NULL, 10024, 10010, timestamptz '2010-05-06T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 995),
     (11744, 10135, 10344, 'Closed', 'Determine requirements', 'Disccussed on 29-Jul.  Sachin to do R+D on this and to ensure it fits in with the BondAnalyticsGUI', NULL, 10010, 10010, timestamptz '2011-06-06T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-30T00:00:00', false, 0),
-    (11745, 10180, 10344, 'MedLow', 'Reporting Tool for Strategy. Determine requirements', 'Give Stratrgy a tool (may be 3rd party) that allows them to create good look reports easily, e.g., to be incorporated into publications and to be updated on demand.
-Possibly a Crystal Reports type of solution.
+    (11745, 10180, 10344, 'MedLow', 'Reporting Tool for Strategy. Determine requirements', 'Give Stratrgy a tool (may be 3rd party) that allows them to create good look reports easily, e.g., to be incorporated into publications and to be updated on demand.
+Possibly a Crystal Reports type of solution.
 Not a high priority as at Aug 9 - 2011 ', NULL, 10003, 10010, timestamptz '2011-06-06T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-09T00:00:00', false, 576),
     (11746, 10071, 10332, 'Closed', 'Record book in DB and separate positions by book', 'Needs changes in Fingal Wrapper for Totoro', NULL, 10023, 10010, timestamptz '2011-06-06T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-07-07T00:00:00', false, 72),
     (11748, 10096, 10231, 'Closed', 'Move to new wiki servers', 'Need to fix missing info from the old wiki', NULL, 10010, 10010, timestamptz '2011-06-07T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-06-15T00:00:00', false, 0),
@@ -1798,7 +1804,7 @@ Not a high priority as at Aug 9 - 2011 ', NULL, 10003, 10010, timestamptz '2011-
     (11762, 10070, 10379, 'Closed', 'Look into ALBA_20061 failure', 'Need to find a fix for loan id = 271609', NULL, 10010, 10010, timestamptz '2011-06-15T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-18T00:00:00', false, 88),
     (11763, 10070, 10189, 'Closed', 'Fix -ve WAL issue', '', NULL, 10010, 10010, timestamptz '2011-06-16T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-04T00:00:00', false, 89),
     (11764, 10119, 10362, 'Closed', 'Code review and document', 'Paresh and Sachin to review in Mumbai', NULL, 10010, 10010, timestamptz '2011-06-17T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-10-04T00:00:00', false, 65),
-    (11767, 10093, 10299, 'Closed', 'Deal level performance aggregate', 'Development complete to be released.
+    (11767, 10093, 10299, 'Closed', 'Deal level performance aggregate', 'Development complete to be released.
 Now checked into Trunk.', NULL, 10002, 10010, timestamptz '2011-06-22T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-09-28T00:00:00', false, 50),
     (11770, 10130, 10380, 'Closed', 'Gather requirements for Develop Novus Funding Price Feed', 'Note a Class 2 certificate is only for 25+ emails addresses.', NULL, 10010, 10010, timestamptz '2011-06-27T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-06-30T00:00:00', false, 32),
     (11771, 10139, 10381, 'Closed', 'Develop Totoro Bond Query appliaction.', 'Develop and test appliaction.', NULL, 10016, 10010, timestamptz '2011-06-27T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-13T00:00:00', false, 0),
@@ -1811,7 +1817,7 @@ Now checked into Trunk.', NULL, 10002, 10010, timestamptz '2011-06-22T00:00:00',
     (11778, 10100, 10174, 'Closed', 'UAT for Intex Cashflows in Deals DB', '', NULL, 10010, 10010, timestamptz '2011-06-29T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-29T00:00:00', false, 65),
     (11779, 10100, 10174, 'Closed', 'Deploy Intex Cashflows in for DealsDB GUI', '', NULL, 10010, 10010, timestamptz '2011-06-29T00:00:00', 17.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-02T00:00:00', false, 52),
     (11780, 10100, 10173, 'Closed', 'Deploy Intex Cashflows in Cashflow Generator', '', NULL, 10010, 10010, timestamptz '2011-06-29T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-29T00:00:00', false, 65),
-    (11781, 10130, 10380, 'Closed', 'Get permanent certificate for Novus price feed', 'Details of certificate are on the wiki
+    (11781, 10130, 10380, 'Closed', 'Get permanent certificate for Novus price feed', 'Details of certificate are on the wiki
 Conversation with Colman Murray on 19-Jul-2011.  He said we should go ahead with VeriSign certificate while to company decides how it will handle this kind of thing in the longer term.', NULL, 10010, 10010, timestamptz '2011-06-29T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-09-12T00:00:00', false, 62),
     (11782, 10130, 10380, 'Closed', 'Develop automated price feed for Novus ', '', NULL, 10010, 10010, timestamptz '2011-06-29T00:00:00', 8.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-21T00:00:00', false, 87),
     (11783, 10123, 10271, 'Cancelled', 'Line spacing issue', 'Make sure the line spacing in RTF is the same as Word when text is copied from Word.', NULL, 10031, 10010, timestamptz '2011-06-29T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-01-08T00:00:00', false, 100),
@@ -1829,10 +1835,10 @@ Conversation with Colman Murray on 19-Jul-2011.  He said we should go ahead with
     (11757, 10134, 10299, 'Closed', 'Liquidation time series in PSS file', '', NULL, 10002, 10010, timestamptz '2011-06-09T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-06-23T00:00:00', false, 20),
     (11708, 10126, 10373, 'Low', 'Implement rules to populate Rate Floor and apply the rate floor to all views of a loan', 'This has been put on hold while Danny does some more analysis (1 June 2011)', NULL, 10002, 10010, timestamptz '2011-05-17T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-25T19:35:39.733', false, 2),
     (10941, 10082, 10286, 'MedLow', 'Normalised BOE Amount Data ', '', NULL, 10014, 10010, timestamptz '2010-05-05T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 0),
-    (11709, 10126, 10299, 'MedLow', 'Modify model to use loan level floors rather than hard coded shelf level floors', 'Also add floor field to ESF_static.
+    (11709, 10126, 10299, 'MedLow', 'Modify model to use loan level floors rather than hard coded shelf level floors', 'Also add floor field to ESF_static.
 This has been put on hold while Danny does some more analysis (1 June 2011)', NULL, 10002, 10010, timestamptz '2011-05-17T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 0),
     (11612, 10154, 10197, 'Med', 'Load RMS 25 Data', 'Waiting for a 3rd full quarter of data before Danny will analyse', NULL, 10002, 10010, timestamptz '2011-03-21T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-25T19:30:34.957', false, 310),
-    (11613, 10081, 10189, 'Closed', 'Issue a warning email if there is a failure while saving results.', 'If there is an exception when saving either Results or Errors to the database, make sure the appliaction as a whole does not fail, i.e., it continues to price and save everything it can.
+    (11613, 10081, 10189, 'Closed', 'Issue a warning email if there is a failure while saving results.', 'If there is an exception when saving either Results or Errors to the database, make sure the appliaction as a whole does not fail, i.e., it continues to price and save everything it can.
 The application should return success (''0''), however it should issues a WARNING email.', NULL, 10010, 10010, timestamptz '2011-03-22T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-06T00:00:00', false, 257),
     (11614, 10106, 10340, 'Closed', 'Release latest Dutch HPI verison from trunk after freeze', '', NULL, 10010, 10010, timestamptz '2011-03-22T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-04-05T00:00:00', false, 1),
     (11649, 10115, 10299, 'Closed', 'Determine Key Libraries to be reviewed for end of April', '', NULL, 10010, 10010, timestamptz '2011-04-12T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-05-23T00:00:00', false, 0),
@@ -1843,12 +1849,12 @@ The application should return success (''0''), however it should issues a WARNIN
     (11654, 10080, 10359, 'Closed', 'Deploy IntexMetaData Gather production via Autosys', '', NULL, 10010, 10010, timestamptz '2011-04-12T00:00:00', NULL, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-28T00:00:00', false, 15),
     (11655, 10080, 10299, 'Closed', 'Deploy CDU file report production via Autosys', '', NULL, 10010, 10010, timestamptz '2011-04-12T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-28T00:00:00', false, 0),
     (11755, 10100, 10169, 'Closed', 'Apply trigger to Static Data schema in Deals DB', '', NULL, 10010, 10010, timestamptz '2011-06-08T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-06-13T00:00:00', false, 40),
-    (11756, 10100, 10169, 'Closed', 'Remove old ''Audit'' tables from StaticData schema in Deals DB', '
-Changes were made to Prod on 6-Jul-2011 at around 16:10.
+    (11756, 10100, 10169, 'Closed', 'Remove old ''Audit'' tables from StaticData schema in Deals DB', '
+Changes were made to Prod on 6-Jul-2011 at around 16:10.
 Also modify all SPs in DealsDbOOLayer to not refer to the Audit tables.  NOTE: this will also involve introducing identity columns on the main tables, e.g. for Bonds.bondId etc. and modifying the SPs to take account of this.', NULL, 10010, 10010, timestamptz '2011-06-08T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-07-07T00:00:00', false, 45),
     (10934, 10225, 10357, 'Closed', 'CE - Release CE to Prod for June conference', NULL, NULL, 10014, 10010, timestamptz '2010-05-06T00:00:00', 15.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-12T00:00:00', false, 406),
     (10967, 10045, 10189, 'Closed', 'Modify windows sizes so that all columns are displayed', NULL, NULL, 10010, 10010, timestamptz '2010-07-29T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2010-09-15T00:00:00', false, 1),
-    (10935, 10083, 10357, 'Cancelled', 'CE - Review database tables for Deal vs Issuer after June conference', 'Two years later, this is not done, so clearly not important.
+    (10935, 10083, 10357, 'Cancelled', 'CE - Review database tables for Deal vs Issuer after June conference', 'Two years later, this is not done, so clearly not important.
 CE app will be retired shortly to be replaced by improved CE data from ABSNet', NULL, 10010, 10010, timestamptz '2010-05-27T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-04-18T20:47:26.450', true, 185),
     (10936, 10225, 10357, 'Closed', 'CE - Make use of PerformanceDataLib', '', NULL, 10018, 10010, timestamptz '2010-07-28T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 1004),
     (10937, 10060, 10357, 'Low', 'CE - Design override GUI', '', NULL, 10010, 10010, timestamptz '2010-08-13T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 467),
@@ -1898,10 +1904,10 @@ CE app will be retired shortly to be replaced by improved CE data from ABSNet', 
     (10800, 10225, 10171, 'Closed', 'Investigate duplicate fixings', NULL, NULL, 10005, 10010, timestamptz '2009-05-21T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-11-18T00:00:00', false, 226),
     (11797, 10070, 10220, 'Closed', 'Call ComInit when Fingal Proxy is instanciated.', '', NULL, 10010, 10010, timestamptz '2011-07-06T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-06T00:00:00', false, 100),
     (11798, 10144, 10385, 'Closed', 'Create PID document and link to PPM', 'For PMO', NULL, 10010, 10010, timestamptz '2011-07-06T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-07-11T00:00:00', false, 0),
-    (11817, 10219, 10309, 'Med', 'Add  ignore  and sleep snooze functionality', 'When user receive alerts, -
-1.Check for the issue and decide to ignore it as 
-a.Permanently: once marked as ignored in dashboard, it will disappear from alerts and user should not receive it again in future.
-b. For some period of time: the alert will go in snooze mode and user will not receive it again for the specified time. Once that time is elapsed, it will appear again on dashboard/alert mails. When user decide to ignore/snooze alert, how about a field for him to enter some comment? It will be useful in future, if he want to know why he decided to ignore it. This is not critically required for static data alerts so we can skip this in initial release but will be important for dynamic data related alerts.
+    (11817, 10219, 10309, 'Med', 'Add  ignore  and sleep snooze functionality', 'When user receive alerts, -
+1.Check for the issue and decide to ignore it as 
+a.Permanently: once marked as ignored in dashboard, it will disappear from alerts and user should not receive it again in future.
+b. For some period of time: the alert will go in snooze mode and user will not receive it again for the specified time. Once that time is elapsed, it will appear again on dashboard/alert mails. When user decide to ignore/snooze alert, how about a field for him to enter some comment? It will be useful in future, if he want to know why he decided to ignore it. This is not critically required for static data alerts so we can skip this in initial release but will be important for dynamic data related alerts.
 ', NULL, 10010, 10012, timestamptz '2011-07-15T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'InProgress', timestamptz '2012-05-11T15:40:43.357', false, 44),
     (11921, 10105, 10289, 'Closed', 'Trade blotter should not write BloombergName, Currency and Sector to the Trade table when the bond Id is known.', '', NULL, 10010, 10010, timestamptz '2011-09-15T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-24T00:00:00', false, 34),
     (11955, 10068, 10260, 'Closed', 'Mid Year Reviews - Dead Line 28th October', '', NULL, 10010, 10010, timestamptz '2011-09-24T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-11-29T00:00:00', false, 269),
@@ -1916,34 +1922,34 @@ b. For some period of time: the alert will go in snooze mode and user will not r
     (12035, 10079, 10299, 'Closed', 'Jira: EABS-008: Kensington rate changes - for the model', 'Needs to be part of re-estimation', NULL, 10002, 10010, timestamptz '2011-11-15T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-03T00:00:00', false, 268),
     (12076, 10121, 10380, 'Closed', 'Omit prices from feed if price is null', '', NULL, 10010, 10010, timestamptz '2012-01-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 236),
     (12077, 10060, 10380, 'Closed', 'Tidy up email to avoid excessive warnings', '', NULL, 10010, 10010, timestamptz '2012-01-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 281),
-    (12082, 10121, 10173, 'Closed', 'Refresh cashflows for paid off bonds', 'SQL below identifies bonds with problems.
-
-select bondid,  FactorDate into #fd
-from StaticData.BondsDynamic
-where CurrentFactor = 0
-
-select distinct cf.bondid
-from StaticData.BondCashFlows cf, #fd
-where #fd.bondid = cf.bondid
-and #fd.FactorDate < cf.FactorDate
+    (12082, 10121, 10173, 'Closed', 'Refresh cashflows for paid off bonds', 'SQL below identifies bonds with problems.
+
+select bondid,  FactorDate into #fd
+from StaticData.BondsDynamic
+where CurrentFactor = 0
+
+select distinct cf.bondid
+from StaticData.BondCashFlows cf, #fd
+where #fd.bondid = cf.bondid
+and #fd.FactorDate < cf.FactorDate
 and not cf.FactorValue = 0', NULL, 10010, 10010, timestamptz '2012-01-05T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-01-12T00:00:00', false, 241),
     (12083, 10058, 10173, 'Med', 'Move Cashflow generator to Autosys', '', NULL, 10010, 10010, timestamptz '2012-01-05T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-12T15:04:05.317', false, 424),
     (11966, 10083, 10289, 'Closed', 'Remove old Trade Blotter Audit tables and modify SPs accordingly', '', NULL, 10010, 10010, timestamptz '2011-10-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-31T00:00:00', false, 0),
     (11967, 10083, 10395, 'Closed', 'Remove old Audit functionality from Config DB', '', NULL, 10010, 10010, timestamptz '2011-10-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2011-10-28T00:00:00', false, 0),
     (11968, 10060, 10240, 'Closed', 'Get Autosys Warning set up for AVR Report', 'See CRQ000000159914', NULL, 10010, 10010, timestamptz '2011-10-04T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-11T00:00:00', false, 285),
-    (11969, 10083, 10389, 'Med', 'Unify deal trigger infomation. Figure out a plan', 'Deals DB has trigger tables put in place by Paramendra and I don''t believe these are maintained.
-There are also other trigger related tables in Deals DB and in Surveillance DB.
-Can we delete the Triggers in Deals DB?  I don''t they have ever been used.
+    (11969, 10083, 10389, 'Med', 'Unify deal trigger infomation. Figure out a plan', 'Deals DB has trigger tables put in place by Paramendra and I don''t believe these are maintained.
+There are also other trigger related tables in Deals DB and in Surveillance DB.
+Can we delete the Triggers in Deals DB?  I don''t they have ever been used.
 These need to be unified so there is a single, coherent source that can be effectively maintained.', NULL, 10010, 10010, timestamptz '2011-10-04T00:00:00', 5.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-01-27T09:17:25.623', false, 322),
     (11978, 10209, 10201, 'Closed', 'Minor fixes to Leek Loader', '', NULL, 10010, 10010, timestamptz '2011-10-12T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-21T07:03:19.610', false, 11),
-    (11979, 10209, 10197, 'MedHigh', 'Minor fixes to Kensington loader', 'Make the ''Mapping.xml'' embedded as a resource in the binary.
+    (11979, 10209, 10197, 'MedHigh', 'Minor fixes to Kensington loader', 'Make the ''Mapping.xml'' embedded as a resource in the binary.
 Make the log say how many how many rows are to be written as well as how many have been written.', NULL, 10010, 10010, timestamptz '2011-10-12T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-31T11:06:18.513', true, 247),
     (11980, 10073, 10189, 'Closed', 'Check for all curves being present in the market before pricing', 'Don''t run if yield curves are missing. If curves are not present, wait and retry every 5 mins.  After 2 hours fail. ', NULL, 10010, 10010, timestamptz '2011-10-12T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-12-06T00:00:00', false, 141),
     (11986, 10068, 10260, 'Cancelled', 'To participate in some form of appropriate training as described in GPM', 'Decided to take e-learning Securitization course.  Taking 1/4 of a day per week until the end of April.', NULL, 10010, 10010, timestamptz '2011-10-14T00:00:00', 5.0, 'PersonDays', 0.1, 'Other', 'Cancelled', timestamptz '2012-05-10T13:48:32.597', false, 430),
     (11987, 10068, 10260, 'MedHigh', 'To participate in some form of appropriate training as described in GPM', '', NULL, 10010, 10010, timestamptz '2011-10-14T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'InProgress', timestamptz '2012-05-11T08:27:31.290', false, 498),
     (10808, 10225, 10171, 'Closed', 'Add to call facility for extracting BBG cashflows', NULL, NULL, 10010, 10010, timestamptz '2009-07-31T00:00:00', 0.5, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-11-27T00:00:00', false, 235),
     (10809, 10225, 10171, 'Closed', 'Improve error message when BBG API is not present', NULL, NULL, 10010, 10010, timestamptz '2009-07-31T00:00:00', 0.5, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2010-02-09T00:00:00', false, 309),
-    (11991, 10070, 10322, 'Closed', 'Fix outstanding issues with BBG Bond Loader', '1) Make the BBG Loader report a ''Warning'' (rather than success) if there is an issues saving one or sets of data to the database.
+    (11991, 10070, 10322, 'Closed', 'Fix outstanding issues with BBG Bond Loader', '1) Make the BBG Loader report a ''Warning'' (rather than success) if there is an issues saving one or sets of data to the database.
 2) Check Static and Cashflow filter to make sure they are the same.  Currently there are cashflow requests being made for bonds that are not in the Static request.', NULL, 10010, 10010, timestamptz '2011-10-19T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-10-30T00:00:00', false, 188),
     (11994, 10105, 10174, 'Med', 'Specify template deal when creating new deals.', 'When creating from BBG, allow a template deal to be specified that will be used to copy data that cannot be retrieved from BBG.', NULL, 10024, 10010, timestamptz '2011-10-20T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 425),
     (12031, 10141, 10405, 'Closed', 'Review and deploy TreppDataMaintainer', '', NULL, 10010, 10010, timestamptz '2011-11-14T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-28T00:00:00', false, 122),
@@ -1959,7 +1965,7 @@ Make the log say how many how many rows are to be written as well as how many ha
     (12085, 10060, 10390, 'Closed', 'Find a way to make it easier to back out a complete file upload', '', NULL, 10010, 10010, timestamptz '2012-01-05T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-08T09:32:25.137', false, 293),
     (12086, 10123, 10271, 'Closed', 'Make first release of new Comment Viewer', '', NULL, 10010, 10010, timestamptz '2012-01-05T00:00:00', 6.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-18T20:37:07.967', false, 195),
     (12067, 10060, 10308, 'MedHigh', 'Produce a high level diagram to show all production processes and flows', '', NULL, 10010, 10010, timestamptz '2011-12-21T00:00:00', 3.0, 'PersonDays', 0.5, 'Support', 'NotStarted', timestamptz '2012-05-10T13:56:46.573', false, 421),
-    (12102, 10105, 10396, 'Closed', 'Allow multiple Rating on Matrix L2 rules', 'Allow a number of ratings to be specified with an implicit ''OR'' for matrix pricing level 2 rules.
+    (12102, 10105, 10396, 'Closed', 'Allow multiple Rating on Matrix L2 rules', 'Allow a number of ratings to be specified with an implicit ''OR'' for matrix pricing level 2 rules.
 Need to modify Pricing Batch too.', NULL, 10023, 10010, timestamptz '2012-01-11T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-12T00:00:00', false, 153),
     (10801, 10225, 10171, 'Closed', 'Make use of Bloomberg Bridge', NULL, NULL, 10010, 10010, timestamptz '2009-05-27T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-08T00:00:00', false, 63),
     (10802, 10225, 10171, 'Closed', 'Make Fixings editable', NULL, NULL, 10010, 10010, timestamptz '2009-06-11T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-03T00:00:00', false, 88),
@@ -2151,10 +2157,10 @@ Need to modify Pricing Batch too.', NULL, 10023, 10010, timestamptz '2012-01-11T
     (11404, 10225, 10282, 'Closed', 'Build app to retrieve BBG static data', NULL, NULL, 10010, 10010, timestamptz '2009-09-30T00:00:00', 4.0, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2010-01-06T00:00:00', false, 271),
     (11405, 10225, 10282, 'Closed', 'Retrieve 2,3,4,5 yrs GBP Swap rates', NULL, NULL, 10005, 10010, timestamptz '2009-10-23T00:00:00', 2.0, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-12-10T00:00:00', false, 246),
     (11406, 10225, 10282, 'Closed', 'Retrieve  BoE base rate', NULL, NULL, 10005, 10010, timestamptz '2009-09-30T00:00:00', 2.0, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-12-10T00:00:00', false, 246),
-    (11350, 10209, 10350, 'Med', 'Sheduled job to set DB permissions', 'There are two SPs on every DB ''dbo.SetReadOnlyPermissions'' and ''dbo.SetSupportPermissions''.
-
-These SP set the deskReadOnly and Support permissions on SPs, tables, etc.
-
+    (11350, 10209, 10350, 'Med', 'Sheduled job to set DB permissions', 'There are two SPs on every DB ''dbo.SetReadOnlyPermissions'' and ''dbo.SetSupportPermissions''.
+
+These SP set the deskReadOnly and Support permissions on SPs, tables, etc.
+
 The aim is to modify the SystemMaintainer to perform the same functionality as these two SPs, on each database.  That is, the SystemMaintainer should not calls these SPs, instead, it should carry out the same functionality.', NULL, 10010, 10010, timestamptz '2010-10-01T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-05-10T13:47:14', false, 29),
     (11351, 10225, 10271, 'Closed', 'Initial Design and plan', NULL, NULL, 10010, 10010, timestamptz '2009-07-07T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-31T00:00:00', false, 116),
     (11352, 10225, 10271, 'Closed', 'Test and Release', NULL, NULL, 10010, 10010, timestamptz '2009-07-31T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-08-03T00:00:00', false, 119),
@@ -2206,7 +2212,7 @@ The aim is to modify the SystemMaintainer to perform the same functionality as t
     (11399, 10063, 10280, 'Closed', 'Develop and release Nationwide House Price Data', '', NULL, 10003, 10010, timestamptz '2009-08-27T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-02-27T08:22:03.263', false, 101),
     (11400, 10225, 10280, 'Closed', 'Move Halifax HPA data to Surveillance DB', NULL, NULL, 10010, 10010, timestamptz '2009-09-01T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-03-02T00:00:00', false, 693),
     (11401, 10225, 10281, 'Closed', 'Add ECB Data', NULL, NULL, 10003, 10010, timestamptz '2009-09-30T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-10-13T00:00:00', false, 190),
-    (11402, 10073, 10281, 'Closed', 'Automate email to Research', 'Need to investigate requirement first to see if it is still required.
+    (11402, 10073, 10281, 'Closed', 'Automate email to Research', 'Need to investigate requirement first to see if it is still required.
 Sachin to review', NULL, 10010, 10010, timestamptz '2010-02-01T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-20T00:00:00', false, 114),
     (11403, 10225, 10244, 'Closed', 'Add TS facility for Granite', NULL, NULL, 10003, 10010, timestamptz '2009-07-31T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-08-04T00:00:00', false, 120),
     (11409, 10225, 10282, 'Closed', 'Retrieve 1m, 3m,6m,9m,12m LIBOR and BBR rate for GBP', NULL, NULL, NULL, 10010, timestamptz '2009-10-23T00:00:00', 2.0, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-12-10T00:00:00', false, 246),
@@ -2265,8 +2271,8 @@ Sachin to review', NULL, 10010, 10010, timestamptz '2010-02-01T00:00:00', 3.0, '
     (11461, 10225, 10295, 'Closed', 'Develop generic loan PDF file parsing approach', 'There is none.', NULL, 10021, 10010, timestamptz '2010-09-08T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-06T00:00:00', false, 1001),
     (11462, 10225, 10295, 'Closed', 'Intex deals are out of date', NULL, NULL, 10010, 10010, timestamptz '2010-11-22T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2010-12-14T00:00:00', false, 617),
     (11463, 10225, 10295, 'Closed', 'Download INE population statistics ', NULL, NULL, 10005, 10010, timestamptz '2010-11-22T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2010-11-30T00:00:00', false, 595),
-    (11464, 10095, 10389, 'Closed', 'Determine initial CMBS plan', 'Plan seems to be:-
-1) Expand Deals DB to better cope with CMBS deals
+    (11464, 10095, 10389, 'Closed', 'Determine initial CMBS plan', 'Plan seems to be:-
+1) Expand Deals DB to better cope with CMBS deals
 2) Build a filtering mechanism to identify interesting news items', NULL, 10003, 10010, timestamptz '2009-11-03T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-30T00:00:00', false, 77),
     (11465, 10225, 10297, 'Closed', 'Download Trepp data', NULL, NULL, 10003, 10010, timestamptz '2010-02-10T00:00:00', 0.5, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2010-02-10T00:00:00', false, 310),
     (11466, 10225, 10297, 'Closed', 'Analyse Trepp Data', NULL, NULL, 10010, 10010, timestamptz '2010-02-10T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-08-16T00:00:00', false, 496),
@@ -2336,7 +2342,7 @@ Sachin to review', NULL, 10010, 10010, timestamptz '2010-02-01T00:00:00', 3.0, '
     (11530, 10225, 10310, 'Closed', 'Support Tool - Incorporate comments from group review', NULL, NULL, 10010, 10010, timestamptz '2010-04-13T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-05-05T00:00:00', false, 378),
     (11531, 10225, 10310, 'Closed', 'Support Tool - Release GUI and Batch to Prod', NULL, NULL, 10010, 10010, timestamptz '2010-05-06T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-06-24T00:00:00', false, 395),
     (11532, 10225, 10311, 'Closed', 'Determine how to make loan loading monitoring effective', NULL, NULL, 10010, 10010, timestamptz '2011-01-20T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-02-16T00:00:00', false, 679),
-    (11533, 10220, 10309, 'Med', 'EffectiveLoanLoading: Modifications to DashBoard GUI and batch', 'Discuss with Ruth
+    (11533, 10220, 10309, 'Med', 'EffectiveLoanLoading: Modifications to DashBoard GUI and batch', 'Discuss with Ruth
 Need to make sure the Dashboard clearly shows what needs to be done.', NULL, 10010, 10010, timestamptz '2011-02-16T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-25T14:50:42.363', false, 27),
     (11534, 10225, 10418, 'Closed', 'Collect comments and implement fixes', NULL, NULL, 10010, 10010, timestamptz '2009-06-11T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-07-14T00:00:00', false, 99),
     (11535, 10225, 10396, 'Closed', 'Editor - Make first implementation - L1 Matrix', NULL, NULL, 10010, 10010, timestamptz '2009-06-11T00:00:00', NULL, 'PersonDays', 1.0, NULL, 'Closed', timestamptz '2009-06-19T00:00:00', false, 74),
@@ -2384,7 +2390,7 @@ Need to make sure the Dashboard clearly shows what needs to be done.', NULL, 100
     (11577, 10180, 10342, 'Closed', 'Compare Blotter and matrix/markit prices and alert: Gather requirements', 'This is what the AVR does, essentially.', NULL, 10023, 10010, timestamptz '2010-10-15T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-27T06:08:52.350', false, 315),
     (11578, 10051, 10329, 'Closed', 'SaveOpeningRuns: Gather requirements', NULL, NULL, 10023, 10010, timestamptz '2010-11-01T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-11-01T00:00:00', false, 1),
     (11579, 10051, 10329, 'Closed', 'SaveOpeningRuns: Build app to save runs from email', NULL, NULL, 10023, 10010, timestamptz '2010-11-01T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2010-12-07T00:00:00', false, 36),
-    (11580, 10071, 10329, 'Closed', 'Fixes to OpeningRuns App', 'When attachment ''FW Nomura ABS Opening Markets - 10 September 2010.msg'', is dragged and dropped onto the Opening Runs collector.  A number lines in the file are not parsed correctly.
+    (11580, 10071, 10329, 'Closed', 'Fixes to OpeningRuns App', 'When attachment ''FW Nomura ABS Opening Markets - 10 September 2010.msg'', is dragged and dropped onto the Opening Runs collector.  A number lines in the file are not parsed correctly.
 This task is to allow all of the lines to be parsed correctly.', NULL, 10023, 10010, timestamptz '2010-12-07T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-04-21T00:00:00', false, 23),
     (11581, 10225, 10329, 'Closed', 'Opening Runs Code Review', NULL, NULL, 10010, 10010, timestamptz '2011-02-16T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-03-08T00:00:00', false, 700),
     (11582, 10180, 10342, 'MedLow', 'OpeningRunsGUI: Requirements, Design and Plan', 'A new GUI (or extension to TradeBlotter) that allows traders to enter opening runs and these to be sent to Bloomberg', NULL, 10010, 10010, timestamptz '2010-11-01T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 625),
@@ -2395,10 +2401,10 @@ This task is to allow all of the lines to be parsed correctly.', NULL, 10023, 10
     (11588, 10225, 10332, 'Closed', 'AVR: Release', NULL, NULL, 10010, 10010, timestamptz '2011-02-15T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-02-15T00:00:00', false, 679),
     (11589, 10225, 10332, 'Closed', 'Gather requirements', 'Lost requirement', NULL, 10023, 10010, timestamptz '2010-10-26T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-08-30T00:00:00', false, 874),
     (11804, 10105, 10332, 'MedLow', 'Skip covered bonds', '', NULL, 10010, 10010, timestamptz '2011-07-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 476),
-    (11805, 10108, 10373, 'Closed', 'Modify rule ESAILPopulateMissingInterestRateIndex', 'Implented. PD2 ran this in prod. Need to re-release by correcting version no.
+    (11805, 10108, 10373, 'Closed', 'Modify rule ESAILPopulateMissingInterestRateIndex', 'Implented. PD2 ran this in prod. Need to re-release by correcting version no.
 ', NULL, 10002, 10010, timestamptz '2011-07-13T00:00:00', 0.25, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-20T00:00:00', false, 130),
     (11806, 10096, 10377, 'MedHigh', 'Check the build status of all apps', '', NULL, 10010, 10010, timestamptz '2011-07-13T00:00:00', 0.5, 'PersonDays', 1.0, 'Infrastructure', 'NotStarted', timestamptz '2012-03-22T10:20:50.377', false, 412),
-    (11590, 10071, 10329, 'Closed', 'AVR: Handle shelf names from the runs sheet', 'The opening runs collector needs to be able to parse lines the refer to whole shelfs.
+    (11590, 10071, 10329, 'Closed', 'AVR: Handle shelf names from the runs sheet', 'The opening runs collector needs to be able to parse lines the refer to whole shelfs.
 For these, the opening runs collector needs to translate each single ''shelf'' line into many (one for each bond) records.  The bonds related to each shelf line are all bonds, that are not paid off, that have the same original rating (need to check whether this is original or current rating) as indicated on the shelf line in the input file.', NULL, 10023, 10010, timestamptz '2011-03-16T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-04-21T00:00:00', false, 22),
     (11591, 10225, 10337, 'Closed', 'Define approach', NULL, NULL, 10003, 10010, timestamptz '2010-12-07T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2010-03-09T00:00:00', false, 336),
     (11592, 10077, 10337, 'Low', 'Produce detailed plan', '', NULL, 10003, 10010, timestamptz '2010-12-07T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 38),
@@ -2409,20 +2415,20 @@ For these, the opening runs collector needs to translate each single ''shelf'' l
     (11682, 10066, 10289, 'Closed', 'Add David West as a user', 'Lisa Jaycock is already a user', NULL, 10010, 10010, timestamptz '2011-05-04T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-05-05T00:00:00', false, 0),
     (11766, 10145, 10357, 'Closed', 'Get users / Ajay to fix CE issues', 'Get users to take responsibilty for fixing the issues listed on the CE generated email in a timely fashion.  Currently the issue contains many warning messages.', NULL, 10010, 10010, timestamptz '2011-06-17T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-01-05T00:00:00', false, 0),
     (11768, 10059, 10226, 'Closed', 'Get Purify Working again', '', NULL, 10010, 10010, timestamptz '2011-06-23T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-07-13T00:00:00', false, 110),
-    (11769, 10083, 10225, 'Closed', 'BBS migration - modify wrapper and applications', 'Need to:-
-1) Make reference to the new BBS server names, (e.g. ''bbsprd.nomura.com'' rather than ''us0227'') - Waiting for confirmation this is supported.
-
+    (11769, 10083, 10225, 'Closed', 'BBS migration - modify wrapper and applications', 'Need to:-
+1) Make reference to the new BBS server names, (e.g. ''bbsprd.nomura.com'' rather than ''us0227'') - Waiting for confirmation this is supported.
+
 2) Consider if we put support for BBS DEV and UAT environments to BBSWrapper - Done.', NULL, 10010, 10010, timestamptz '2011-06-23T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-02-03T12:26:17.333', false, 120),
     (11793, 10108, 10386, 'Closed', 'Reload all loan data on QA after copy from Prod', 'To allow Danny to do a diff.', NULL, 10010, 10010, timestamptz '2011-07-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-07-13T00:00:00', false, 35),
     (11795, 10058, 10383, 'Closed', 'Deploy to Autosys', 'Need to discuss email attached.', NULL, 10010, 10010, timestamptz '2011-07-05T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-10T00:00:00', false, 111),
-    (11799, 10123, 10174, 'Med', 'Improvements suggested by Erik #2', '1) See email 7-Jul-2011
+    (11799, 10123, 10174, 'Med', 'Improvements suggested by Erik #2', '1) See email 7-Jul-2011
 2) Format the ''OrigAmont'' on the Deal screen to make it more readble, e.g., 10000000 -> 10,000,000 and right alignment', NULL, 10010, 10010, timestamptz '2011-07-07T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-19T17:48:21.217', false, 424),
     (11800, 10068, 10260, 'Closed', 'Get Desk for Nick', '', NULL, 10010, 10010, timestamptz '2011-07-07T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-07-15T00:00:00', false, 190),
     (11801, 10083, 10224, 'Cancelled', 'Add generic calling mechanism for variable parameter.', 'Use the implementation of ''MktLoadFromDatabase'' and ''MktLoadFromDatabaseForTrade'' as an example.  These two methods can be deleted and replaced with a wholly generic one.', NULL, 10010, 10010, timestamptz '2011-07-08T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 95),
     (11802, 10073, 10371, 'Closed', 'Modify Autosys batch scripts to identify log files and be more modular', '', NULL, 10010, 10010, timestamptz '2011-07-08T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-07-26T00:00:00', false, 57),
     (11803, 10078, 10259, 'Cancelled', 'Meet with Peter Bartlet re Fingal issues', 'Clearly not that important.', NULL, 10010, 10010, timestamptz '2011-07-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Cancelled', timestamptz '2012-03-23T13:13:08.780', false, 78),
-    (11810, 10140, 10341, 'Cancelled', 'Implement automated BVAL feed.', 'Waiting for go ahead from David
-Assume this will not happen (30-Aug-2011)
+    (11810, 10140, 10341, 'Cancelled', 'Implement automated BVAL feed.', 'Waiting for go ahead from David
+Assume this will not happen (30-Aug-2011)
 Cancelled - Jan 2012', NULL, 10003, 10010, timestamptz '2011-07-14T00:00:00', 6.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 172),
     (11811, 10068, 10389, 'Closed', 'Plan model tasks in more detail', '', NULL, 10010, 10010, timestamptz '2011-07-14T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-09-24T00:00:00', false, 203),
     (11812, 10068, 10260, 'Closed', 'Chase outstanding PP tasks', '', NULL, 10010, 10010, timestamptz '2011-07-14T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-04-25T14:52:45.270', false, 443),
@@ -2432,18 +2438,18 @@ Cancelled - Jan 2012', NULL, 10003, 10010, timestamptz '2011-07-14T00:00:00', 6.
     (11818, 10205, 10381, 'Med', 'Modify to show previous day''s prices and difference with today''s prices.', 'See Ruth', NULL, 10018, 10010, timestamptz '2011-07-15T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-27T14:50:47.643', true, 2),
     (11820, 10225, 10197, 'Closed', 'Remove RMS 17 and 18 from loan loading batches', '', NULL, 10010, 10010, timestamptz '2011-07-18T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2011-10-10T00:00:00', false, 877),
     (11830, 10058, 10350, 'Closed', 'Migrate to Autosys', '', NULL, 10010, 10010, timestamptz '2011-07-21T00:00:00', 2.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2011-09-06T00:00:00', false, 103),
-    (11831, 10093, 10299, 'MedLow', 'Interest Adjustment Vectors', 'Not in production as it needs the Severity model to be implemented in order to be effective (22Jul''11)
-Implemented but enabled.
-Couple of lines commented out
+    (11831, 10093, 10299, 'MedLow', 'Interest Adjustment Vectors', 'Not in production as it needs the Severity model to be implemented in order to be effective (22Jul''11)
+Implemented but enabled.
+Couple of lines commented out
 ', NULL, 10002, 10010, timestamptz '2011-07-22T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Ready', timestamptz '2012-01-27T14:48:11.390', true, 576),
     (11832, 10093, 10299, 'Closed', 'Triggers Phase 2 - adding Delq figures to the triggers section of the pss file', 'DQ measures on deal level vectors', NULL, 10002, 10010, timestamptz '2011-07-22T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2011-11-15T00:00:00', false, 173),
     (11833, 10093, 10299, 'MedLow', 'Severity model', 'Severity model: skeleton (the flat  40% severity, but with dynamic  interest rate adjustment (i.e. no model...) ', NULL, 10002, 10010, timestamptz '2011-07-22T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 599),
     (11834, 10093, 10299, 'MedLow', 'Aggregation - higher compression', 'Aggregation: more parameterize/ test compressing more: esail – compress more', NULL, 10002, 10010, timestamptz '2011-07-22T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-01-06T00:00:00', false, 585),
-    (11836, 10140, 10260, 'Cancelled', 'Determine requirements', 'David + Co need to think about whether this goes any further (Aug 9- 2011)
+    (11836, 10140, 10260, 'Cancelled', 'Determine requirements', 'David + Co need to think about whether this goes any further (Aug 9- 2011)
 Cancelled - Jan 2012', NULL, 10003, 10010, timestamptz '2011-07-25T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-01-06T00:00:00', false, 79),
     (11837, 10150, 10315, 'MedLow', 'Simplify maintaining client data', 'Find a way to make it easier to maintain the list of client people and client organisations.', NULL, 10003, 10010, timestamptz '2011-07-27T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-08T00:00:00', false, 13),
     (11838, 10105, 10289, 'Closed', 'Limit reports by data range', '', NULL, 10031, 10010, timestamptz '2011-07-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2011-10-24T00:00:00', false, 0),
-    (11839, 10093, 10299, 'MedLow', 'Run a custom set of loans through the model', 'E.g., a set of replines for a deal that we don''t have loan level data.
+    (11839, 10093, 10299, 'MedLow', 'Run a custom set of loans through the model', 'E.g., a set of replines for a deal that we don''t have loan level data.
 Allow user to specifiy this set of loans', NULL, 10010, 10010, timestamptz '2011-07-27T00:00:00', 10.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-27T09:17:02.980', false, 585),
     (11840, 10059, 10226, 'Closed', 'Develop release check list', '', NULL, 10010, 10010, timestamptz '2011-07-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-11-14T00:00:00', false, 134),
     (11841, 10068, 10260, 'Closed', 'Try using Jira for CoveredBondsDatabase Project', '', NULL, 10010, 10010, timestamptz '2011-07-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2011-09-22T00:00:00', false, 210),
@@ -2461,34 +2467,34 @@ Allow user to specifiy this set of loans', NULL, 10010, 10010, timestamptz '2011
     (12116, 10189, 10289, 'Closed', 'Add Xtrakter Report', 'This report shows Xtrakter trades listed by date, but only for those bonds that have been ever been an actual trade according to Trade Blotter.', NULL, 10007, 10010, timestamptz '2012-01-17T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-23T13:31:02.717', false, 0),
     (12117, 10189, 10289, 'Closed', 'Summary report of what happended yesterday ot trade we own', 'This can be done on position report by sorting by Xtrakter trade date.', NULL, 10007, 10010, timestamptz '2012-01-17T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-18T14:46:43.013', false, 0),
     (12118, 10189, 10289, 'Closed', 'Add Xtrakter history to Position Report', '', NULL, 10007, 10010, timestamptz '2012-01-17T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-18T14:44:49.763', false, 1),
-    (12119, 10183, 10391, 'Med', 'Use forward curves in DSAG', 'Needed to make NWGT0601, NWGT0602 work.
+    (12119, 10183, 10391, 'Med', 'Use forward curves in DSAG', 'Needed to make NWGT0601, NWGT0602 work.
 This comes after curved curves are using by MatrixPricing / DealsDBMaintainer', NULL, 10002, 10010, timestamptz '2012-01-17T00:00:00', 10.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-18T12:20:18.037', false, 3),
     (12125, 10189, 10289, 'Closed', 'Add ability to query Xtrakter DB', '', NULL, 10010, 10010, timestamptz '2012-01-18T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-23T13:31:08.150', false, 1),
     (12126, 10133, 10353, 'Closed', 'Make DBUtils a GUI app for the dev team', '', NULL, 10010, 10010, timestamptz '2012-01-19T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-14T08:14:30.620', false, 261),
-    (12114, 10173, 10389, 'MedHigh', 'Figure out plan', 'Need to share ''real'' trades from Blotter with appropriate sales people.
+    (12114, 10173, 10389, 'MedHigh', 'Figure out plan', 'Need to share ''real'' trades from Blotter with appropriate sales people.
 Also need a client oriented view for Sales People.', NULL, 10010, 10010, timestamptz '2012-01-16T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-02-21T13:46:57.543', false, 142),
     (12127, 10188, 10389, 'Closed', 'Understand requirements', 'See attachment ''Requirement.docx'' attached to the Project itself.', NULL, 10010, 10010, timestamptz '2012-01-19T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-02-21T13:40:56.327', false, 4),
     (12128, 10188, 10389, 'Closed', 'Determine Plan', 'Add Tasks to Project Pal to reflect the work to be done.', NULL, 10010, 10010, timestamptz '2012-01-19T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-02-21T13:41:00.343', false, 4),
     (12120, 10190, 10391, 'Closed', 'Quick hack to allow SVR rates for NewGate deals', 'NWGT0601, NWGT0602 ', NULL, 10010, 10010, timestamptz '2012-01-18T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-27T16:43:04.073', false, 245),
     (12121, 10190, 10391, 'Closed', 'Disable ESAIL in DSAG', '', NULL, 10010, 10010, timestamptz '2012-01-18T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-01-30T13:00:07.950', false, 246),
-    (12122, 10105, 10391, 'MedLow', 'Enhancements for ESAIL', 'ESAIL requires 2 calculations.
-1) Calculate for settle date as at Feb 2009
+    (12122, 10105, 10391, 'MedLow', 'Enhancements for ESAIL', 'ESAIL requires 2 calculations.
+1) Calculate for settle date as at Feb 2009
 2) Calculate for current settle date', NULL, 10002, 10010, timestamptz '2012-01-18T00:00:00', 10.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-01-18T12:32:06.020', false, 464),
     (12123, 10142, 10389, 'Med', 'Plan suitable development', '', NULL, 10010, 10010, timestamptz '2012-01-18T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Tentative', timestamptz '2012-04-25T12:50:56.690', false, 285),
     (12124, 10188, 10389, 'Closed', 'Determine Plan', 'The plan is for Paresh to figure out the plan according the requirements.', NULL, 10010, 10010, timestamptz '2012-01-18T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-19T11:34:52.497', false, 0),
     (12132, 10070, 10173, 'Closed', 'Investigate cause of exception.', 'Fix all errors and exceptions from DealsDBMaintainer', NULL, 10010, 10010, timestamptz '2012-01-24T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-02-27T09:11:52.713', false, 327),
     (12133, 10121, 10289, 'Closed', 'Fix bug in Flex Grid where Ctrl-C copied hidden rows to the clipboard', '', NULL, 10007, 10010, timestamptz '2012-01-24T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-01-25T13:42:11.533', false, 257),
-    (12134, 10121, 10289, 'Closed', 'Xtrakter data not shown for some bonds.', 'Fix problem where Corp bonds that are in Extractor, but not in DealsDB are not shown on Extrakter query form.
-
+    (12134, 10121, 10289, 'Closed', 'Xtrakter data not shown for some bonds.', 'Fix problem where Corp bonds that are in Extractor, but not in DealsDB are not shown on Extrakter query form.
+
 Example: XS0273564434', NULL, 10007, 10010, timestamptz '2012-01-24T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-01-25T13:42:16.050', false, 257),
-    (12135, 10192, 10364, 'Closed', 'Adjust Month End Dates in Halifax HPI', 'In the databases, the month Ends are Feb, May, Aug, Nov.  But they should be Mar, Jun,Sep, Dec.
-
-This is for the tables :-
-a) HPAIndexData.Halifax_AllMonNSA  and  
-b) HPAIndexData.Halifax_AllMonSA
-
-It also affects the interpolated data in the tables 
-c) HPAIndexData.Halifax_MonthlyRegionalIndexNSA and 
+    (12135, 10192, 10364, 'Closed', 'Adjust Month End Dates in Halifax HPI', 'In the databases, the month Ends are Feb, May, Aug, Nov.  But they should be Mar, Jun,Sep, Dec.
+
+This is for the tables :-
+a) HPAIndexData.Halifax_AllMonNSA  and  
+b) HPAIndexData.Halifax_AllMonSA
+
+It also affects the interpolated data in the tables 
+c) HPAIndexData.Halifax_MonthlyRegionalIndexNSA and 
 d) HPAIndexData.Halifax_MonthlyRegionalIndexSA', NULL, 10023, 10010, timestamptz '2012-01-24T00:00:00', 4.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-02-24T14:52:23.280', true, 0),
     (12136, 10172, 10332, 'Closed', 'Add Xtrakter Rule', '', NULL, 10010, 10010, timestamptz '2012-01-24T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-01-31T08:17:45.223', false, 30),
     (12143, 10221, 10195, 'Med', 'Loader for Lanark', 'Develop new Loader for Lanark', NULL, 10012, 10012, timestamptz '2012-01-31T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-09T07:35:45.970', true, 24),
@@ -2496,18 +2502,18 @@ d) HPAIndexData.Halifax_MonthlyRegionalIndexSA', NULL, 10023, 10010, timestamptz
     (12204, 10209, 10350, 'Med', 'Add check that XML feed to Radial is working.', '', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-08T11:25:21.423', false, 260),
     (12205, 10123, 10271, 'Closed', 'Review new CommentsViewer', '', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-02T08:12:14.783', false, 183),
     (12206, 10081, 10371, 'Med', 'Create Asset Info section in PSS', '', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-01T17:44:56.510', false, 389),
-    (12140, 10116, 10195, 'Closed', 'Standardize columns in the uk prime database and modify loaders', 'Standardixe uk prime column names and modifiy sp and loaders to handle the change -
-
-Comments - March 07, 2011
-The standardized columns names are documented at 
-http://eusvnf.nomura.com:7100/SVF/repos/ABSEurope/trunk/ABSEuropeSystemFiles/RawLoanData/UKPrimeData/UKPrimeLoans_StandardizedColumnNames.xlsx
-
-- Modification of loaders to work with standardization will be tackled in separate tasks
-one for each loader
+    (12140, 10116, 10195, 'Closed', 'Standardize columns in the uk prime database and modify loaders', 'Standardixe uk prime column names and modifiy sp and loaders to handle the change -
+
+Comments - March 07, 2011
+The standardized columns names are documented at 
+http://eusvnf.nomura.com:7100/SVF/repos/ABSEurope/trunk/ABSEuropeSystemFiles/RawLoanData/UKPrimeData/UKPrimeLoans_StandardizedColumnNames.xlsx
+
+- Modification of loaders to work with standardization will be tackled in separate tasks
+one for each loader
 ', NULL, 10012, 10012, timestamptz '2012-01-27T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'Closed', timestamptz '2012-03-07T06:21:16.523', false, 235),
     (12141, 10133, 10231, 'MedLow', 'Figure out C++ issues on Production server', '', NULL, 10010, 10010, timestamptz '2012-01-27T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-02-23T07:56:14.600', false, 519),
-    (12142, 10116, 10195, 'Closed', 'Write a new loader for Arran Uk Prime Deal', 'Write a new loader for Arran UK Prime deal-
-
+    (12142, 10116, 10195, 'Closed', 'Write a new loader for Arran Uk Prime Deal', 'Write a new loader for Arran UK Prime deal-
+
 Refer task 2311', NULL, 10012, 10012, timestamptz '2012-01-30T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-30T15:27:00.743', false, 294),
     (12144, 10221, 10195, 'Med', 'Develop Loader for Lannraig', 'Develop Loader for Lannraig ', NULL, 10012, 10012, timestamptz '2012-01-31T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-30T15:27:21.027', true, 30),
     (12145, 10221, 10195, 'Med', ' Loader 7 - Silk Road ', 'Develop loader for  Silk Road (Two deals - Silk Road 1 and Silk Road 2)', NULL, 10012, 10012, timestamptz '2012-01-31T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-30T15:32:55.167', true, 6),
@@ -2515,12 +2521,12 @@ Refer task 2311', NULL, 10012, 10012, timestamptz '2012-01-30T00:00:00', 4.0, 'P
     (12151, 10081, 10371, 'MedHigh', 'Modify model output to be more robust', 'Need to copy good / current output files to the ''Strategy'' output area.', NULL, 10010, 10010, timestamptz '2012-01-31T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-26T09:05:29.740', false, 403),
     (12301, 10209, 10350, 'MedHigh', 'Script triggers to SVN', '', NULL, 10010, 10010, timestamptz '2012-04-21T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'InProgress', timestamptz '2012-04-27T13:16:29.307', false, 23),
     (12302, 10209, 10174, 'Med', 'Make GUI demand that a value for Bond to Deal FX Rate is specified', '', NULL, 10010, 10010, timestamptz '2012-04-21T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-21T06:53:23.047', false, 203),
-    (12152, 10105, 10416, 'MedLow', 'Consolidate Xtrakter Data', 'There is a lot of repitition in the Xtrakter Data.
-Need to find a more consolidated way to hold and use this, 
+    (12152, 10105, 10416, 'MedLow', 'Consolidate Xtrakter Data', 'There is a lot of repitition in the Xtrakter Data.
+Need to find a more consolidated way to hold and use this, 
 e.g., may be two tables, one for quotes, one for trades, each is only updated when there is new information.', NULL, 10010, 10010, timestamptz '2012-01-31T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-20T14:53:38.473', false, 409),
     (12157, 10195, 10409, 'Med', 'Design and develop Cheat Sheet generator appliaction # 3', '', NULL, 10010, 10010, timestamptz '2012-02-08T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-02-08T15:34:05.413', true, 29),
-    (12158, 10196, 10391, 'Closed', 'Calculate Deal Level Cum Loss', 'the cumloss we report now is until the bond pays off
-there is also one for the entire deal
+    (12158, 10196, 10391, 'Closed', 'Calculate Deal Level Cum Loss', 'the cumloss we report now is until the bond pays off
+there is also one for the entire deal
 ', NULL, 10002, 10010, timestamptz '2012-02-08T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-10T17:13:30.633', false, 179),
     (12129, 10192, 10382, 'Med', 'Better handle cases where Index LTV cannot be calculated', '', NULL, 10010, 10010, timestamptz '2012-01-23T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-07-16T06:27:44.043', false, 81),
     (12130, 10070, 10173, 'Closed', 'Figure out why DealsDBMaintainer is running for so long', '', NULL, 10010, 10010, timestamptz '2012-01-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-03-16T13:39:13.283', false, 341),
@@ -2528,27 +2534,27 @@ there is also one for the entire deal
     (12138, 10193, 10389, 'Closed', 'Plan to resolve LEEK data format issues', '', NULL, 10010, 10010, timestamptz '2012-01-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-02-29T10:47:43.217', false, 0),
     (12139, 10116, 10390, 'Closed', 'Modify UK Prime loaders to include missing Non-Null Columns', 'Some columns that have values in the uk prime loan tapes  have not been added to the tables created in the DB. Task involves identifying all the columns that have been missed for all the 11 deals/Master trusts, adding them to the database and then modifying the loader to load the new columns.', NULL, 10012, 10012, timestamptz '2012-01-27T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-02T09:59:50.407', false, 220),
     (12147, 10068, 10262, 'Closed', 'Renew SAS License 2012', '', NULL, 10010, 10010, timestamptz '2012-01-31T00:00:00', 1.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-04-02T08:40:57.420', false, 451),
-    (12213, 10203, 10406, 'Closed', 'LoanLoaderFosse - Modify to work with Boe Data Library', 'Modify the loader to work with the new classes in the BoeData Library.
-
+    (12213, 10203, 10406, 'Closed', 'LoanLoaderFosse - Modify to work with Boe Data Library', 'Modify the loader to work with the new classes in the BoeData Library.
+
 Rectify out of memory issues', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-20T08:52:41.503', false, 0),
     (12277, 10202, 10197, 'Closed', 'Fix Kensington loader for hidden Excel rows', '', NULL, 10010, 10010, timestamptz '2012-04-10T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-04-21T07:01:37.530', false, 38),
-    (12148, 10189, 10289, 'Closed', 'Add Xtrakter Trades to Trade Blotter main form', 'The aim is for all Xtrakter Trades for bonds listed in Deals DB, to be listed on the main blotter form.
-So there are now three types of trades:-
-1) Real Nomura Trades
-2) Colour Nomura Trades
-3) Xtrakter Trades.
-
-Xtrakter Trades will be read only.
-
-There shall be a toggle of some description to show all Xtrakter trades or hide them.  The default will be that they are hidden.
-
+    (12148, 10189, 10289, 'Closed', 'Add Xtrakter Trades to Trade Blotter main form', 'The aim is for all Xtrakter Trades for bonds listed in Deals DB, to be listed on the main blotter form.
+So there are now three types of trades:-
+1) Real Nomura Trades
+2) Colour Nomura Trades
+3) Xtrakter Trades.
+
+Xtrakter Trades will be read only.
+
+There shall be a toggle of some description to show all Xtrakter trades or hide them.  The default will be that they are hidden.
+
 The main body of the existing Trade Blotter code should be disturbed as little as possible.', NULL, 10005, 10010, timestamptz '2012-01-31T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-10T10:11:29.347', false, 69),
     (12159, 10196, 10409, 'Med', 'Add Deal Cum Loss to Cheat Sheet Report', '', NULL, 10010, 10010, timestamptz '2012-02-08T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-19T15:10:27.693', false, 0),
     (12163, 10209, 10379, 'Med', 'Modify ''Warning'' email to give more detail.', '', NULL, 10010, 10010, timestamptz '2012-02-09T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-02-09T08:23:47.167', true, 259),
-    (12166, 10217, 10405, 'Med', 'Modify Trepp Loaders to assign LoanParts', 'Modify Trepp Loaders to create and populate LoanParts in the DealsDB correctly.
-
-It seems the LoanParts may need to have an explicit ''trepp id'' field on it.
-
+    (12166, 10217, 10405, 'Med', 'Modify Trepp Loaders to assign LoanParts', 'Modify Trepp Loaders to create and populate LoanParts in the DealsDB correctly.
+
+It seems the LoanParts may need to have an explicit ''trepp id'' field on it.
+
 It looks like there is some functionality in the TreppFileLoader to do this, but that is probably the wrong place and it should be in the TreppDataMaintainer.', NULL, 10010, 10010, timestamptz '2012-02-10T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-20T14:45:31.607', false, 20),
     (12207, 10204, 10419, 'Med', 'Modify config to come from ABSConfig', 'See PP 2218 for how to do this.', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-04-11T12:05:11.180', false, 243),
     (12300, 10209, 10320, 'Closed', 'Improvements to logging', '', NULL, 10021, 10010, timestamptz '2012-04-21T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-05-02T10:12:58.333', false, 21),
@@ -2558,22 +2564,22 @@ It looks like there is some functionality in the TreppFileLoader to do this, but
     (12170, 10083, 10348, 'Closed', 'Remove Readers from Constructors', 'Remove IDataReader constructors and replaces with explicit parameterised constructors.', NULL, 10010, 10010, timestamptz '2012-02-14T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-02T13:14:17.120', false, 168),
     (12174, 10105, 10289, 'Closed', 'Hide Colour trades and columns for Product Control users', '', NULL, 10010, 10010, timestamptz '2012-02-21T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-21T14:35:21.710', false, 192),
     (12187, 10179, 10404, 'Closed', 'Prevent non-European Trepp data in DB', '', NULL, 10010, 10010, timestamptz '2012-02-27T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-02-29T11:55:37.430', false, 40),
-    (12188, 10217, 10404, 'Med', 'Modify Trepp archive file location', 'Need to modify the loader to use files from SVN and save the monthly snapshot file back to SVN.
-
-
-
---------
-The Trepp archive is currently ''\\Uk\data\prod\ABS_IT_Shared\Trepp\HistoricalDatafiles\'' which is a public read+write share.
-
-We need to move this to somewhere else, e.g., some where on the Prod readonly share ''\\Global.Nomura.Com\GM\EU\ABS_IT_AppData'' or in SVN.  Also we need to compress it.
-
+    (12188, 10217, 10404, 'Med', 'Modify Trepp archive file location', 'Need to modify the loader to use files from SVN and save the monthly snapshot file back to SVN.
+
+
+
+--------
+The Trepp archive is currently ''\\Uk\data\prod\ABS_IT_Shared\Trepp\HistoricalDatafiles\'' which is a public read+write share.
+
+We need to move this to somewhere else, e.g., some where on the Prod readonly share ''\\Global.Nomura.Com\GM\EU\ABS_IT_AppData'' or in SVN.  Also we need to compress it.
+
 The prod share ''\\Global.Nomura.Com\GM\EU\ABS_IT_AppData'' is currently not big enough to hold this data, so it will need to be expanded.', NULL, 10010, 10010, timestamptz '2012-02-27T00:00:00', 2.0, 'PersonDays', 1.0, 'Infrastructure', 'InProgress', timestamptz '2012-05-02T09:48:18.310', false, 0),
     (12271, 10209, 10422, 'MedLow', 'Consider none critical prod systems', '', NULL, 10002, 10010, timestamptz '2012-04-02T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'NotStarted', timestamptz '2012-04-25T14:15:13.450', false, 309),
     (12272, 10070, 10339, 'Med', 'Get SAS Enterprise guide 5.1', 'See PP 1752 for the previous SAS EG upgrade.', NULL, 10010, 10010, timestamptz '2012-04-02T00:00:00', 2.0, 'PersonDays', 0.5, 'Support', 'NotStarted', timestamptz '2012-04-26T06:30:03.243', false, 412),
     (12273, 10123, 10271, 'Closed', 'Comment View - UQAT', '', NULL, 10018, 10010, timestamptz '2012-04-02T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-17T15:20:35.840', false, 202),
-    (12191, 10169, 10220, 'Closed', 'Modify log class to limit the size of log files', 'To prevent a rogue process filling up the log file folder.
-If the log output for a process exceeds a certain size, the application will be forcibly terminated - (the log will state what has happened and why).
-Suggest as max size limit around 10MB.
+    (12191, 10169, 10220, 'Closed', 'Modify log class to limit the size of log files', 'To prevent a rogue process filling up the log file folder.
+If the log output for a process exceeds a certain size, the application will be forcibly terminated - (the log will state what has happened and why).
+Suggest as max size limit around 10MB.
 The max size may be changed by a config varaible, primarily to allow someone to run the app in DEBUG or TRACE mode, but also to cater for emergency situations.', NULL, 10010, 10010, timestamptz '2012-02-29T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-16T13:59:22.150', false, 160),
     (12192, 10201, 10414, 'Closed', 'Get disk space allocated', '', NULL, 10010, 10010, timestamptz '2012-02-29T00:00:00', 0.5, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-03-14T07:25:54.670', false, 0),
     (12193, 10201, 10414, 'Closed', 'Get network shares set up', '', NULL, 10010, 10010, timestamptz '2012-02-29T00:00:00', 0.5, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-03-14T07:29:08.880', false, 0),
@@ -2586,42 +2592,42 @@ The max size may be changed by a config varaible, primarily to allow someone to 
     (12199, 10209, 10262, 'Med', 'Streamline NSAM/Autosys ticket rejection and resubmit', '', NULL, 10010, 10010, timestamptz '2012-03-06T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'NotStarted', timestamptz '2012-03-06T17:15:58.637', false, 259),
     (12200, 10133, 10226, 'Med', 'Make more effective use of DB environments', '', NULL, 10010, 10010, timestamptz '2012-03-06T00:00:00', 1.0, 'PersonDays', 1.0, 'Infrastructure', 'NotStarted', timestamptz '2012-03-23T13:19:19.620', false, 514),
     (12201, 10105, 10418, 'MedLow', 'Improve sort functionality', '', NULL, 10012, 10010, timestamptz '2012-03-06T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-27T09:15:57.483', false, 482),
-    (12202, 10193, 10195, 'Cancelled', 'ESF Mapping for New BOE format', 'Convert to ESF mappings need to be coded in the New Leek BOE loader.
-
+    (12202, 10193, 10195, 'Cancelled', 'ESF Mapping for New BOE format', 'Convert to ESF mappings need to be coded in the New Leek BOE loader.
+
 Duplicate of 2137', NULL, 10012, 10012, timestamptz '2012-03-07T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-03-08T13:50:12.217', true, 35),
-    (12211, 10218, 10406, 'Med', 'Loader  2  - Holmes -  Make Production ready', '1.Incorporate review comments
-2. Use new Loanloader framework to load tapes from db and then load loan data to database
+    (12211, 10218, 10406, 'Med', 'Loader  2  - Holmes -  Make Production ready', '1.Incorporate review comments
+2. Use new Loanloader framework to load tapes from db and then load loan data to database
 ', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 3.0, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-11T06:47:26.853', false, 387),
-    (12212, 10221, 10406, 'Med', 'Loader  6 -SilverStone 
+    (12212, 10221, 10406, 'Med', 'Loader  6 -SilverStone 
 ', 'Develope new csv loader as per the UK Prime framework', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 4.0, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-03T08:54:20.353', false, 0),
-    (12214, 10218, 10406, 'Med', 'Loader 1 -  Arkle - Make production ready
-', '1.Incorporate review comments
+    (12214, 10218, 10406, 'Med', 'Loader 1 -  Arkle - Make production ready
+', '1.Incorporate review comments
 2. Use the new loanloader framework to load tapes from db and load  loandata to database.', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-11T06:47:11.743', false, 387),
-    (12215, 10221, 10406, 'Med', 'LoanLoaderGraceChurch - Modify the loader to work with the new classes in the BoeData Library.
-', 'Modify the loader to work with the new classes in the BoeData Library.
+    (12215, 10221, 10406, 'Med', 'LoanLoaderGraceChurch - Modify the loader to work with the new classes in the BoeData Library.
+', 'Modify the loader to work with the new classes in the BoeData Library.
 ', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-09T07:47:02.387', false, 48),
-    (12216, 10221, 10406, 'Med', 'LoanloaderMound - Modify the loader to work with the new classes in the BoeData Library.
-', ' Modify the loader to work with the new classes in the BoeData Library.
+    (12216, 10221, 10406, 'Med', 'LoanloaderMound - Modify the loader to work with the new classes in the BoeData Library.
+', ' Modify the loader to work with the new classes in the BoeData Library.
 ', NULL, 10012, 10012, timestamptz '2012-03-09T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-09T07:48:08.007', false, 54),
     (12299, 10121, 10173, 'Closed', 'Investigate DealsDBMaintainer issues', 'Why are so many bonds being updated each day?', NULL, 10010, 10010, timestamptz '2012-04-20T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-05-01T15:45:37.103', false, 353),
     (12203, 10209, 10388, 'Med', 'Check Autosys Box/Job wiki is up to date AND figure out on going plan.', 'Also - think about how we ensure that this is regularly check to keep it up to date.  Based on this put something in place to ensure this happens, e.g., add a reminder facility to Support Dashboard.', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-03-08T11:21:12.820', false, 262),
-    (12208, 10145, 10357, 'Med', 'Modify CE batch to record warnings', 'Rizwan to do this under Sachin''s supervision
-
-Modify CE batch to 
-1) record static data warning in the table ''Userconfig.CalculationWarnings''.
-2) it will not log in the table any performance data issues
-2) will report it''s Autosys status as success, even if there are bond warnings.
-3) continue to log all warnings to its own log file.
+    (12208, 10145, 10357, 'Med', 'Modify CE batch to record warnings', 'Rizwan to do this under Sachin''s supervision
+
+Modify CE batch to 
+1) record static data warning in the table ''Userconfig.CalculationWarnings''.
+2) it will not log in the table any performance data issues
+2) will report it''s Autosys status as success, even if there are bond warnings.
+3) continue to log all warnings to its own log file.
 ', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-02T08:36:52.993', false, 395),
     (12209, 10209, 10404, 'High', 'Compress the Trepp file archive', 'Compress files after sacing them to archive and be able to load from compressed files.', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-08T15:29:15.830', false, 246),
     (12210, 10068, 10262, 'Closed', 'Investigate hiring new grad for London', '', NULL, 10010, 10010, timestamptz '2012-03-08T00:00:00', 0.5, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-03-26T09:06:31.303', false, 443),
     (12217, 10179, 10389, 'Closed', 'Go over Trepp and determine plan', '', NULL, 10010, 10010, timestamptz '2012-03-12T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-20T14:44:52.443', false, 56),
     (12283, 10081, 10322, 'Closed', 'Release New BBG Bond loader with Retries for Fingal', '', NULL, 10010, 10010, timestamptz '2012-04-12T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-21T07:45:37.770', false, 360),
     (12284, 10202, 10404, 'MedHigh', 'Modify Trepp Loader for ''011'' format data', '', NULL, 10010, 10010, timestamptz '2012-04-12T00:00:00', 3.0, 'PersonDays', 1.0, 'Support', 'Ready', timestamptz '2013-05-31T06:55:22.067', false, 56),
-    (12218, 10204, 10220, 'Closed', 'Design way to hold complex config data', 'By complex, I mean something that is more complex that Key Value pair, but not arbitrarily complex.
-
-I picture, from the C# perspective.  Using a Key to request an item from ABSConfig.
-
+    (12218, 10204, 10220, 'Closed', 'Design way to hold complex config data', 'By complex, I mean something that is more complex that Key Value pair, but not arbitrarily complex.
+
+I picture, from the C# perspective.  Using a Key to request an item from ABSConfig.
+
 The item may come back in the form of a dictionary of <string, ConfigItem> where ''ConfigItem'' is an instance of class that itself is collection of Key Value pairs.', NULL, 10010, 10010, timestamptz '2012-03-12T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-02T08:34:56.297', false, 0),
     (12219, 10204, 10220, 'Closed', 'Implement extension to ABSConfig for more complex config data', '', NULL, 10010, 10010, timestamptz '2012-03-12T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-11T12:05:28.743', false, 9),
     (12222, 10218, 10195, 'Med', 'UKPrime Tape Manager -Create Tool to load loan files  to the database', 'Create Tool to load loan files  to the database', NULL, 10012, 10012, timestamptz '2012-03-14T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-05-11T05:04:47.150', false, 382),
@@ -2629,21 +2635,21 @@ The item may come back in the form of a dictionary of <string, ConfigItem> where
     (12242, 10099, 10322, 'Closed', 'Modify BloombergBondLoader to request and load Corp Key bonds', '', NULL, 10010, 10010, timestamptz '2012-03-20T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-20T07:32:39.960', false, 16),
     (12243, 10099, 10173, 'Med', 'Modify DealsDBMaintainer to populate Corp bond fields', '', NULL, 10010, 10010, timestamptz '2012-03-20T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-20T10:11:12.233', false, 100),
     (12244, 10099, 10174, 'Med', 'Modify DealsDB GUI to populate Corp bond fields', '', NULL, 10010, 10010, timestamptz '2012-03-20T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-20T10:13:20.173', false, 102),
-    (12223, 10209, 10356, 'Med', 'Implement enhancements to DiskSpaceManager', 'See attachment ''14-Mar-2012'' for description of requirements and also below.
-
-When there is a permission problem,  it should not stop processing the ''top level'' directory.  For example, it seems that while processing ''C:\ABSEurope\tmp'', on the first occurrence of a permission problem it will stop processing all of ''C:\ABSEurope\tmp''.  The leaves large areas of the directory structure untouched.  Instead, it should only stop processing the current directory that has the permissions problem and anything below it.
-
-It would be useful if both the log and email report the available disk space, regardless of how much is available.
-
+    (12223, 10209, 10356, 'Med', 'Implement enhancements to DiskSpaceManager', 'See attachment ''14-Mar-2012'' for description of requirements and also below.
+
+When there is a permission problem,  it should not stop processing the ''top level'' directory.  For example, it seems that while processing ''C:\ABSEurope\tmp'', on the first occurrence of a permission problem it will stop processing all of ''C:\ABSEurope\tmp''.  The leaves large areas of the directory structure untouched.  Instead, it should only stop processing the current directory that has the permissions problem and anything below it.
+
+It would be useful if both the log and email report the available disk space, regardless of how much is available.
+
 Don''t archive .svn folder, but do delete old .svn folders (may be only if the parent folder is empty, not including the .svn folder).', NULL, 10010, 10010, timestamptz '2012-03-14T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-11T07:37:16.537', false, 236),
-    (12228, 10191, 10409, 'Med', 'UAT Cheat Sheet #2', 'Need to check:-
-1. Triggers are named correctly
+    (12228, 10191, 10409, 'Med', 'UAT Cheat Sheet #2', 'Need to check:-
+1. Triggers are named correctly
 2. Step up margin is configure as Extended Attributes in Deals DB and are displayed correctly', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-03-19T15:12:57.800', false, 9),
     (12229, 10191, 10179, 'Closed', 'Review Intex Deal Scraper', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-21T07:45:54.020', false, 210),
     (12230, 10191, 10409, 'Med', 'Deploy Cheat Sheet #2', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-16T15:00:04.980', false, 12),
     (12231, 10191, 10179, 'Closed', 'Deploy Intex Deal Scaper', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-04-25T19:27:25.510', false, 214),
-    (12232, 10081, 10322, 'Closed', 'Make BBG Bond Loader robust if the same isin is listed multiple time.', 'If the same Isin is listed more than once on the request table, then the app should handle it by only requesting it once.
-
+    (12232, 10081, 10322, 'Closed', 'Make BBG Bond Loader robust if the same isin is listed multiple time.', 'If the same Isin is listed more than once on the request table, then the app should handle it by only requesting it once.
+
 When the response comes back, all of the entries for the ISIN should be updated.', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-03-26T09:04:16.160', false, 332),
     (12233, 10081, 10197, 'MedHigh', 'Add checks to Kensington loader', 'Plan similar changes to other loaders before closing this task.', NULL, 10010, 10012, timestamptz '2012-03-16T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-03-22T17:33:39.123', false, 382),
     (12234, 10044, 10419, 'Med', 'Peer review LoadLoaderService', '', NULL, 10010, 10010, timestamptz '2012-03-19T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-11T12:50:36.597', false, 747),
@@ -2651,7 +2657,7 @@ When the response comes back, all of the entries for the ISIN should be updated.
     (12235, 10070, 10365, 'Med', 'Spanish INE website changes. ', 'Make the Spanish Macroloader work with  the INE website changes. Current process receives the file directly from the URI.  The scope of change involves monitoring http requests and posting the correct requests to get the response file. Approx 3 days of work unless if we don’t find anything unusual.', NULL, 10012, 10012, timestamptz '2012-03-19T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'InProgress', timestamptz '2012-04-25T13:13:02.257', false, 421),
     (12306, 10142, 10341, 'Med', 'Carry out development cycle', '', NULL, 10010, 10010, timestamptz '2012-04-25T00:00:00', 30.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-25T14:40:18.353', false, 299),
     (12224, 10111, 10220, 'Med', 'Migrate Messaging Prototype to trunk and document', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-16T13:05:10.267', false, 119),
-    (12236, 10220, 10309, 'Med', 'Add monitoring of Macro Data up-to-dateness', 'This is to add monitoring of Macro Data to Dashboard and its batch in a way that fits in completely with its current structure.
+    (12236, 10220, 10309, 'Med', 'Add monitoring of Macro Data up-to-dateness', 'This is to add monitoring of Macro Data to Dashboard and its batch in a way that fits in completely with its current structure.
 See attachment on 15-Mar-2012 where David C spotted the data was out of date.  The system should spot this and alert automatically.', NULL, 10024, 10010, timestamptz '2012-03-19T00:00:00', 5.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-26T06:18:32.330', false, 12),
     (12237, 10068, 10262, 'Closed', 'Appropriate Change Management', 'Figure out how to work appropriately with Change Management', NULL, 10010, 10010, timestamptz '2012-03-19T00:00:00', 5.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-04-02T08:40:25.757', false, 440),
     (12255, 10207, 10422, 'Closed', 'Release Comment Viewer via Change Management', '', NULL, 10010, 10010, timestamptz '2012-03-21T00:00:00', 3.0, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-04-19T16:42:07.760', false, 0),
@@ -2670,11 +2676,11 @@ See attachment on 15-Mar-2012 where David C spotted the data was out of date.  T
     (12253, 10165, 10341, 'MedLow', 'Development cycle', '', NULL, 10010, 10010, timestamptz '2012-03-21T00:00:00', 15.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-21T09:03:41.920', false, 13),
     (12254, 10173, 10421, 'Med', 'Complete development cycle', '', NULL, 10010, 10010, timestamptz '2012-03-21T00:00:00', 25.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-03-21T09:41:56.760', false, 175),
     (12276, 10133, 10415, 'Med', 'Give sasDev read permission on DB copy', '', NULL, 10010, 10010, timestamptz '2012-04-05T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-05T09:55:11.717', false, 516),
-    (12278, 10209, 10169, 'Closed', 'Add Audit capability for new tables', 'Add ''Audit'' tables for the following in Deals Database
-
-StaticData.BondAttributes
-StaticData.DealAttributes
-StaticData.LoanPart
+    (12278, 10209, 10169, 'Closed', 'Add Audit capability for new tables', 'Add ''Audit'' tables for the following in Deals Database
+
+StaticData.BondAttributes
+StaticData.DealAttributes
+StaticData.LoanPart
 StaticData.LoanPartAttributes', NULL, 10010, 10010, timestamptz '2012-04-10T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-05-09T10:38:30.850', false, 22),
     (12281, 10105, 10189, 'Closed', 'Don''t fail the whole Matrix batch if individual bonds fail', '', NULL, 10010, 10010, timestamptz '2012-04-11T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-17T14:53:56.740', false, 249),
     (12282, 10209, 10423, 'Closed', 'Develop Loan Backout Wizard for backing out UKNC Loan Level Data', '', NULL, 10010, 10010, timestamptz '2012-04-11T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-05-10T07:28:22.953', false, 185),
@@ -2683,19 +2689,19 @@ StaticData.LoanPartAttributes', NULL, 10010, 10010, timestamptz '2012-04-10T00:0
     (12225, 10044, 10420, 'Closed', 'UAT Loan Loading solution', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 2.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-03-19T08:33:20.767', false, 699),
     (12226, 10044, 10419, 'Closed', 'Deploy Load Loader solution to Production', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-21T06:26:09.550', false, 720),
     (12227, 10058, 10173, 'Med', 'Complete Code review', '', NULL, 10010, 10010, timestamptz '2012-03-16T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'InProgress', timestamptz '2012-05-10T13:24:49.753', false, 416),
-    (12238, 10060, 10240, 'Cancelled', 'Move box for SystemMaintainer   ', 'Put job in box ''EABSEOD_Box'' on ice.
+    (12238, 10060, 10240, 'Cancelled', 'Move box for SystemMaintainer   ', 'Put job in box ''EABSEOD_Box'' on ice.
 Take job in box ''EABSMAINTENANCE_Box '' off ice.', NULL, 10010, 10010, timestamptz '2012-03-19T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-03-19T15:30:51.917', false, 354),
     (12295, 10121, 10359, 'MedLow', 'Handle duplicate and missing deals in DealsDB', '', NULL, 10010, 10010, timestamptz '2012-04-20T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-20T13:44:32.840', false, 403),
     (12305, 10185, 10299, 'Med', 'Modify Model to use new Rate Path data', '', NULL, 10010, 10010, timestamptz '2012-04-24T00:00:00', 5.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-05-07T05:26:46.563', false, 106),
     (12287, 10211, 10354, 'Closed', 'Quick fix for ''...'' issue with Google translate addin', '', NULL, 10010, 10010, timestamptz '2012-04-17T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-05-09T14:43:31.297', false, 0),
     (12288, 10211, 10354, 'MedHigh', 'A', '', NULL, 10010, 10010, timestamptz '2012-04-17T00:00:00', 4.0, 'PersonDays', 0.5, 'NewDevelopment', 'InProgress', timestamptz '2013-05-09T07:03:04.767', false, 4),
-    (12239, 10121, 10209, 'Closed', 'LoanLoader Merrill Error while deleting file from archive folder', 'Following error message is seen when the loader is run manually and it fails while trying to  delete a file in the Archive folder(Created by ap1 user) under C:\abseurope\LoanloaderMerril\Newg0603.
-"Error while sending error message when runnin loader in ''LoadMissingData'' (messaging) mode."
-Issues:
-1.  message says the loader is run in messaging mode, when in fact it was run manually.
-2. An error mail is sent, but there is an object null reference exception. 
-
-Please attach  the ''attached mail'' to the PP task.
+    (12239, 10121, 10209, 'Closed', 'LoanLoader Merrill Error while deleting file from archive folder', 'Following error message is seen when the loader is run manually and it fails while trying to  delete a file in the Archive folder(Created by ap1 user) under C:\abseurope\LoanloaderMerril\Newg0603.
+"Error while sending error message when runnin loader in ''LoadMissingData'' (messaging) mode."
+Issues:
+1.  message says the loader is run in messaging mode, when in fact it was run manually.
+2. An error mail is sent, but there is an object null reference exception. 
+
+Please attach  the ''attached mail'' to the PP task.
 ', NULL, 10012, 10012, timestamptz '2012-03-19T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-05-03T10:42:58.390', false, 320),
     (12240, 10096, 10226, 'Closed', 'Set correct permissions on BBS Share', '', NULL, 10010, 10010, timestamptz '2012-03-19T00:00:00', 0.5, 'PersonDays', 1.0, 'Infrastructure', 'Closed', timestamptz '2012-04-11T10:11:49.637', false, 289),
     (12241, 10202, 10256, 'Closed', 'New rates from QDB', '', NULL, 10010, 10010, timestamptz '2012-03-19T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-04-21T06:50:07.873', false, 37),
@@ -2703,25 +2709,25 @@ Please attach  the ''attached mail'' to the PP task.
     (12268, 10078, 10218, 'Low', 'Make date filter on grid ignore time element', '', NULL, 10010, 10010, timestamptz '2012-04-02T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-02T10:19:13.100', false, 295),
     (12269, 10169, 10389, 'Med', 'K Curve 2', 'Figure out the impact', NULL, 10010, 10010, timestamptz '2012-04-02T00:00:00', 2.0, 'PersonDays', 0.25, 'Support', 'NotStarted', timestamptz '2012-05-10T13:58:47.797', false, 230),
     (12270, 10068, 10260, 'Closed', 'Presentation for Mumbai visit', '', NULL, 10010, 10010, timestamptz '2012-04-02T00:00:00', 2.0, 'PersonDays', 1.0, 'Other', 'Closed', timestamptz '2012-05-03T08:55:06.190', false, 463),
-    (12274, 10210, 10329, 'Closed', 'Ignore misc text in last field on line', 'See attachement - 4th April 08:12:00 from Zhuu.
-
-The last ''field'' specifies the quantities that the desk is prepared to buy or sell.  e.g.,  ''15.0m x 4.1m''.
-
-In the attachment, 2 lines end with ''INTEX'' and one with ''*SOLD*''.  This causes the line to fail to parse.
-
-Suggested changes are below, but may be something else is more appropriate.
-
-The aim is to make this modifications with minimal changes to the app, i.e., avoid any refactoring.
-
-To cope with the ''INTEX'' lines, e.g.,   "25.0m x40.0m  INTEX"
-i) Find the ''x'' in the last field.  
-ii) Convert text on the right of it to a size (i.e.,  "40.0m")
-iii) Ignore anything after it.
-
-To cope with ''*SOLD*''.
-i) Find the ''x'' in the last field.  
-ii) If the text on the right does not start with a numeric character (0-9, or ''.'' (decimal point)), then ignore it.
-
+    (12274, 10210, 10329, 'Closed', 'Ignore misc text in last field on line', 'See attachement - 4th April 08:12:00 from Zhuu.
+
+The last ''field'' specifies the quantities that the desk is prepared to buy or sell.  e.g.,  ''15.0m x 4.1m''.
+
+In the attachment, 2 lines end with ''INTEX'' and one with ''*SOLD*''.  This causes the line to fail to parse.
+
+Suggested changes are below, but may be something else is more appropriate.
+
+The aim is to make this modifications with minimal changes to the app, i.e., avoid any refactoring.
+
+To cope with the ''INTEX'' lines, e.g.,   "25.0m x40.0m  INTEX"
+i) Find the ''x'' in the last field.  
+ii) Convert text on the right of it to a size (i.e.,  "40.0m")
+iii) Ignore anything after it.
+
+To cope with ''*SOLD*''.
+i) Find the ''x'' in the last field.  
+ii) If the text on the right does not start with a numeric character (0-9, or ''.'' (decimal point)), then ignore it.
+
 ', NULL, 10010, 10010, timestamptz '2012-04-04T00:00:00', 2.0, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-10T10:10:49.847', false, 0),
     (12280, 10105, 10189, 'MedLow', 'Fix concurrency issues', '', NULL, 10010, 10010, timestamptz '2012-04-11T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-17T14:52:48.107', false, 416),
     (12257, 10207, 10422, 'Med', 'Migrate all pre-planned releases to use Change Management', '', NULL, 10010, 10010, timestamptz '2012-03-21T00:00:00', 10.0, 'PersonDays', 0.1, 'Infrastructure', 'InProgress', timestamptz '2013-05-09T07:08:19.607', false, 3),
@@ -2729,13 +2735,13 @@ ii) If the text on the right does not start with a numeric character (0-9, or ''
     (12259, 10208, 10169, 'Med', 'Correct BBG Descriptions', 'Do this once all ISINs have been updated by Ajay.', NULL, 10010, 10010, timestamptz '2012-03-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-03-23T08:33:45.740', false, 1),
     (12260, 10208, 10169, 'Med', 'Next tranche of work to improve Issuance Analyser', '', NULL, 10010, 10010, timestamptz '2012-03-23T00:00:00', 15.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-03-23T08:31:43.050', false, 7),
     (12265, 10209, 10391, 'Closed', 'Improve reporting of errors and warnings.', '', NULL, 10010, 10010, timestamptz '2012-03-26T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'Closed', timestamptz '2012-04-10T17:12:41.393', false, 0),
-    (12266, 10202, 10197, 'Closed', 'Fix Kensington loader and reload data tapes', '
+    (12266, 10202, 10197, 'Closed', 'Fix Kensington loader and reload data tapes', '
 S', NULL, 10010, 10010, timestamptz '2012-03-29T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2012-04-25T14:11:52.327', false, 35),
-    (12275, 10121, 10332, 'Med', 'AVR incorrectly sends email for missing OpeningRuns when Matrix data is missing', 'See attachments (email reporting missing opening runs and log file stating opening runs are present)
-
+    (12275, 10121, 10332, 'Med', 'AVR incorrectly sends email for missing OpeningRuns when Matrix data is missing', 'See attachments (email reporting missing opening runs and log file stating opening runs are present)
+
 Need to fix this so the email is only sent if opening runs are missing.', NULL, 10010, 10010, timestamptz '2012-04-05T00:00:00', 1.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-04-05T09:50:46.420', false, 369),
-    (12286, 10209, 10350, 'MedLow', 'Make Sys Maintainer report Warning correctly', 'This app reports an Error when only one of it its actions fails, it should report this only as a warning.
-
+    (12286, 10209, 10350, 'MedLow', 'Make Sys Maintainer report Warning correctly', 'This app reports an Error when only one of it its actions fails, it should report this only as a warning.
+
 See attached email (17-Apr-12) and log file (16-Apr-2012)', NULL, 10010, 10010, timestamptz '2012-04-17T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-04-17T07:51:05.970', false, 240),
     (12289, 10211, 10354, 'Med', 'Develop C# Google Translate Excel Addin', '', NULL, 10010, 10010, timestamptz '2012-04-17T00:00:00', 7.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-04-17T15:04:38.820', false, 47),
     (12290, 10212, 10220, 'Closed', 'Implement permissioning mechanism in Common.Utilities', '', NULL, 10010, 10010, timestamptz '2012-04-17T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-05-03T14:31:57.757', false, 8),
@@ -2746,40 +2752,40 @@ See attached email (17-Apr-12) and log file (16-Apr-2012)', NULL, 10010, 10010, 
     (12264, 10209, 10332, 'MedHigh', 'Make AVR report warning for invalid ISINs', 'Currently, if ISIN are invalid, it is reported in the log, but the email still reports SUCCESS. It needs to report WARNING in this case.', NULL, 10010, 10010, timestamptz '2012-03-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-03-23T16:30:05.110', false, 175),
     (12293, 10213, 10289, 'Cancelled', 'Modify to add new Book to Position Report', 'No modification was required, once the AVR was changed.', NULL, 10005, 10010, timestamptz '2012-04-19T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Cancelled', timestamptz '2012-05-01T13:32:06.403', false, 3),
     (12294, 10213, 10332, 'Closed', 'Modify to store position data for new book', 'Add the option to not exclude the book from the AVR Report itself, but store data so it can be used by Trade Blotter.', NULL, 10005, 10010, timestamptz '2012-04-19T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2012-05-02T08:02:18.253', false, 0),
-    (12304, 10209, 10332, 'Med', 'Add ability to check for opening runs each day', 'Each day the opening runs should be entered in the morning for the following end of day run the next morning.
-Is the opening runs are not present by midday, send an eamil to strategy to remind them.
+    (12304, 10209, 10332, 'Med', 'Add ability to check for opening runs each day', 'Each day the opening runs should be entered in the morning for the following end of day run the next morning.
+Is the opening runs are not present by midday, send an eamil to strategy to remind them.
 This could be done by running the AVR with a new options ''-checkingOpeningRunsOnly''.  This could be started in Autosys at around midday each business day.', NULL, 10010, 10010, timestamptz '2012-04-23T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-23T06:07:05.093', false, 231),
     (12307, 10171, 10262, 'Med', 'Support Rizwan', '', NULL, 10010, 10010, timestamptz '2012-04-26T00:00:00', 45.0, 'PersonDays', 0.2, 'Support', 'InProgress', timestamptz '2012-04-26T06:22:30.103', false, 0),
     (12308, 10044, 10424, 'Med', 'Modify to work with Loan Loading Framework', '', NULL, 10010, 10010, timestamptz '2012-04-27T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-04-27T08:25:07.907', false, 752),
     (12309, 10068, 10262, 'Closed', 'See if Sreevani''s Bloomberg License can be transfered to Paresh', '', NULL, 10010, 10010, timestamptz '2012-04-30T00:00:00', 10.0, 'PersonDays', 0.02, 'Other', 'Closed', timestamptz '2013-05-01T07:00:05.320', false, 0),
     (12310, 10121, 10179, 'Med', 'Correct status of email sent from batch', '', NULL, 10010, 10010, timestamptz '2012-04-30T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'InProgress', timestamptz '2012-05-09T13:24:17.507', false, 360),
-    (12311, 10218, 10406, 'MedHigh', 'Loader 3 -  Arran -  Make Production ready', '1. Involves incorporating review comments 
+    (12311, 10218, 10406, 'MedHigh', 'Loader 3 -  Arran -  Make Production ready', '1. Involves incorporating review comments 
 2. Use new Loanloader framework to load tapes from db and then load loan data to database', NULL, 10012, 10012, timestamptz '2012-04-30T00:00:00', 3.0, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-11T06:47:48.800', false, 387),
     (12314, 10202, 10379, 'Med', 'Fix required for new LEEK data', '', NULL, 10010, 10010, timestamptz '2012-05-01T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-05-03T13:58:30.933', false, 66),
-    (12315, 10121, 10299, 'MedLow', 'Fix issue with 2 ESAIL deals.', 'Two ESAIL deals failed when the number of period run in the model were extended.
-
+    (12315, 10121, 10299, 'MedLow', 'Fix issue with 2 ESAIL deals.', 'Two ESAIL deals failed when the number of period run in the model were extended.
+
 This needs to be fixed.  Paresh has the details.', NULL, 10012, 10010, timestamptz '2012-05-01T00:00:00', 3.0, 'PersonDays', 1.0, 'Maintenance', 'NotStarted', timestamptz '2012-05-01T13:59:39.983', false, 425),
     (12316, 10209, 10419, 'Med', 'Move to Autosus Box EABSSOD_Box', '', NULL, 10010, 10010, timestamptz '2012-05-01T00:00:00', 0.5, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-03T13:18:48.800', false, 37),
     (12317, 10202, 10382, 'Med', 'Investigate increase in warnings, probably due to LEEK', '', NULL, 10010, 10010, timestamptz '2012-05-01T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-05-03T13:23:47.473', false, 64),
-    (12319, 10210, 10174, 'Med', 'Disable Delete if Bond/Deals are in use', 'If a DealId or BondId is in use, then don''t allow the user to delete it.  This is prevent orphaned comments.
-
-''IN USE'' means, for example, Comments, Trade Blotter, etc.  
-
-One part of this task is to identify these.
+    (12319, 10210, 10174, 'Med', 'Disable Delete if Bond/Deals are in use', 'If a DealId or BondId is in use, then don''t allow the user to delete it.  This is prevent orphaned comments.
+
+''IN USE'' means, for example, Comments, Trade Blotter, etc.  
+
+One part of this task is to identify these.
 A second part is to decide what a user should do if they are faced with this. E.g., can they remove or move the comment that is causing the problem themselves, and then delete the Bond/Deal, or do they need to contact ABS IT.', NULL, 10010, 10010, timestamptz '2012-05-02T00:00:00', 4.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-09T12:33:01.250', false, 77),
     (12320, 10105, 10289, 'Med', 'Add Menu to get ''Deal'' Xtrakter prices on main blotter.', 'Add this to right click menu.', NULL, 10031, 10010, timestamptz '2012-05-02T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-10T13:38:25.020', false, 405),
-    (12321, 10219, 10309, 'MedHigh', 'Determine Scope of releases', 'Work with Mumbai Strategy to determine the scope of first few release.
-
-The scope of the first release should be focussed on Deals DB data quality and identify 
-i) What checks to include (e.g., missing ISIN)
-ii) Which subset of deals to include (e.g., sectors)
-The above should be according to Strategy''s highest priorities.
-
-This scoping should be done for at least 1st and 2nd release,  may be further if appropriate.
-
-Once scope is it done it needs to be document and communicated to Rizwan (email is sufficient).
-
-- 11-May-2009: PN - First release to include UK Prime Only
+    (12321, 10219, 10309, 'MedHigh', 'Determine Scope of releases', 'Work with Mumbai Strategy to determine the scope of first few release.
+
+The scope of the first release should be focussed on Deals DB data quality and identify 
+i) What checks to include (e.g., missing ISIN)
+ii) Which subset of deals to include (e.g., sectors)
+The above should be according to Strategy''s highest priorities.
+
+This scoping should be done for at least 1st and 2nd release,  may be further if appropriate.
+
+Once scope is it done it needs to be document and communicated to Rizwan (email is sufficient).
+
+- 11-May-2009: PN - First release to include UK Prime Only
 ', NULL, 10010, 10012, timestamptz '2012-05-03T00:00:00', 2.0, 'PersonDays', 0.5, 'NewDevelopment', 'InProgress', timestamptz '2012-05-11T07:00:05.430', false, 34),
     (12322, 10219, 10309, 'Med', 'Carry out UAT', '', NULL, 10010, 10012, timestamptz '2012-05-03T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-11T07:25:22.937', false, 56),
     (12323, 10219, 10309, 'Med', 'Make first Prod release', '', NULL, 10010, 10012, timestamptz '2012-05-03T00:00:00', 3.0, 'PersonDays', 0.5, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-11T07:25:33.467', false, 57),
@@ -2787,569 +2793,569 @@ Once scope is it done it needs to be document and communicated to Rizwan (email 
     (12325, 10218, 10262, 'Closed', 'Plan out 1st Prime Release', '', NULL, 10010, 10010, timestamptz '2012-05-03T00:00:00', 0.25, 'PersonDays', 1.0, 'NewDevelopment', 'Closed', timestamptz '2013-05-01T06:55:46.070', false, 381),
     (12326, 10221, 10262, 'Med', 'Plan out final Prime Release', '', NULL, 10010, 10010, timestamptz '2012-05-03T00:00:00', 0.25, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-03T09:54:23.887', false, 3),
     (12327, 10223, 10425, 'Med', 'Implement NomuraNow cache clearing for BoE data', '', NULL, 10003, 10010, timestamptz '2012-05-03T00:00:00', 3.0, 'PersonDays', 0.25, 'Enhancement', 'NotStarted', timestamptz '2012-05-10T13:59:24.527', false, 0),
-    (12328, 10212, 10342, 'Closed', 'Get DBAs to agree to permissioning changes', 'Given up.
-
-Instead, simply setting public select permission on all tables.  Just select, no view.
+    (12328, 10212, 10342, 'Closed', 'Get DBAs to agree to permissioning changes', 'Given up.
+
+Instead, simply setting public select permission on all tables.  Just select, no view.
 ', NULL, 10010, 10010, timestamptz '2012-05-03T00:00:00', 4.0, 'PersonDays', 0.25, 'NewDevelopment', 'Closed', timestamptz '2012-05-10T13:44:37.970', false, 9),
     (12332, 10223, 10425, 'Cancelled', 'Implement NomuraNow cache clearing for all data series', 'Duplicate of 1248', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'Cancelled', timestamptz '2012-05-10T12:54:31.480', false, 18),
     (12333, 10179, 10404, 'Med', 'Testing and release', '', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 4.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-05-10T13:31:14.460', false, 111),
-    (12334, 10202, 10299, 'Closed', 'Fix Repline Aggegation Issue', 'using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Data.Common;
-using Utils;
-using DBTaskMan.Internal;
-
-namespace DBTaskMan
-{
-    public class Project : DBAccess.DBObject<Project>, ISearchable
-    {
-
-
-        #region Public Interface
-
-        public static bool HideCompletedProjects
-        {
-            get
-            {
-                return m_hideCompletedProjects;
-            }
-            set
-            {
-                m_hideCompletedProjects = value;
-            }
-        }
-        private static bool m_hideCompletedProjects = false;
-
-        public override bool IsHidden
-        {
-            get
-            {
-                return (m_hideCompletedProjects && //TotalActiveTaskCount == 0);
-                         (m_priortity == PriorityValue._0_Cancelled ||
-                          m_priortity == PriorityValue._0_Closed));
-            }
-        }
-
-        public bool ContainsText(string searchText)
-        {
-            return (Name != null && Name.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) != -1);
-        }
-
-        public bool IsClosed
-        {
-            get
-            {
-                return m_priortity == PriorityValue._0_Closed ||
-                       m_priortity == PriorityValue._0_Cancelled;
-            }
-        }
-
-        public string Name
-        {
-            get { return m_name; }
-            set { m_name = value; StatusModified(); }
-        }
-
-        public string DetailedDescription
-        {
-            get { return m_detailedDescription; }
-            set { m_detailedDescription = value; StatusModified(); }
-        }
-
-        public DateTime? DueDate
-        {
-            get { return m_dueDate; }
-            set { m_dueDate = value; StatusModified(); }
-        }
-
-        public DateTime? StartDate
-        {
-            get
-            {
-                DateTime minStartDate = DateTime.MaxValue;
-                foreach (Task currentTask in Tasks)
-                {
-                    if (currentTask.Status == StatusValue.Cancelled ||
-                        currentTask.Status == StatusValue.Closed)
-                        continue;
-                    DateTime? taskStartDate = currentTask.StartDate;
-                    if (taskStartDate < minStartDate)
-                        minStartDate = taskStartDate.Value;
-                }
-                foreach (Project currentProject in m_subProjects)
-                {
-                    if (currentProject.Priority == PriorityValue._0_Cancelled ||
-                        currentProject.Priority == PriorityValue._0_Closed)
-                        continue;
-                    DateTime? projectStartDate = currentProject.StartDate;
-                    if (projectStartDate < minStartDate)
-                        minStartDate = projectStartDate.Value;
-                }
-
-                if (minStartDate == DateTime.MaxValue)
-                    return null;
-                return minStartDate;
-            }
-        }
-
-        public DateTime? EndDate
-        {
-            get
-            {
-                DateTime maxStartDate = DateTime.MinValue;
-                foreach (Task currentTask in Tasks)
-                {
-                    if (currentTask.Status == StatusValue.Cancelled ||
-                        currentTask.Status == StatusValue.Closed)
-                        continue;
-                    DateTime? taskDueDate = currentTask.DueDate;
-                    if (taskDueDate > maxStartDate)
-                        maxStartDate = taskDueDate.Value;
-                }
-                foreach (Project currentProject in m_subProjects)
-                {
-                    if (currentProject.Priority == PriorityValue._0_Cancelled ||
-                        currentProject.Priority == PriorityValue._0_Closed)
-                        continue;
-                    DateTime? projectEndDate = currentProject.EndDate;
-                    if (projectEndDate > maxStartDate)
-                        maxStartDate = projectEndDate.Value;
-                }
-
-                if (maxStartDate == DateTime.MinValue)
-                    return null;
-                return maxStartDate;
-            }
-        }
-
-        public string FullName
-        {
-            get
-            {
-                if (Parent == null) return m_name;
-                return m_name + " => [" + FullParentName + "]";
-            }
-        }
-
-        public string FullParentName
-        {
-            get
-            {
-                if (Parent == null) return "";
-                return Parent.FullPathName;
-            }
-        }
-
-        private string FullPathName
-        {
-            get
-            {
-                if (Parent == null) return m_name;
-                return Parent.FullPathName + "=>" + m_name;
-            }
-        }
-
-        public PriorityValue? Priority
-        {
-            get { return m_priortity; }
-            set
-            {
-                m_priortity = value;
-                StatusModified();
-                if (m_priortity == PriorityValue._0_Closed || m_priortity == PriorityValue._0_Cancelled)
-                {
-                    if (m_subProjects != null)
-                    {
-                        foreach (Project subProject in m_subProjects)
-                        {
-                            subProject.Priority = value;
-                        }
-                    }
-                }
-            }
-
-        }
-
-        public List<PriorityValue?> PriorityList
-        {
-            get
-            {
-                List<PriorityValue?> result;
-                if (m_parent == null)
-                {
-                    result = new List<PriorityValue?>();
-                }
-                else
-                {
-                    result = m_parent.PriorityList;
-                }
-                result.Add(m_priortity);
-                return result;
-            }
-        }
-
-        public Project Parent
-        {
-            get
-            {
-                if (m_parent == null && m_parentId.HasValue)
-                {
-                    m_parent = Project.GetInstanceFromDatabaseId(m_parentId.Value);
-                }
-                return m_parent;
-            }
-            set
-            {
-                m_parent = value;
-                m_parentId = null;
-                StatusModified();
-            }
-
-        }
-        public IEnumerable<Project> SubProjects
-        {
-            get
-            {
-                if (m_subProjects == null)
-                {
-                    m_subProjects = from theInstance in AllInstances
-                                    where theInstance.Parent == this
-                                    select theInstance;
-
-                }
-                return m_subProjects;
-            }
-        }
-
-        public IEnumerable<Task> Tasks
-        {
-            get
-            {
-                return LinkTable_Task2Project.TaskForProjects(this);
-            }
-        }
-
-
-
-
-        public HashSet<Task> AllActiveTasks
-        {
-            get
-            {
-                HashSet<Task> allTasks = new HashSet<Task>();
-                foreach (Project subProject in SubProjects)
-                {
-                    if (subProject.IsActive)
-                    {
-                        foreach (Task subTask in subProject.AllActiveTasks)
-                        {
-                            if (!allTasks.Contains(subTask))
-                                allTasks.Add(subTask);
-                        }
-                    }
-                }
-
-                foreach (Task thisProjectTask in Tasks)
-                {
-                    if (thisProjectTask.Priority == PriorityValue._0_Cancelled ||
-                        thisProjectTask.Priority == PriorityValue._0_Closed)
-                        continue;
-
-                    if (!allTasks.Contains(thisProjectTask))
-                        allTasks.Add(thisProjectTask);
-                }
-                return allTasks;
-            }
-        }
-
-        public IEnumerable<Attachment> Attachments
-        {
-            get
-            {
-                return Attachment.AttachmentsForProject(this);
-            }
-        }
-
-        public double TotalActiveTaskEffort
-        {
-            get
-            {
-                double taskEffort = ActiveTaskEffort;
-                foreach (DBTaskMan.Project currentProject in SubProjects)
-                {
-                    taskEffort += currentProject.TotalActiveTaskEffort;
-                }
-                return taskEffort;
-            }
-        }
-
-        public double ActiveTaskEffort
-        {
-            get
-            {
-                double taskEffort = 0;
-                foreach (Task currentTask in Tasks)
-                {
-                    if (currentTask.Status != StatusValue.Cancelled &&
-                        currentTask.Status != StatusValue.Closed)
-                        taskEffort += currentTask.TotalEffort;
-                }
-
-                return taskEffort;
-            }
-        }
-
-
-        public int TotalActiveTaskCount
-        {
-            get
-            {
-                int taskCount = ActiveTaskCount;
-                foreach (DBTaskMan.Project currentProject in SubProjects)
-                {
-                    taskCount += currentProject.TotalActiveTaskCount;
-                }
-                return taskCount;
-            }
-        }
-
-        public int ActiveTaskCount
-        {
-            get
-            {
-                int taskCount = 0;
-                foreach (Task currentTask in Tasks)
-                {
-                    if (currentTask.Status != StatusValue.Cancelled &&
-                        currentTask.Status != StatusValue.Closed)
-                        taskCount++;
-                }
-
-                return taskCount;
-            }
-        }
-
-        static public Project AddNewInstance(string name, Project parent)
-        {
-            return new Project(name, parent);
-        }
-
-        static public Project FindProject(string name)
-        {
-            foreach (Project thisProject in AllInstances)
-            {
-                if (thisProject.FullName == name)
-                    return thisProject;
-            }
-
-            return null;
-
-        }
-
-        static public IList<Project> TopLevelProjects
-        {
-            get
-            {
-                List<Project> topLevelProjects = new List<Project>();
-
-                foreach (Project thisProject in AllInstances)
-                {
-                    if (thisProject.Parent == null)
-                        topLevelProjects.Add(thisProject);
-                }
-
-
-                return topLevelProjects;
-            }
-        }
-
-        public bool IsDescendantOf(Project possibleParent)
-        {
-            if (Parent == null)
-                return false;
-
-            if (Parent == possibleParent)
-                return true;
-
-            return Parent.IsDescendantOf(possibleParent);
-        }
-
-
-        #endregion
-
-        override public void CopyDetails(Project instanceToMerge)
-        {
-            CopyDetailsBase(instanceToMerge);
-
-            m_priortity = instanceToMerge.m_priortity;
-            m_name = instanceToMerge.m_name;
-            m_detailedDescription = instanceToMerge.m_detailedDescription;
-            m_parent = instanceToMerge.m_parent;
-            m_parentId = instanceToMerge.m_parentId;
-            m_subProjects = null;
-            m_dueDate = instanceToMerge.m_dueDate;
-
-            StatusNotModified();
-        }
-
-
-        ///// Private
-
-
-        int? m_parentId = null;
-        Project m_parent = null;
-        IEnumerable<Project> m_subProjects = null;
-        string m_name;
-        string m_detailedDescription;
-        PriorityValue? m_priortity;
-        DateTime? m_dueDate = null;
-        //DateTime? m_startDate = null;
-
-        private Project(string name, Project parent)
-        {
-            AddNewInstance(this);
-            m_name = name;
-            m_parent = parent;
-        }
-
-        //////// Database access
-
-        static Project()
-        {
-            AllInstanceQuery = "select * from " + DatabaseBase.Schema + "Project";
-        }
-
-        public Project()
-        { }
-
-        public bool IsActive
-        {
-            get
-            {
-                if (this.Priority == PriorityValue._0_Cancelled ||
-                    this.Priority == PriorityValue._0_Closed)
-                    return false;
-                foreach (Task currentTask in Tasks)
-                {
-                    if (currentTask.Status.HasValue &&
-                       currentTask.Status != StatusValue.Closed &&
-                        currentTask.Status != StatusValue.Cancelled)
-                        return true;
-                }
-                foreach (Project currentProject in SubProjects)
-                {
-                    if (currentProject.IsActive)
-                        return true;
-                }
-                return false;
-            }
-
-        }
-
-
-
-        protected override void CreateFromReader(DbDataReader record)
-        {
-
-            if (!s_setupHasBeenDone)
-            {
-                s_setupHasBeenDone = true;
-                SetUpFromReader(record);
-            }
-
-            DatabaseId = DatabaseBase.GetColumnValueAs<int>(record, s_columnProjectId).Value;
-            m_parentId = DatabaseBase.GetColumnValueAs<int>(record, s_columnParentComponentId);
-            if (m_parentId.HasValue)
-            {
-                m_parent = Project.GetInstanceFromDatabaseId(m_parentId.Value);
-            }
-            m_name = DatabaseBase.GetColumnValueAsString(record, s_columnName);
-            m_detailedDescription = DatabaseBase.GetColumnValueAsString(record, s_columnDetailedDescription);
-            Priority = DatabaseBase.ParseDBEnumString<PriorityValue>(DatabaseBase.GetColumnValueAsString(record, s_columnPriority));
-            m_owner = DatabaseBase.GetColumnValueAsString(record, s_columnOwner);
-            m_dueDate = DatabaseBase.GetColumnValueAs<DateTime>(record, s_columnDueDate);
-
-
-        }
-
-        protected override DbCommand SaveToDataBaseSQLCommand()
-        {
-            SqlInsert sqlForInstert = new SqlInsert("Project", DatabaseId);
-            sqlForInstert.AddParameter("Name", System.Data.SqlDbType.NVarChar, 1000, m_name);
-            sqlForInstert.AddParameter("ParentProjectId", System.Data.SqlDbType.Int, GetDatabaseIdForWritingToDatabase(Parent));
-            sqlForInstert.AddParameter("Priority", System.Data.SqlDbType.NVarChar, 50, DatabaseBase.ToDBEnumString(Priority));
-            if(Utils.DatabaseBase.DBType == DatabaseBase.DBTypeValues.SQLServer)
-                sqlForInstert.AddParameter("DetailedDescription", System.Data.SqlDbType.NVarChar, 1000000, m_detailedDescription);
-            else
-                sqlForInstert.AddParameter("DetailedDescription", System.Data.SqlDbType.NText, m_detailedDescription);
-            sqlForInstert.AddParameter("Owner", System.Data.SqlDbType.NVarChar, 50, m_owner);
-            sqlForInstert.AddParameter("DueDate", System.Data.SqlDbType.DateTime, m_dueDate);
-
-            return sqlForInstert.Command;
-        }
-
-        override public void DeleteInstance()
-        {
-            if (!HasDependants)
-                Project.DeleteInstance(this);
-        }
-
-        public bool HasDependants
-        {
-            get
-            {
-                return this.Tasks.Count() > 0 || this.SubProjects.Count() > 0;
-            }
-        }
-
-
-        protected override DbCommand DeleteFromDataBaseSQLCommand()
-        {
-            SqlDelete deleteSql = new SqlDelete("Project", DatabaseId);
-            return deleteSql.Command;
-
-        }
-
-
-        static protected void SetUpFromReader(DbDataReader tempateRecord)
-        {
-
-            s_columnProjectId = tempateRecord.GetOrdinal("ProjectId");
-            s_columnParentComponentId = tempateRecord.GetOrdinal("ParentProjectId");
-            s_columnName = tempateRecord.GetOrdinal("Name");
-            s_columnDetailedDescription = tempateRecord.GetOrdinal("DetailedDescription");
-            s_columnPriority = tempateRecord.GetOrdinal("Priority");
-            s_columnOwner = tempateRecord.GetOrdinal("Owner");
-            s_columnDueDate = tempateRecord.GetOrdinal("DueDate");
-        }
-
-        static bool s_setupHasBeenDone = false;
-
-        static int s_columnProjectId;
-        static int s_columnParentComponentId;
-        static int s_columnName;
-        static int s_columnDetailedDescription;
-        static int s_columnPriority;
-        static int s_columnOwner;
-        static int s_columnDueDate;
-
-
-        /////////////////////////       
-
-    }
-}
+    (12334, 10202, 10299, 'Closed', 'Fix Repline Aggegation Issue', 'using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Data.Common;
+using Utils;
+using DBTaskMan.Internal;
+
+namespace DBTaskMan
+{
+    public class Project : DBAccess.DBObject<Project>, ISearchable
+    {
+
+
+        #region Public Interface
+
+        public static bool HideCompletedProjects
+        {
+            get
+            {
+                return m_hideCompletedProjects;
+            }
+            set
+            {
+                m_hideCompletedProjects = value;
+            }
+        }
+        private static bool m_hideCompletedProjects = false;
+
+        public override bool IsHidden
+        {
+            get
+            {
+                return (m_hideCompletedProjects && //TotalActiveTaskCount == 0);
+                         (m_priortity == PriorityValue._0_Cancelled ||
+                          m_priortity == PriorityValue._0_Closed));
+            }
+        }
+
+        public bool ContainsText(string searchText)
+        {
+            return (Name != null && Name.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) != -1);
+        }
+
+        public bool IsClosed
+        {
+            get
+            {
+                return m_priortity == PriorityValue._0_Closed ||
+                       m_priortity == PriorityValue._0_Cancelled;
+            }
+        }
+
+        public string Name
+        {
+            get { return m_name; }
+            set { m_name = value; StatusModified(); }
+        }
+
+        public string DetailedDescription
+        {
+            get { return m_detailedDescription; }
+            set { m_detailedDescription = value; StatusModified(); }
+        }
+
+        public DateTime? DueDate
+        {
+            get { return m_dueDate; }
+            set { m_dueDate = value; StatusModified(); }
+        }
+
+        public DateTime? StartDate
+        {
+            get
+            {
+                DateTime minStartDate = DateTime.MaxValue;
+                foreach (Task currentTask in Tasks)
+                {
+                    if (currentTask.Status == StatusValue.Cancelled ||
+                        currentTask.Status == StatusValue.Closed)
+                        continue;
+                    DateTime? taskStartDate = currentTask.StartDate;
+                    if (taskStartDate < minStartDate)
+                        minStartDate = taskStartDate.Value;
+                }
+                foreach (Project currentProject in m_subProjects)
+                {
+                    if (currentProject.Priority == PriorityValue._0_Cancelled ||
+                        currentProject.Priority == PriorityValue._0_Closed)
+                        continue;
+                    DateTime? projectStartDate = currentProject.StartDate;
+                    if (projectStartDate < minStartDate)
+                        minStartDate = projectStartDate.Value;
+                }
+
+                if (minStartDate == DateTime.MaxValue)
+                    return null;
+                return minStartDate;
+            }
+        }
+
+        public DateTime? EndDate
+        {
+            get
+            {
+                DateTime maxStartDate = DateTime.MinValue;
+                foreach (Task currentTask in Tasks)
+                {
+                    if (currentTask.Status == StatusValue.Cancelled ||
+                        currentTask.Status == StatusValue.Closed)
+                        continue;
+                    DateTime? taskDueDate = currentTask.DueDate;
+                    if (taskDueDate > maxStartDate)
+                        maxStartDate = taskDueDate.Value;
+                }
+                foreach (Project currentProject in m_subProjects)
+                {
+                    if (currentProject.Priority == PriorityValue._0_Cancelled ||
+                        currentProject.Priority == PriorityValue._0_Closed)
+                        continue;
+                    DateTime? projectEndDate = currentProject.EndDate;
+                    if (projectEndDate > maxStartDate)
+                        maxStartDate = projectEndDate.Value;
+                }
+
+                if (maxStartDate == DateTime.MinValue)
+                    return null;
+                return maxStartDate;
+            }
+        }
+
+        public string FullName
+        {
+            get
+            {
+                if (Parent == null) return m_name;
+                return m_name + " => [" + FullParentName + "]";
+            }
+        }
+
+        public string FullParentName
+        {
+            get
+            {
+                if (Parent == null) return "";
+                return Parent.FullPathName;
+            }
+        }
+
+        private string FullPathName
+        {
+            get
+            {
+                if (Parent == null) return m_name;
+                return Parent.FullPathName + "=>" + m_name;
+            }
+        }
+
+        public PriorityValue? Priority
+        {
+            get { return m_priortity; }
+            set
+            {
+                m_priortity = value;
+                StatusModified();
+                if (m_priortity == PriorityValue._0_Closed || m_priortity == PriorityValue._0_Cancelled)
+                {
+                    if (m_subProjects != null)
+                    {
+                        foreach (Project subProject in m_subProjects)
+                        {
+                            subProject.Priority = value;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        public List<PriorityValue?> PriorityList
+        {
+            get
+            {
+                List<PriorityValue?> result;
+                if (m_parent == null)
+                {
+                    result = new List<PriorityValue?>();
+                }
+                else
+                {
+                    result = m_parent.PriorityList;
+                }
+                result.Add(m_priortity);
+                return result;
+            }
+        }
+
+        public Project Parent
+        {
+            get
+            {
+                if (m_parent == null && m_parentId.HasValue)
+                {
+                    m_parent = Project.GetInstanceFromDatabaseId(m_parentId.Value);
+                }
+                return m_parent;
+            }
+            set
+            {
+                m_parent = value;
+                m_parentId = null;
+                StatusModified();
+            }
+
+        }
+        public IEnumerable<Project> SubProjects
+        {
+            get
+            {
+                if (m_subProjects == null)
+                {
+                    m_subProjects = from theInstance in AllInstances
+                                    where theInstance.Parent == this
+                                    select theInstance;
+
+                }
+                return m_subProjects;
+            }
+        }
+
+        public IEnumerable<Task> Tasks
+        {
+            get
+            {
+                return LinkTable_Task2Project.TaskForProjects(this);
+            }
+        }
+
+
+
+
+        public HashSet<Task> AllActiveTasks
+        {
+            get
+            {
+                HashSet<Task> allTasks = new HashSet<Task>();
+                foreach (Project subProject in SubProjects)
+                {
+                    if (subProject.IsActive)
+                    {
+                        foreach (Task subTask in subProject.AllActiveTasks)
+                        {
+                            if (!allTasks.Contains(subTask))
+                                allTasks.Add(subTask);
+                        }
+                    }
+                }
+
+                foreach (Task thisProjectTask in Tasks)
+                {
+                    if (thisProjectTask.Priority == PriorityValue._0_Cancelled ||
+                        thisProjectTask.Priority == PriorityValue._0_Closed)
+                        continue;
+
+                    if (!allTasks.Contains(thisProjectTask))
+                        allTasks.Add(thisProjectTask);
+                }
+                return allTasks;
+            }
+        }
+
+        public IEnumerable<Attachment> Attachments
+        {
+            get
+            {
+                return Attachment.AttachmentsForProject(this);
+            }
+        }
+
+        public double TotalActiveTaskEffort
+        {
+            get
+            {
+                double taskEffort = ActiveTaskEffort;
+                foreach (DBTaskMan.Project currentProject in SubProjects)
+                {
+                    taskEffort += currentProject.TotalActiveTaskEffort;
+                }
+                return taskEffort;
+            }
+        }
+
+        public double ActiveTaskEffort
+        {
+            get
+            {
+                double taskEffort = 0;
+                foreach (Task currentTask in Tasks)
+                {
+                    if (currentTask.Status != StatusValue.Cancelled &&
+                        currentTask.Status != StatusValue.Closed)
+                        taskEffort += currentTask.TotalEffort;
+                }
+
+                return taskEffort;
+            }
+        }
+
+
+        public int TotalActiveTaskCount
+        {
+            get
+            {
+                int taskCount = ActiveTaskCount;
+                foreach (DBTaskMan.Project currentProject in SubProjects)
+                {
+                    taskCount += currentProject.TotalActiveTaskCount;
+                }
+                return taskCount;
+            }
+        }
+
+        public int ActiveTaskCount
+        {
+            get
+            {
+                int taskCount = 0;
+                foreach (Task currentTask in Tasks)
+                {
+                    if (currentTask.Status != StatusValue.Cancelled &&
+                        currentTask.Status != StatusValue.Closed)
+                        taskCount++;
+                }
+
+                return taskCount;
+            }
+        }
+
+        static public Project AddNewInstance(string name, Project parent)
+        {
+            return new Project(name, parent);
+        }
+
+        static public Project FindProject(string name)
+        {
+            foreach (Project thisProject in AllInstances)
+            {
+                if (thisProject.FullName == name)
+                    return thisProject;
+            }
+
+            return null;
+
+        }
+
+        static public IList<Project> TopLevelProjects
+        {
+            get
+            {
+                List<Project> topLevelProjects = new List<Project>();
+
+                foreach (Project thisProject in AllInstances)
+                {
+                    if (thisProject.Parent == null)
+                        topLevelProjects.Add(thisProject);
+                }
+
+
+                return topLevelProjects;
+            }
+        }
+
+        public bool IsDescendantOf(Project possibleParent)
+        {
+            if (Parent == null)
+                return false;
+
+            if (Parent == possibleParent)
+                return true;
+
+            return Parent.IsDescendantOf(possibleParent);
+        }
+
+
+        #endregion
+
+        override public void CopyDetails(Project instanceToMerge)
+        {
+            CopyDetailsBase(instanceToMerge);
+
+            m_priortity = instanceToMerge.m_priortity;
+            m_name = instanceToMerge.m_name;
+            m_detailedDescription = instanceToMerge.m_detailedDescription;
+            m_parent = instanceToMerge.m_parent;
+            m_parentId = instanceToMerge.m_parentId;
+            m_subProjects = null;
+            m_dueDate = instanceToMerge.m_dueDate;
+
+            StatusNotModified();
+        }
+
+
+        ///// Private
+
+
+        int? m_parentId = null;
+        Project m_parent = null;
+        IEnumerable<Project> m_subProjects = null;
+        string m_name;
+        string m_detailedDescription;
+        PriorityValue? m_priortity;
+        DateTime? m_dueDate = null;
+        //DateTime? m_startDate = null;
+
+        private Project(string name, Project parent)
+        {
+            AddNewInstance(this);
+            m_name = name;
+            m_parent = parent;
+        }
+
+        //////// Database access
+
+        static Project()
+        {
+            AllInstanceQuery = "select * from " + DatabaseBase.Schema + "Project";
+        }
+
+        public Project()
+        { }
+
+        public bool IsActive
+        {
+            get
+            {
+                if (this.Priority == PriorityValue._0_Cancelled ||
+                    this.Priority == PriorityValue._0_Closed)
+                    return false;
+                foreach (Task currentTask in Tasks)
+                {
+                    if (currentTask.Status.HasValue &&
+                       currentTask.Status != StatusValue.Closed &&
+                        currentTask.Status != StatusValue.Cancelled)
+                        return true;
+                }
+                foreach (Project currentProject in SubProjects)
+                {
+                    if (currentProject.IsActive)
+                        return true;
+                }
+                return false;
+            }
+
+        }
+
+
+
+        protected override void CreateFromReader(DbDataReader record)
+        {
+
+            if (!s_setupHasBeenDone)
+            {
+                s_setupHasBeenDone = true;
+                SetUpFromReader(record);
+            }
+
+            DatabaseId = DatabaseBase.GetColumnValueAs<int>(record, s_columnProjectId).Value;
+            m_parentId = DatabaseBase.GetColumnValueAs<int>(record, s_columnParentComponentId);
+            if (m_parentId.HasValue)
+            {
+                m_parent = Project.GetInstanceFromDatabaseId(m_parentId.Value);
+            }
+            m_name = DatabaseBase.GetColumnValueAsString(record, s_columnName);
+            m_detailedDescription = DatabaseBase.GetColumnValueAsString(record, s_columnDetailedDescription);
+            Priority = DatabaseBase.ParseDBEnumString<PriorityValue>(DatabaseBase.GetColumnValueAsString(record, s_columnPriority));
+            m_owner = DatabaseBase.GetColumnValueAsString(record, s_columnOwner);
+            m_dueDate = DatabaseBase.GetColumnValueAs<DateTime>(record, s_columnDueDate);
+
+
+        }
+
+        protected override DbCommand SaveToDataBaseSQLCommand()
+        {
+            SqlInsert sqlForInstert = new SqlInsert("Project", DatabaseId);
+            sqlForInstert.AddParameter("Name", System.Data.SqlDbType.NVarChar, 1000, m_name);
+            sqlForInstert.AddParameter("ParentProjectId", System.Data.SqlDbType.Int, GetDatabaseIdForWritingToDatabase(Parent));
+            sqlForInstert.AddParameter("Priority", System.Data.SqlDbType.NVarChar, 50, DatabaseBase.ToDBEnumString(Priority));
+            if(Utils.DatabaseBase.DBType == DatabaseBase.DBTypeValues.SQLServer)
+                sqlForInstert.AddParameter("DetailedDescription", System.Data.SqlDbType.NVarChar, 1000000, m_detailedDescription);
+            else
+                sqlForInstert.AddParameter("DetailedDescription", System.Data.SqlDbType.NText, m_detailedDescription);
+            sqlForInstert.AddParameter("Owner", System.Data.SqlDbType.NVarChar, 50, m_owner);
+            sqlForInstert.AddParameter("DueDate", System.Data.SqlDbType.DateTime, m_dueDate);
+
+            return sqlForInstert.Command;
+        }
+
+        override public void DeleteInstance()
+        {
+            if (!HasDependants)
+                Project.DeleteInstance(this);
+        }
+
+        public bool HasDependants
+        {
+            get
+            {
+                return this.Tasks.Count() > 0 || this.SubProjects.Count() > 0;
+            }
+        }
+
+
+        protected override DbCommand DeleteFromDataBaseSQLCommand()
+        {
+            SqlDelete deleteSql = new SqlDelete("Project", DatabaseId);
+            return deleteSql.Command;
+
+        }
+
+
+        static protected void SetUpFromReader(DbDataReader tempateRecord)
+        {
+
+            s_columnProjectId = tempateRecord.GetOrdinal("ProjectId");
+            s_columnParentComponentId = tempateRecord.GetOrdinal("ParentProjectId");
+            s_columnName = tempateRecord.GetOrdinal("Name");
+            s_columnDetailedDescription = tempateRecord.GetOrdinal("DetailedDescription");
+            s_columnPriority = tempateRecord.GetOrdinal("Priority");
+            s_columnOwner = tempateRecord.GetOrdinal("Owner");
+            s_columnDueDate = tempateRecord.GetOrdinal("DueDate");
+        }
+
+        static bool s_setupHasBeenDone = false;
+
+        static int s_columnProjectId;
+        static int s_columnParentComponentId;
+        static int s_columnName;
+        static int s_columnDetailedDescription;
+        static int s_columnPriority;
+        static int s_columnOwner;
+        static int s_columnDueDate;
+
+
+        /////////////////////////       
+
+    }
+}
 ', NULL, 10002, 10010, timestamptz '2012-05-09T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'Closed', timestamptz '2013-05-01T06:53:07.720', false, 70),
     (12335, 10121, 10174, 'Med', 'Bug with class names when creating new deals/bonds', '', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 2.0, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-05-09T13:22:25.417', false, 374),
     (12339, 10209, 10423, 'Med', 'Document Backout Wizzard', '', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', 0.5, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-10T07:29:08.950', false, 51),
-    (12340, 10083, 10370, 'MedLow', 'Move common code in DealsDB GUI and DealsDBMaintainer into library', 'See the code along the lines of ''string spreadIndex = "bbg:" + blgDataHolidays.RESET_IDX;''
-
+    (12340, 10083, 10370, 'MedLow', 'Move common code in DealsDB GUI and DealsDBMaintainer into library', 'See the code along the lines of ''string spreadIndex = "bbg:" + blgDataHolidays.RESET_IDX;''
+
 Also, consider the methods ''GetCDUDate'' and ''IntexDealExists'' on the class ApplicationDealsDBMaintainer in DealsDBMaintainer', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', NULL, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-10T11:47:46.560', false, 382),
     (12342, 10202, 10391, 'Med', 'Investigate strange errors on NWGT0602.', '', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', 1.0, 'PersonDays', 1.0, 'Support', 'InProgress', timestamptz '2012-05-10T17:16:51.420', false, 70),
     (12343, 10224, 10341, 'Med', 'Restart Covered Bond Analytic Generation', '', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', 3.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-10T13:36:53.553', false, 5),
     (12344, 10212, 10181, 'Med', 'Modify for new permissioning', '', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', 5.0, 'PersonDays', 0.5, 'Infrastructure', 'NotStarted', timestamptz '2012-05-10T14:49:55.920', false, 42),
-    (12312, 10218, 10406, 'Med', 'Loader 4 - Permanent -  Make Production ready', '1.Incorporate review comments
+    (12312, 10218, 10406, 'Med', 'Loader 4 - Permanent -  Make Production ready', '1.Incorporate review comments
 2. Use new Loanloader framework to load tapes from db and then load loan data to database', NULL, 10012, 10012, timestamptz '2012-04-30T00:00:00', 2.0, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-11T06:47:33.810', false, 391),
     (12313, 10218, 10406, 'Med', 'Loader 5 - Fosse -  Make Production ready', '1. Use new Loanloader framework to load tapes from db and then load loan data to database', NULL, 10012, 10012, timestamptz '2012-04-30T00:00:00', 2.0, 'PersonDays', 0.5, 'Enhancement', 'NotStarted', timestamptz '2012-05-11T06:50:46.337', false, 391),
     (12336, 10121, 10173, 'Med', 'Fix BondType for BEF bonds to Radial', '', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 0.5, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-09T14:45:23.600', false, 377),
@@ -3357,25 +3363,25 @@ Also, consider the methods ''GetCDUDate'' and ''IntexDealExists'' on the class A
     (12338, 10179, 10404, 'Med', 'Review Trepp Loader', '', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 5.0, 'PersonDays', 0.2, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-11T07:52:51.093', false, 116),
     (12318, 10185, 10373, 'MedHigh', 'Peer Review Rate Path Generation', '', NULL, 10010, 10010, timestamptz '2012-05-02T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2013-06-14T06:51:03.247', false, 103),
     (12341, 10209, 10322, 'Med', 'Review issue with Bbg not updating data in a timely fashion.', '', NULL, 10010, 10010, timestamptz '2012-05-10T00:00:00', 0.5, 'PersonDays', 1.0, 'Support', 'NotStarted', timestamptz '2012-05-10T13:09:44.523', false, 113),
-    (12345, 10218, 10342, 'Med', 'UK Tape Manager - Code Review and QAT', 'This application has been tested by the developer.
-Code review and testing by peer
+    (12345, 10218, 10342, 'Med', 'UK Tape Manager - Code Review and QAT', 'This application has been tested by the developer.
+Code review and testing by peer
 ', NULL, 10012, 10012, timestamptz '2012-05-11T00:00:00', 2.0, 'PersonDays', 0.5, 'Other', 'NotStarted', timestamptz '2012-05-11T06:45:28.490', false, 388),
     (12346, 10218, 10212, 'Med', 'Design Common tape loader and DB loanloader framework', 'Involves designing a common loan loader framework for saving tapes to the database, fetchin tapes from the db and loading them to the database using the Excelfileloader/csv file loader.', NULL, 10012, 10012, timestamptz '2012-05-11T00:00:00', 1.0, 'PersonDays', 1.0, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-11T06:49:37.850', false, 387),
-    (12347, 10218, 10406, 'Med', 'Test 5 loaders  against QAT/STG along with autosys', '1. Involves creating Autosys box, jobs for the UK Primeloaders
+    (12347, 10218, 10406, 'Med', 'Test 5 loaders  against QAT/STG along with autosys', '1. Involves creating Autosys box, jobs for the UK Primeloaders
 2.  Testing the first 5 loaders using autosys in qat environment.', NULL, 10012, 10012, timestamptz '2012-05-11T00:00:00', 3.0, 'PersonDays', 0.0075, 'NewDevelopment', 'NotStarted', timestamptz '2012-05-11T06:54:24.793', false, 0),
-    (12348, 10219, 10309, 'Med', 'Implemet first set of validation checks for UK Prime Sector', '1. ISIN: 
-Missing data: show alerts for bonds which are missing ISINs, 
-Invalid data: ISINs having invalid data like 0. Check can be added if ISIN/CUSIP string is less that 9 character long, may be some validation to detect invalid/junk data by looking at standard format of ISIN/CUSIP.
-
-2. Fx2deal currency multiplier:
-Missing data: missing Fx2deal multiplier 
-Invalid data: if deal currency = bond currency => fx2deal currency should be 1, otherwise alert. If deal currency <> bond currency => fx2deal currency should NOT be 1, otherwise alert
-
-3. Ratings: if any of the following rating is missing- combined original, combined current. 
-4. Original retention: if missing, show alert
+    (12348, 10219, 10309, 'Med', 'Implemet first set of validation checks for UK Prime Sector', '1. ISIN: 
+Missing data: show alerts for bonds which are missing ISINs, 
+Invalid data: ISINs having invalid data like 0. Check can be added if ISIN/CUSIP string is less that 9 character long, may be some validation to detect invalid/junk data by looking at standard format of ISIN/CUSIP.
+
+2. Fx2deal currency multiplier:
+Missing data: missing Fx2deal multiplier 
+Invalid data: if deal currency = bond currency => fx2deal currency should be 1, otherwise alert. If deal currency <> bond currency => fx2deal currency should NOT be 1, otherwise alert
+
+3. Ratings: if any of the following rating is missing- combined original, combined current. 
+4. Original retention: if missing, show alert
 ', NULL, 10012, 10012, timestamptz '2012-05-11T00:00:00', 3.0, 'PersonDays', 1.0, 'NewDevelopment', 'InProgress', timestamptz '2012-05-11T15:41:54.990', false, 41),
-    (12349, 10219, 10309, 'Med', 'Overall supervision of the design and development activities', 'Sachin to provide design and development guidance to Rizwan for the first release of the support dashboard.
-1. Sachin to investigate improvements to existing GUI is needed.
+    (12349, 10219, 10309, 'Med', 'Overall supervision of the design and development activities', 'Sachin to provide design and development guidance to Rizwan for the first release of the support dashboard.
+1. Sachin to investigate improvements to existing GUI is needed.
 2. Sachin to look into high level design', NULL, 10012, 10012, timestamptz '2012-05-11T00:00:00', 15.0, 'PersonDays', 0.25, 'Other', 'NotStarted', timestamptz '2012-05-11T07:18:49.303', false, 0),
     (12329, 10222, 10373, 'Med', 'Update SVR rates for Kensington and Leek ', '', NULL, 10002, 10010, timestamptz '2012-05-09T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-05-09T11:46:31.680', false, 0),
     (12330, 10222, 10299, 'MedHigh', 'Test', '', NULL, 10010, 10010, timestamptz '2012-05-09T00:00:00', 1.0, 'PersonDays', 1.0, 'Enhancement', 'NotStarted', timestamptz '2012-09-13T07:05:21.550', false, 95),
@@ -5062,7 +5068,7 @@ INSERT INTO dependency (pre_task_id, pre_project_id, post_task_id, post_project_
 -- ---------------------------------------------------------------------------
 
 INSERT INTO remark (task_id, project_id, component_id, remark_text, created_by_person_id, created_time) VALUES
-    (11798, NULL, NULL, 'Share point requested:
+    (11798, NULL, NULL, 'Share point requested:
 Ticket # HPD000001451646', 10010, timestamptz '2019-10-30T11:16:29.727'),
     (11700, NULL, NULL, 'Paresh stated this is is not a high priority issue and trying to identify a solution might be time consuming.', 10010, timestamptz '2019-10-30T11:16:29.727'),
     (11781, NULL, NULL, 'Need Zhuu to raise form to Euroclear to inform them of the new certificate', 10010, timestamptz '2019-10-30T11:16:29.730'),
@@ -5074,21 +5080,21 @@ Ticket # HPD000001451646', 10010, timestamptz '2019-10-30T11:16:29.727'),
     (11920, NULL, NULL, 'Its on Martin plate to authorise it. send a reminder to him...', 10010, timestamptz '2019-10-30T11:16:29.730'),
     (11997, NULL, NULL, 'They had stopped providing data, as some series are confidential. please find the attached mail.', 10010, timestamptz '2019-10-30T11:16:29.733'),
     (11859, NULL, NULL, 'Testing complete, need to document and prepare the release', 10010, timestamptz '2019-10-30T11:16:29.733'),
-    (12108, NULL, NULL, '1. we started getting feeds from QDb guys on rate ( done)
+    (12108, NULL, NULL, '1. we started getting feeds from QDb guys on rate ( done)
 2. Our apps should process them.', 10021, timestamptz '2019-10-30T11:16:29.733'),
     (12080, NULL, NULL, 'Waiting for Zhuu to respond', 10010, timestamptz '2019-10-30T11:16:29.733'),
     (10858, NULL, NULL, 'Zhuu to provide excel example to use Triggers to generate Intex cfs.', 10010, timestamptz '2019-10-30T11:16:29.733'),
     (11708, NULL, NULL, 'ON HOLD: waiting for Danny''s response', 10010, timestamptz '2019-10-30T11:16:29.733'),
     (11787, NULL, NULL, 'Waiting to see if a real requirement appears', 10010, timestamptz '2019-10-30T11:16:29.737'),
-    (11762, NULL, NULL, 'pls close this.
-RRG fixed and released 1.3.1 to handle this kind of issue 
-Data is as per file received
+    (11762, NULL, NULL, 'pls close this.
+RRG fixed and released 1.3.1 to handle this kind of issue 
+Data is as per file received
 ', 10010, timestamptz '2019-10-30T11:16:29.737'),
-    (11597, NULL, NULL, 'ready for release
+    (11597, NULL, NULL, 'ready for release
 available in branch patilsa_ForecasterBatchAsOfDate_2.12617', 10010, timestamptz '2019-10-30T11:16:29.737'),
     (11986, NULL, NULL, 'This will need to be revisited when Sreevani returns to work.', 10010, timestamptz '2019-10-30T11:16:29.737'),
     (11807, NULL, NULL, 'WIP', 10010, timestamptz '2019-10-30T11:16:29.737'),
-    (11807, NULL, NULL, 'del
+    (11807, NULL, NULL, 'del
 ', 10010, timestamptz '2019-10-30T11:16:29.737'),
     (12088, NULL, NULL, 'There is no mandate or requirement to do this at this time.', 10010, timestamptz '2019-10-30T11:16:29.740'),
     (11665, NULL, NULL, 'This item can be closed', 10021, timestamptz '2019-10-30T11:16:29.740'),
@@ -5104,7 +5110,7 @@ available in branch patilsa_ForecasterBatchAsOfDate_2.12617', 10010, timestamptz
     (12147, NULL, NULL, 'Need to approve invoice once new license has arrived (see email of 6th March)', 10010, timestamptz '2019-10-30T11:16:29.743'),
     (12062, NULL, NULL, 'Trigger implemenations requires refactoring according to emails ''DealTriggers''', 10010, timestamptz '2019-10-30T11:16:29.743'),
     (12218, NULL, NULL, 'Sreevani and I discussed.  First solution will target holding a DataTable serialised as XML in the database in a new column of type varbinary(max)', 10010, timestamptz '2019-10-30T11:16:29.743'),
-    (12147, NULL, NULL, 'Spoke to SAS.  They advised invoice needs to be paid before license files are delivered.
+    (12147, NULL, NULL, 'Spoke to SAS.  They advised invoice needs to be paid before license files are delivered.
 The entry in Sprite has been receipted.', 10010, timestamptz '2019-10-30T11:16:29.747'),
     (12182, NULL, NULL, 'completed', 10019, timestamptz '2019-10-30T11:16:29.747'),
     (12181, NULL, NULL, 'completed', 10019, timestamptz '2019-10-30T11:16:29.747'),
@@ -5137,17 +5143,17 @@ The entry in Sprite has been receipted.', 10010, timestamptz '2019-10-30T11:16:2
     (11183, NULL, NULL, 'Seems LDAP is not the way to go,  GCD / Windows Active Directory is.', 10010, timestamptz '2019-10-30T11:16:29.760'),
     (11866, NULL, NULL, 'We can''t co-ordinate this with US, it simply doesn''t work.', 10010, timestamptz '2019-10-30T11:16:29.760'),
     (12087, NULL, NULL, 'Co-ordination with US doesn''t work.', 10010, timestamptz '2019-10-30T11:16:29.760'),
-    (12266, NULL, NULL, 'USed the loanbackout tool to backout loan data. The loan laoder framework now checks for the visible
+    (12266, NULL, NULL, 'USed the loanbackout tool to backout loan data. The loan laoder framework now checks for the visible
 property of the row.', 10012, timestamptz '2019-10-30T11:16:29.760'),
     (12001, NULL, NULL, 'GUI tool to load prime tapes into a database table is currently under development.', 10012, timestamptz '2019-10-30T11:16:29.760'),
     (12055, NULL, NULL, 'Some Trepp files seem to be incomplete - Erik is following up with Trepp directly', 10010, timestamptz '2019-10-30T11:16:29.760'),
     (11855, NULL, NULL, 'Seems fixed, but need to keep watching this.', 10010, timestamptz '2019-10-30T11:16:29.760'),
     (12051, NULL, NULL, 'David decided to continue with CE', 10010, timestamptz '2019-10-30T11:16:29.760'),
     (12081, NULL, NULL, 'Plan to move these warnings to support DashBoard', 10010, timestamptz '2019-10-30T11:16:29.763'),
-    (12139, NULL, NULL, 'Approach to be followed is as follows:
-1. All columns in the file will be present in the db tables. If we only choose columns in the file that have data, to be in the db, then we will have to deal with adding new columns that start to provide data in the future, resulting in messy release management issues.
-Exceptions listed in pt. 3
-2. All cells that have NA, -, N/A data will have null populated for them in the db.
+    (12139, NULL, NULL, 'Approach to be followed is as follows:
+1. All columns in the file will be present in the db tables. If we only choose columns in the file that have data, to be in the db, then we will have to deal with adding new columns that start to provide data in the future, resulting in messy release management issues.
+Exceptions listed in pt. 3
+2. All cells that have NA, -, N/A data will have null populated for them in the db.
 3. Exception to point 1, as of apr 2, 2012 are fosse and holmes loaders which have clearly highlighted columns which they do not intend to provide data for. These are not present in the db table.', 10012, timestamptz '2019-10-30T11:16:29.763'),
     (11987, NULL, NULL, 'test remark', 10010, timestamptz '2019-10-30T11:16:29.763'),
     (12351, NULL, NULL, 'Woh!', 10010, timestamptz '2019-10-30T11:16:29.763'),

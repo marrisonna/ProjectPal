@@ -73,8 +73,6 @@ CREATE TABLE person (
     -- Person has no password yet and can't log in — not an error state, e.g. a
     -- resource-only Person who never needs to.
     password_hash         text,
-    -- Gantt bar colour, a per-Person per-Organisation setting (DomainModel.md PersonRole entry).
-    colour                text,
     modified_by            integer REFERENCES person(person_id),
     modified_time            timestamptz NOT NULL DEFAULT now()
 );
@@ -88,9 +86,14 @@ CREATE TABLE person_role (
     -- A shorter name this Person is known by on this Team (e.g. "Alice"
     -- rather than "Alice Chen"), shown in place of person.name wherever a
     -- screen displays a name in the context of this Team. Null means no
-    -- override. Level 1 is read-only (seed data only) — editing is deferred
-    -- to a dedicated Team Management screen in Level 2 (D1.4-21).
+    -- override. Editable via the Team Management screen (D1.4-21/D1.4-87).
     nickname     text,
+    -- Gantt bar colour, per-Person *per-Team* (D-DM-13/D1.4-88, revising an
+    -- earlier per-Person-per-Organisation framing) — the same Person can
+    -- show up in a different colour on each Team they belong to, the same
+    -- way their nickname/role/is_resource already do. Editable via Team
+    -- Management, moved there from Manage People (ManagePeoplePlan.md).
+    colour       text,
     PRIMARY KEY (person_id, team_id)
 );
 
