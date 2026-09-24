@@ -755,20 +755,32 @@ export function TaskGrid({
     sortable: false,
     filterable: false,
     hideSortIcons: true,
-    getActions: (params: GridRowParams<TaskRecord>) =>
-      canDeleteRow(params.row)
-        ? [
-            <GridActionsCellItem
-              key="delete"
-              // Same muted grey as the rename/delete/add-task icons next to
-              // a Project's own name (Project.tsx's ROW_ICON_SX) — matching
-              // that, not the DataGrid action button's own default colour.
-              icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
-              label="Delete"
-              onClick={() => handleDeleteTask(params.row)}
-            />,
-          ]
-        : [],
+    // D1.4-99/D1.4-100 — always rendered now (previously an empty array
+    // when !canDeleteRow, matching this app's older convention); a row you
+    // can't delete instead shows a lighter-grey, genuinely disabled icon —
+    // clicking it is a real no-op (`onClick` never fires), not just
+    // discouraged — the same "always present, disabled when not
+    // applicable" treatment TeamsManagementPage.tsx's own Delete icon uses
+    // (D1.4-98), for a consistent look across every grid's own actions
+    // column rather than some rows having the icon and some not. Same two
+    // colours as TeamsManagementPage.tsx/ManagePeoplePage.tsx's own Delete
+    // icons too (D1.4-100) — this cell is the whole point of its own
+    // narrow column, not a secondary affordance beside other content,
+    // superseding the older, lighter rgba(0,0,0,0.28) this column used
+    // when it could only ever be "shown" or "not shown," never "shown but
+    // disabled."
+    getActions: (params: GridRowParams<TaskRecord>) => {
+      const deletable = canDeleteRow(params.row);
+      return [
+        <GridActionsCellItem
+          key="delete"
+          icon={<DeleteIcon fontSize="inherit" sx={{ color: deletable ? "rgba(0,0,0,0.87)" : "rgba(0,0,0,0.18)" }} />}
+          label="Delete"
+          disabled={!deletable}
+          onClick={deletable ? () => handleDeleteTask(params.row) : undefined}
+        />,
+      ];
+    },
   };
 
   const columns: GridColDef<TaskRecord>[] = [

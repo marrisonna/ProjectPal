@@ -297,21 +297,24 @@ export function ManagePeoplePage() {
           onClick={() => setPasswordTarget(params.row)}
         />,
       ];
-      // §4.5 — the delete button only shows for a Person it will actually
-      // succeed for (D-DM-12's own reference check, mirrored client-side
-      // above), rather than always showing it and explaining a 409
-      // afterward — matching TaskGrid's own canDeleteRow convention.
-      if (isPersonDeletable(params.row.person_id)) {
-        actions.push(
-          <GridActionsCellItem
-            key="delete"
-            icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.87)" }} />}
-            label="Delete"
-            style={{ padding: "2px" }}
-            onClick={() => handleDeletePerson(params.row)}
-          />,
-        );
-      }
+      // §4.5/D1.4-100 — always shown now; disabled (a real no-op click) and
+      // a lighter grey for a Person D-DM-12's own reference check (mirrored
+      // client-side above) wouldn't actually let this succeed for, rather
+      // than hiding the icon entirely — the same "always present" treatment
+      // TeamsManagementPage.tsx's/TaskGrid.tsx's own Delete icons use
+      // (D1.4-98/D1.4-99), for a consistent look rather than some rows
+      // having one icon and some having two.
+      const deletable = isPersonDeletable(params.row.person_id);
+      actions.push(
+        <GridActionsCellItem
+          key="delete"
+          icon={<DeleteIcon fontSize="inherit" sx={{ color: deletable ? "rgba(0,0,0,0.87)" : "rgba(0,0,0,0.18)" }} />}
+          label="Delete"
+          style={{ padding: "2px" }}
+          disabled={!deletable}
+          onClick={deletable ? () => handleDeletePerson(params.row) : undefined}
+        />,
+      );
       return actions;
     },
   };
