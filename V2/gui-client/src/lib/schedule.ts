@@ -70,6 +70,31 @@ export function computeDuration(
   return task.effort_in_days / resourceCount / allocation;
 }
 
+/**
+ * V1.2's `MainWindow.ShowReport`'s own per-resource effort split — a
+ * genuinely different question from `computeDuration` above, despite the
+ * similar inputs: that one answers "how many calendar days will this Task
+ * span" (Duration ignores resource count/allocation entirely — the stored
+ * value already *is* the calendar span), this one answers "how many
+ * person-days of actual work does one assigned resource contribute"
+ * (Duration is converted *into* person-days here by multiplying by
+ * allocation, the opposite direction). Used by DashboardPage.tsx's own
+ * per-Resource workload report (D1.4-104); `resourceCount` there is the
+ * count of *distinct effective identities* on the Task (a real resource,
+ * or the single shared "Other"/"Unassigned" bucket standing in for
+ * one-or-more stale/missing ones) — always >= 1, so this never needs
+ * `computeDuration`'s own zero-resource fallback.
+ */
+export function computeResourceEffortDays(
+  task: Pick<TaskRecord, "effort_in_days" | "effort_type" | "percentage_allocation">,
+  resourceCount: number,
+): number {
+  if (resourceCount === 0) return 0;
+  let effort = (task.effort_in_days ?? 0) / resourceCount;
+  if (task.effort_type === "Duration") effort *= task.percentage_allocation ?? 1;
+  return effort;
+}
+
 /** V1.2's Task.EarliestStartDate: purely the relative offset, unconstrained
  * by any Dependency — this is what "Requested Start Date" displays. */
 export function computeEarliestStartDate(

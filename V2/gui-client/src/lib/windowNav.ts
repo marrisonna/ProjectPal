@@ -177,6 +177,10 @@ const TEAMS_MANAGEMENT_WINDOW_FEATURES = "width=420,height=600";
 // import), each with a small grid at most — Teams Management's own
 // narrower shape fits better than the wider People/Search one.
 const ADMIN_WINDOW_FEATURES = "width=560,height=700";
+// DashboardPage.tsx's own double-click-a-Resource-row action (D1.4-105) —
+// a full All Tasks grid (many columns), so wider than Search/People's own
+// windows above.
+const TASKS_FOR_RESOURCE_WINDOW_FEATURES = "width=1100,height=700";
 
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
@@ -193,6 +197,26 @@ function windowFeaturesFor(entityType: string): string | undefined {
 /** One singleton window per (entityType, entityId) — see openNamedWindow. */
 export function openItemWindow(entityType: string, entityId: string | number): void {
   openNamedWindow(`/${entityType}/${entityId}`, `${entityType}-${entityId}`, windowFeaturesFor(entityType));
+}
+
+/**
+ * All Tasks filtered to one Resource (DashboardPage.tsx's own double-click
+ * on a Resource row, D1.4-105) — a *separate* window per `resourceKey`
+ * ("unassigned", or a Person id as a string), not the single "tasks-list"
+ * singleton the plain All Tasks window shares. Opening this for several
+ * different Resources from the Dashboard doesn't keep replacing the same
+ * window, and the Dashboard's own window is left exactly as it was rather
+ * than being navigated away from. AllTaskPage.tsx's own
+ * `useSingletonWindowIdentity` call varies its own name the same way,
+ * keyed off the same `?resource=` query param, so this and that stay in
+ * sync about what "already open" means for a given Resource.
+ */
+export function openTasksForResource(resourceKey: string): void {
+  openNamedWindow(
+    `/tasks?resource=${encodeURIComponent(resourceKey)}`,
+    `tasks-resource-${resourceKey}`,
+    TASKS_FOR_RESOURCE_WINDOW_FEATURES,
+  );
 }
 
 /** One singleton window for a whole list view (e.g. "tasks" -> "All Tasks"). */

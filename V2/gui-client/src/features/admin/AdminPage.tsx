@@ -5,10 +5,10 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Tooltip from "@mui/material/Tooltip";
-import type { GridColDef } from "@mui/x-data-grid";
+import { useGridApiRef } from "@mui/x-data-grid";
 import { useExportAllData, useIntegrityCheck, usePeople, useTasks, useTeams } from "../../api/hooks";
 import { useAuth } from "../../auth/AuthContext";
-import { DenseDataGrid } from "../../components/DenseDataGrid";
+import { DenseDataGrid, useDenseGridColumns } from "../../components/DenseDataGrid";
 import { formatApiError } from "../../lib/apiErrors";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
@@ -46,6 +46,8 @@ export function AdminPage() {
   useDocumentTitle("Admin Tools");
   useSingletonWindowIdentity("admin-list");
   const { person: caller } = useAuth();
+  const leaderlessApiRef = useGridApiRef();
+  const staleResourceApiRef = useGridApiRef();
 
   const {
     data: integrityResult,
@@ -77,11 +79,35 @@ export function AdminPage() {
   }));
   const hasIssues = leaderlessTeamRows.length > 0 || staleResourceRows.length > 0;
 
-  const leaderlessColumns: GridColDef<LeaderlessTeamRow>[] = [{ field: "name", headerName: "Team", flex: 1 }];
-  const staleResourceColumns: GridColDef<StaleResourceRow>[] = [
-    { field: "taskLabel", headerName: "Task", flex: 2 },
-    { field: "personLabel", headerName: "Person", flex: 1 },
-    { field: "teamLabel", headerName: "Team", flex: 1 },
+  // Routed through `withFilter`/`filtering`, the same machinery every
+  // other grid in the app uses (TaskGrid.tsx, Teams Management, the
+  // Dashboard, ...) — a plain `GridColDef[]` with no `filtering` prop, as
+  // these two grids used to be built, renders with MUI's own default
+  // header chrome instead of `FilterableHeader`'s (different font weight,
+  // no shaded background) and loses the right-click "Reset All
+  // Filters"/"Show Filter" menu items entirely, which is exactly what made
+  // them look different from every other grid in the app. Two independent
+  // `useDenseGridColumns` calls (one per grid, each with its own `apiRef`)
+  // since they're two separate DataGrid instances with their own filter
+  // state, not one shared grid.
+  const leaderless = useDenseGridColumns<LeaderlessTeamRow>({
+    rows: leaderlessTeamRows,
+    getRowId: (row) => row.team_id,
+    apiRef: leaderlessApiRef,
+  });
+  const leaderlessColumns = [
+    leaderless.withFilter({ field: "name", headerName: "Team" }, (row) => [row.name], "string", undefined, 1),
+  ];
+
+  const staleResource = useDenseGridColumns<StaleResourceRow>({
+    rows: staleResourceRows,
+    getRowId: (row) => row.rowKey,
+    apiRef: staleResourceApiRef,
+  });
+  const staleResourceColumns = [
+    staleResource.withFilter({ field: "taskLabel", headerName: "Task" }, (row) => [row.taskLabel], "string", undefined, 2),
+    staleResource.withFilter({ field: "personLabel", headerName: "Person" }, (row) => [row.personLabel], "string", undefined, 1),
+    staleResource.withFilter({ field: "teamLabel", headerName: "Team" }, (row) => [row.teamLabel], "string", undefined, 1),
   ];
 
   async function handleExport() {
@@ -138,10 +164,17 @@ export function AdminPage() {
                     of the app uses) so fixing it is one click away, not a
                     dead-end report. */}
                 <DenseDataGrid<LeaderlessTeamRow>
-                  rows={leaderlessTeamRows}
+                  apiRef={leaderlessApiRef}
+                  rows={leaderless.getFilteredRows()}
                   columns={leaderlessColumns}
                   getRowId={(row) => row.team_id}
                   onRowDoubleClick={(row) => openItemWindow("team-management", row.team_id)}
+                  onColumnResize={leaderless.onColumnResize}
+                  filtering={{
+                    filterVisible: leaderless.filterVisible,
+                    onToggleFilterVisible: () => leaderless.setFilterVisible((prev) => !prev),
+                    onResetFilters: leaderless.resetFilters,
+                  }}
                 />
               </Box>
             )}
@@ -153,10 +186,17 @@ export function AdminPage() {
                 {/* Double-click opens the Task itself, where the
                     assignment actually gets fixed. */}
                 <DenseDataGrid<StaleResourceRow>
-                  rows={staleResourceRows}
+                  apiRef={staleResourceApiRef}
+                  rows={staleResource.getFilteredRows()}
                   columns={staleResourceColumns}
                   getRowId={(row) => row.rowKey}
                   onRowDoubleClick={(row) => openItemWindow("tasks", row.task_id)}
+                  onColumnResize={staleResource.onColumnResize}
+                  filtering={{
+                    filterVisible: staleResource.filterVisible,
+                    onToggleFilterVisible: () => staleResource.setFilterVisible((prev) => !prev),
+                    onResetFilters: staleResource.resetFilters,
+                  }}
                 />
               </Box>
             )}

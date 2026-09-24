@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import {
   useAllAttachments,
   useAllDependencies,
@@ -27,7 +28,16 @@ import { DEFAULT_TASK_GRID_COLUMNS, TaskGrid, type TaskGridColumnKey } from "./T
 // TaskGrid's, which only ever renders whatever `tasks` it's handed (§4.1).
 export function AllTaskPage() {
   useDocumentTitle("All Tasks");
-  useSingletonWindowIdentity("tasks-list");
+  // D1.4-105 — a `?resource=` query param (DashboardPage.tsx's own
+  // double-click-a-Resource-row action, via `openTasksForResource`) means
+  // this is one of *several* possible All Tasks windows, one per Resource,
+  // not the single "tasks-list" singleton the plain nav-bar "Tasks" button
+  // opens — the window name has to match `openTasksForResource`'s own
+  // `tasks-resource-${resourceKey}` exactly, or that function's own
+  // "is one already open?" check can never find this window.
+  const [searchParams] = useSearchParams();
+  const resourceParam = searchParams.get("resource");
+  useSingletonWindowIdentity(resourceParam != null ? `tasks-resource-${resourceParam}` : "tasks-list");
   const { person } = useAuth();
   const { data: tasks, isLoading } = useTasks();
   const { data: projects } = useProjects();
@@ -60,14 +70,38 @@ export function AllTaskPage() {
   // a prop that keeps changing underneath it) — so this has to finish
   // updating `filterState` *before* TaskGrid first mounts, not
   // asynchronously afterwards. `defaultFilterReady` (below) gates that
-  // first mount on it.
+  // first mount on it. A `?resource=` query param (DashboardPage.tsx's own
+  // double-click-a-row action, D1.4-104/D1.4-105) always overrides this
+  // default, Team Lead or not — an explicit request from the Dashboard
+  // beats the "unless you're a Team Lead" fallback. `?resource=unassigned`
+  // filters to genuinely-unassigned Tasks instead of a Person, matching
+  // TaskGrid.tsx's own Resources column, which already contributes `""` as
+  // a filterable value for a Task with no assigned resources at all.
+  // `?resource=other` sets no Resources-column filter at all — "Other"
+  // isn't a resource name TaskGrid's own by-name filter has any concept
+  // of, so that case is handled separately below (`scopedTasks`,
+  // D1.4-106), by narrowing which Tasks even reach TaskGrid in the first
+  // place rather than trying to express it through that column's filter.
   const appliedDefaultResourceFilter = useRef(false);
   const [defaultFilterReady, setDefaultFilterReady] = useState(false);
   useEffect(() => {
     if (appliedDefaultResourceFilter.current) return;
     if (!person || !people) return;
     appliedDefaultResourceFilter.current = true;
-    if (!isTeamLead) {
+    if (resourceParam === "unassigned") {
+      setFilterState((prev) => ({
+        ...prev,
+        resources: { contains: "", exact: new Set([""]) },
+      }));
+    } else if (resourceParam === "other") {
+      // No-op — see the comment above.
+    } else if (resourceParam != null) {
+      const targetName = personDisplayName(Number(resourceParam), undefined, people, personRoles);
+      setFilterState((prev) => ({
+        ...prev,
+        resources: { contains: "", exact: new Set([targetName]) },
+      }));
+    } else if (!isTeamLead) {
       const ownName = personDisplayName(person.person_id, undefined, people, personRoles);
       setFilterState((prev) => ({
         ...prev,
@@ -75,7 +109,7 @@ export function AllTaskPage() {
       }));
     }
     setDefaultFilterReady(true);
-  }, [person, people, personRoles, isTeamLead]);
+  }, [person, people, personRoles, isTeamLead, resourceParam]);
 
   const projectsById = useMemo(() => {
     const map = new Map<number, (typeof projects)[number]>();
@@ -98,25 +132,6 @@ export function AllTaskPage() {
     [tasks, projectsById, myTeamIds],
   );
 
-  // Start the Team column hidden when it wouldn't tell the viewer anything
-  // (every visible row is already the same Team, e.g. a single-Team user).
-  // Read once at TaskGrid's first mount, same as `filterState` above — safe
-  // here because the loading guard below already holds off that mount
-  // until `teamScopedTasks` reflects real data, not an empty placeholder.
-  const uniqueTeamIds = useMemo(
-    () =>
-      new Set(
-        teamScopedTasks
-          .map((t) => projectsById.get(t.project_id)?.team_id)
-          .filter((id): id is number => id != null),
-      ),
-    [teamScopedTasks, projectsById],
-  );
-  const initiallyHiddenColumns = useMemo<TaskGridColumnKey[]>(
-    () => (uniqueTeamIds.size <= 1 ? ["team_id"] : []),
-    [uniqueTeamIds],
-  );
-
   const resourceIdsByTask = useMemo(() => {
     const map = new Map<number, number[]>();
     for (const r of allTaskResources ?? []) {
@@ -126,6 +141,50 @@ export function AllTaskPage() {
     }
     return map;
   }, [allTaskResources]);
+
+  // D1.4-106 — whether a Person currently counts as a resource on a given
+  // Team, exactly mirroring `admin.py`'s own "stale resource assignment"
+  // predicate (D1.4-103) and DashboardPage.tsx's own "Other" bucket
+  // (D1.4-104). `?resource=other` (D1.4-106) has no resource *name* to
+  // filter the Resources column by — a Task's assigned Person is still a
+  // real, nameable Person, just not a current resource on that Task's own
+  // Team — so it's expressed here instead, as a further narrowing of which
+  // Tasks even reach TaskGrid, the same mechanism `teamScopedTasks` itself
+  // already uses for Team-scoping.
+  const resourceTeamPairs = useMemo(() => {
+    const set = new Set<string>();
+    for (const pr of personRoles ?? []) {
+      if (pr.is_resource) set.add(`${pr.person_id}:${pr.team_id}`);
+    }
+    return set;
+  }, [personRoles]);
+  const scopedTasks = useMemo(() => {
+    if (resourceParam !== "other") return teamScopedTasks;
+    return teamScopedTasks.filter((t) => {
+      const teamId = projectsById.get(t.project_id)?.team_id;
+      const ids = resourceIdsByTask.get(t.task_id) ?? [];
+      return ids.some((id) => !resourceTeamPairs.has(`${id}:${teamId}`));
+    });
+  }, [teamScopedTasks, resourceParam, projectsById, resourceIdsByTask, resourceTeamPairs]);
+
+  // Start the Team column hidden when it wouldn't tell the viewer anything
+  // (every visible row is already the same Team, e.g. a single-Team user).
+  // Read once at TaskGrid's first mount, same as `filterState` above — safe
+  // here because the loading guard below already holds off that mount
+  // until `scopedTasks` reflects real data, not an empty placeholder.
+  const uniqueTeamIds = useMemo(
+    () =>
+      new Set(
+        scopedTasks
+          .map((t) => projectsById.get(t.project_id)?.team_id)
+          .filter((id): id is number => id != null),
+      ),
+    [scopedTasks, projectsById],
+  );
+  const initiallyHiddenColumns = useMemo<TaskGridColumnKey[]>(
+    () => (uniqueTeamIds.size <= 1 ? ["team_id"] : []),
+    [uniqueTeamIds],
+  );
 
   const remarksCountByTask = useMemo(() => {
     const map = new Map<number, number>();
@@ -182,7 +241,7 @@ export function AllTaskPage() {
 
   return (
     <TaskGrid
-      tasks={teamScopedTasks}
+      tasks={scopedTasks}
       projects={projects}
       components={components}
       people={people}

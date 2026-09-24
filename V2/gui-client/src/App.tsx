@@ -1,9 +1,11 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AppShell } from "./app/AppShell";
+import { isTeamLeadOfAnyTeam } from "./lib/permissions";
 import { AllTaskPage } from "./features/tasks/AllTaskPage";
+import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { PlanPage } from "./features/plan/PlanPage";
 import { ProjectDetailPage } from "./features/projects/ProjectDetailPage";
@@ -35,6 +37,16 @@ function BareAuthenticatedLayout() {
   );
 }
 
+// D1.4-25/D1.4-39/D1.4-104 — a TeamLeadUser lands on the Dashboard, every
+// other role keeps landing on All Tasks. Safe to read `person` unguarded:
+// this only ever renders inside AuthenticatedLayout, already behind
+// RequireAuth, which guarantees a non-null Person by the time children
+// render.
+function HomeRedirect() {
+  const { person } = useAuth();
+  return <Navigate to={isTeamLeadOfAnyTeam(person) ? "/dashboard" : "/tasks"} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -42,11 +54,12 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<AuthenticatedLayout />}>
-            {/* Every role lands on All Tasks for now — a TeamLeadUser should
-                eventually land on the not-yet-built "MainWindow" instead
-                (D1.4-XX, Claude/Level1_Implementation/4_GuiClient/Plan.md). */}
-            <Route path="/" element={<Navigate to="/tasks" replace />} />
+            <Route path="/" element={<HomeRedirect />} />
             <Route path="/tasks" element={<AllTaskPage />} />
+            {/* D1.4-104 — an in-place page like Tasks above (nav bar stays
+                visible), not a popped-out singleton window like every
+                other Stage 4 screen — see DashboardPage.tsx's own comment. */}
+            <Route path="/dashboard" element={<DashboardPage />} />
           </Route>
           <Route element={<BareAuthenticatedLayout />}>
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />

@@ -49,6 +49,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <RouterLink to="/" style={{ color: "inherit", textDecoration: "none" }}>
               <Logo />
             </RouterLink>
+            {/* D1.4-104 — an in-place page, like Tasks (RouterLink, not
+                openListWindow) — the MainWindow-equivalent landing
+                dashboard. A TeamLeadUser lands here from "/" by default
+                (D1.4-25); anyone can also reach it from here directly. */}
+            <Button color="inherit" component={RouterLink} to="/dashboard">
+              Dashboard
+            </Button>
             <Button color="inherit" component={RouterLink} to="/tasks">
               Tasks
             </Button>
