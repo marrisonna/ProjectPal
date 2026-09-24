@@ -8,8 +8,30 @@ import Typography from "@mui/material/Typography";
 import { Link as RouterLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../theme/Logo";
-import { openListWindow } from "../lib/windowNav";
+import { openItemWindow, openListWindow } from "../lib/windowNav";
 import { isTeamLeadOfAnyTeam } from "../lib/permissions";
+import type { WhoAmI } from "../api/client";
+
+// D1.4-92 — the one "Team Management" nav button decides which of the two
+// split screens to open, the same decision TeamManagementPage.tsx's own
+// "no id" mode used to make for itself before the split: an admin (any
+// Team) or a Team Lead of several always gets the plural Teams Management
+// list; a Team Lead of exactly one Team is sent straight to that one Team's
+// own singular window — no extra click for the common case.
+function openTeamManagement(person: WhoAmI | null): void {
+  if (person?.is_organisation_admin) {
+    openListWindow("teams-management");
+    return;
+  }
+  const ledTeamIds = (person?.team_roles ?? [])
+    .filter((tr) => tr.role === "TeamLeadUser")
+    .map((tr) => tr.team_id);
+  if (ledTeamIds.length === 1) {
+    openItemWindow("team-management", ledTeamIds[0]);
+  } else {
+    openListWindow("teams-management");
+  }
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { person, logout } = useAuth();
@@ -66,9 +88,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Button>
             )}
             {/* ManagePeoplePlan.md §5.1 — an organisation admin (any Team)
-                or a Team Lead of at least one Team. */}
+                or a Team Lead of at least one Team. Opens one of two
+                separate windows (D1.4-92) — see openTeamManagement above. */}
             {(person?.is_organisation_admin || isTeamLeadOfAnyTeam(person)) && (
-              <Button color="inherit" onClick={() => openListWindow("team-management")}>
+              <Button color="inherit" onClick={() => openTeamManagement(person)}>
                 Team Management
               </Button>
             )}

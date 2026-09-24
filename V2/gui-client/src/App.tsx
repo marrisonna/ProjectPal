@@ -11,6 +11,7 @@ import { ComponentDetailPage } from "./features/components/ComponentDetailPage";
 import { SearchPage } from "./features/search/SearchPage";
 import { ManagePeoplePage } from "./features/people/ManagePeoplePage";
 import { TeamManagementPage } from "./features/teams/TeamManagementPage";
+import { TeamsManagementPage } from "./features/teams/TeamsManagementPage";
 
 function AuthenticatedLayout() {
   return (
@@ -67,11 +68,15 @@ export default function App() {
             {/* ManagePeoplePlan.md — its own popped-out singleton window,
                 organisation-admin-only (the page itself gates access). */}
             <Route path="/people" element={<ManagePeoplePage />} />
-            {/* ManagePeoplePlan.md §5 — no-id resolves to a picker/redirect
-                depending on the viewer (TeamManagementPage.tsx's own
-                logic), same dual-purpose shape as /projects and
-                /components above. */}
-            <Route path="/team-management" element={<TeamManagementPage />} />
+            {/* D1.4-92 — split into two distinct singleton-window shapes:
+                TeamsManagementPage.tsx (plural, /teams-management) is the
+                admin-facing list of every Team, at most one instance ever;
+                TeamManagementPage.tsx (singular, requires :teamId) is the
+                per-Team member view, at most one instance *per Team* — the
+                same singleton-per-item mechanism Tasks/Projects/Components
+                already use (AppShell.tsx's own nav button decides which of
+                the two to open). */}
+            <Route path="/teams-management" element={<TeamsManagementPage />} />
             <Route path="/team-management/:teamId" element={<TeamManagementPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

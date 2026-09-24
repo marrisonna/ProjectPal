@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useMemo, useState } from "react";
+import { useParams } from "react-router";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
@@ -22,23 +22,18 @@ import {
   type GridRowParams,
 } from "@mui/x-data-grid";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import IconButton from "@mui/material/IconButton";
 import {
   useAllTaskResources,
   useCreatePersonRole,
-  useCreateTeam,
   useDeletePersonRole,
-  useDeleteTeam,
   usePeople,
   usePersonRoles,
   useProjects,
-  useRenameTeam,
   useTasks,
   useTeams,
   useUpdatePersonRoleField,
 } from "../../api/hooks";
-import type { PersonRecord, PersonRoleRecord, TeamRecord } from "../../api/types";
+import type { PersonRecord, PersonRoleRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import {
   DenseDataGrid,
@@ -202,107 +197,6 @@ function AddTeamMemberDialog({
   );
 }
 
-// The same muted row-icon treatment Project.tsx's own rename affordance
-// uses (its ROW_ICON_SX/ROW_ICON_BUTTON_SX aren't exported, so redefined
-// here rather than reached into).
-const ROW_ICON_SX = { fontSize: 15, color: "rgba(0,0,0,0.28)" };
-const ROW_ICON_BUTTON_SX = { p: "3px", "&:hover .MuiSvgIcon-root": { color: "primary.main" } };
-
-// org-admin-only create/rename (create_team/rename_team both call
-// require_org_admin) — dual-purpose the same way
-// CreateOrRenameProjectDialog.tsx already is, since a fresh Team needs an
-// initial Team Lead (mode "create") while renaming one doesn't touch
-// membership at all (mode "rename"). No prior GUI entry point called either
-// endpoint at all before this.
-function CreateOrRenameTeamDialog({
-  mode,
-  team,
-  people,
-  onClose,
-}: {
-  mode: "create" | "rename";
-  /** Required, and only its name read, for mode "create". */
-  team?: TeamRecord;
-  /** Only used for mode "create" — who can be picked as the new Team's initial Team Lead. */
-  people: PersonRecord[];
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(mode === "rename" ? (team?.name ?? "") : "");
-  const [leadPersonId, setLeadPersonId] = useState<number | "">("");
-  const [error, setError] = useState<string | null>(null);
-  const createTeam = useCreateTeam();
-  const renameTeam = useRenameTeam(team?.team_id ?? -1);
-  const pending = createTeam.isPending || renameTeam.isPending;
-
-  async function handleConfirm() {
-    if (!name.trim()) {
-      setError("A name must be specified.");
-      return;
-    }
-    if (mode === "create" && leadPersonId === "") {
-      setError("Choose an initial Team Lead.");
-      return;
-    }
-    try {
-      if (mode === "create") {
-        await createTeam.mutateAsync({ name: name.trim(), initial_team_lead_person_id: leadPersonId });
-      } else {
-        await renameTeam.mutateAsync(name.trim());
-      }
-      onClose();
-    } catch (err) {
-      setError(formatApiError(err, "please try again."));
-    }
-  }
-
-  return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{mode === "create" ? "New Team" : "Rename Team"}</DialogTitle>
-      <DialogContent>
-        <TextField
-          label="Name"
-          fullWidth
-          margin="normal"
-          autoFocus
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setError(null);
-          }}
-        />
-        {mode === "create" && (
-          <TextField
-            select
-            label="Initial Team Lead"
-            fullWidth
-            margin="normal"
-            value={leadPersonId}
-            onChange={(event) => {
-              setLeadPersonId(Number(event.target.value));
-              setError(null);
-            }}
-          >
-            {people.map((p) => (
-              <MenuItem key={p.person_id} value={p.person_id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-        {error && (
-          <Box sx={{ fontSize: 12, color: "error.main", mt: "4px" }}>{error}</Box>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleConfirm} disabled={pending}>
-          {mode === "create" ? "Create" : "Rename"}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 // The second, more pointed step of removing a member who still has active
 // Tasks (§5.4) — a real Dialog, not another window.confirm, specifically so
 // its own confirm button can say what it actually does rather than a bare
@@ -336,18 +230,21 @@ function ActiveTasksWarningDialog({
   );
 }
 
-// ManagePeoplePlan.md §5 — Team-Lead-facing (or organisation-admin, for any
-// Team) membership management, scoped to one Team at a time. Routes mirror
-// ProjectDetailPage.tsx's own no-id/with-id duality, but the "no id" mode
-// resolves differently depending on who's looking (§5.1): an admin always
-// sees a picker of every Team; a Team Lead of exactly one Team is sent
-// straight through; a Team Lead of several sees a picker of just those.
+// D1.4-92/D1.4-93 — split from what used to combine both modes: this is now
+// purely the *singular* per-Team membership view (add/remove members, edit
+// nickname/colour/role/is_resource), reachable only at
+// /team-management/:teamId — a required param, unlike before. One instance
+// per Team (not more), matching Task/Project/Component's own singleton-per-
+// item windows. No in-window Team switcher (D1.4-93) — picking a different
+// Team always means TeamsManagementPage.tsx's own list, which opens/focuses
+// that Team's own separate window; a switcher living *inside* one Team's
+// own window to jump to another felt unnatural once Teams already had
+// their own separate windows (the same reason Task Detail has no "jump to
+// a different Task" control of its own either).
 export function TeamManagementPage() {
-  const { teamId: teamIdParam } = useParams<{ teamId?: string }>();
-  const id = teamIdParam ? Number(teamIdParam) : null;
-  const navigate = useNavigate();
-  useSingletonWindowIdentity(id != null ? `team-management-${id}` : "team-management-list");
-  useDocumentTitle("Team Management");
+  const { teamId: teamIdParam } = useParams<{ teamId: string }>();
+  const id = Number(teamIdParam);
+  useSingletonWindowIdentity(`team-management-${id}`);
 
   const { person: caller } = useAuth();
   const { data: teams } = useTeams();
@@ -358,46 +255,23 @@ export function TeamManagementPage() {
   const { data: allTaskResources } = useAllTaskResources();
 
   const isAdmin = !!caller?.is_organisation_admin;
-  const ledTeamIds = useMemo(
-    () => new Set((caller?.team_roles ?? []).filter((tr) => tr.role === "TeamLeadUser").map((tr) => tr.team_id)),
-    [caller],
-  );
 
-  // Every Team available to switch/pick among, from this viewer's own
-  // perspective — every Team for an admin, only the ones they lead for a
-  // Team Lead (§5.1).
-  const availableTeams = useMemo(() => {
-    if (!teams) return [];
-    return isAdmin ? teams : teams.filter((t) => ledTeamIds.has(t.team_id));
-  }, [teams, isAdmin, ledTeamIds]);
-
-  // No-id mode, non-admin: a Team Lead of exactly one Team skips the picker
-  // entirely — no extra click for the common case (§5.1). An admin always
-  // sees the picker regardless of count, since "manage any Team" has no
-  // single obvious default.
-  useEffect(() => {
-    if (id != null || isAdmin || !teams) return;
-    if (availableTeams.length === 1) {
-      navigate(`/team-management/${availableTeams[0].team_id}`, { replace: true });
-    }
-  }, [id, isAdmin, teams, availableTeams, navigate]);
-
-  const canManageThisTeam = id != null && (isAdmin || isTeamLead(caller, id));
+  const canManageThisTeam = Number.isFinite(id) && (isAdmin || isTeamLead(caller, id));
 
   const updatePersonRoleField = useUpdatePersonRoleField();
   const deletePersonRole = useDeletePersonRole();
-  const deleteTeam = useDeleteTeam();
   const [addMemberOpen, setAddMemberOpen] = useState(false);
-  const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<TeamRecord | null>(null);
   const [activeTasksWarning, setActiveTasksWarning] = useState<{ row: TeamMemberRow; count: number } | null>(
     null,
   );
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
   const apiRef = useGridApiRef();
 
+  const currentTeam = teams?.find((t) => t.team_id === id);
+  useDocumentTitle(currentTeam ? `Team Management — ${currentTeam.name}` : "Team Management");
+
   const teamMembers = useMemo<TeamMemberRow[]>(() => {
-    if (id == null || !personRoles || !people) return [];
+    if (!Number.isFinite(id) || !personRoles || !people) return [];
     return personRoles
       .filter((pr) => pr.team_id === id)
       .map((pr) => ({ ...pr, name: people.find((p) => p.person_id === pr.person_id)?.name ?? `Person #${pr.person_id}` }));
@@ -426,7 +300,7 @@ export function TeamManagementPage() {
   // too, which is what made removing a brand-new Team's own lone member
   // wrongly warn about Tasks that had nothing to do with this Team at all.
   function activeTaskCount(personId: number): number {
-    if (id == null || !tasks || !projects || !allTaskResources) return 0;
+    if (!tasks || !projects || !allTaskResources) return 0;
     const teamProjectIds = new Set(projects.filter((p) => p.team_id === id).map((p) => p.project_id));
     const resourceTaskIds = new Set(
       allTaskResources.filter((r) => r.person_id === personId).map((r) => r.task_id),
@@ -449,7 +323,6 @@ export function TeamManagementPage() {
   // the whole point here is a button that says what it actually does
   // rather than a generic "OK" for something this consequential.
   async function handleRemoveMember(row: TeamMemberRow) {
-    if (id == null) return;
     if (!window.confirm(`Remove "${row.name}" from this Team?`)) return;
     const count = activeTaskCount(row.person_id);
     if (count > 0) {
@@ -460,7 +333,6 @@ export function TeamManagementPage() {
   }
 
   async function removeMember(row: TeamMemberRow) {
-    if (id == null) return;
     try {
       await deletePersonRole.mutateAsync({ personId: row.person_id, teamId: id });
     } catch (err) {
@@ -468,26 +340,7 @@ export function TeamManagementPage() {
     }
   }
 
-  // D-DM-14/D1.4-90 — rejected server-side if the Team has any Project or
-  // Component; membership itself is cascaded away, not blocking (see
-  // teams.py's own module docstring for why — a Team is created *with* a
-  // bootstrap TeamLeadUser that can never be fully removed, so blocking on
-  // membership would make this unusable for its own stated purpose). Named
-  // here in the confirmation, the same "soft warning" shape as removing a
-  // single member.
-  async function handleDeleteTeam(team: TeamRecord) {
-    const memberCount = (personRoles ?? []).filter((pr) => pr.team_id === team.team_id).length;
-    const warning = memberCount > 0 ? ` This will also remove ${memberCount} member${memberCount === 1 ? "" : "s"} from it.` : "";
-    if (!window.confirm(`Delete Team "${team.name}"?${warning} This cannot be undone.`)) return;
-    try {
-      await deleteTeam.mutateAsync(team.team_id);
-    } catch (err) {
-      setSnackbarError(formatApiError(err, "please try again."));
-    }
-  }
-
   async function processRowUpdate(newRow: TeamMemberRow, oldRow: TeamMemberRow): Promise<TeamMemberRow> {
-    if (id == null) return oldRow;
     const changedField = (Object.keys(newRow) as (keyof TeamMemberRow)[]).find(
       (key) => newRow[key] !== oldRow[key],
     );
@@ -500,20 +353,34 @@ export function TeamManagementPage() {
     return { ...updated, name: oldRow.name };
   }
 
+  // Two icons' worth of width (D1.4-92, matching ManagePeoplePage.tsx's own
+  // ACTIONS_COLUMN_WIDTH) even though there's only one icon here — sized to
+  // fit the "Actions" header text comfortably, not just the icon, and kept
+  // consistent with Manage People's own actions column rather than a
+  // narrower one-off value.
+  const ACTIONS_COLUMN_WIDTH = DENSE_ROW_HEIGHT * 2 + 14;
+
   const actionsColumn: GridColDef<TeamMemberRow> = {
     field: "__actions",
     type: "actions",
-    headerName: "",
-    width: DENSE_ROW_HEIGHT,
-    minWidth: DENSE_ROW_HEIGHT,
-    maxWidth: DENSE_ROW_HEIGHT,
+    headerName: "Actions",
+    headerAlign: "center",
+    width: ACTIONS_COLUMN_WIDTH,
+    minWidth: ACTIONS_COLUMN_WIDTH,
+    maxWidth: ACTIONS_COLUMN_WIDTH,
     sortable: false,
     filterable: false,
     hideSortIcons: true,
     getActions: (params: GridRowParams<TeamMemberRow>) => [
+      // Darker than the muted rgba(0,0,0,0.28) row-action icons used
+      // elsewhere (Project/Component's own row icons, TeamsManagementPage's
+      // rename/delete icons before D1.4-92 darkened those too) —
+      // deliberately so: this icon *is* the whole cell's content, not a
+      // secondary affordance beside other content, matching
+      // ManagePeoplePage.tsx's own reasoning exactly.
       <GridActionsCellItem
         key="remove"
-        icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.28)" }} />}
+        icon={<DeleteIcon fontSize="inherit" sx={{ color: "rgba(0,0,0,0.87)" }} />}
         label="Remove from Team"
         onClick={() => handleRemoveMember(params.row)}
       />,
@@ -574,86 +441,9 @@ export function TeamManagementPage() {
     return <CircularProgress sx={{ m: 2 }} />;
   }
 
-  // No-id mode: either a picker, or (a lone-led-Team redirect firing above)
-  // a brief flash of this same loading state until it navigates through.
-  if (id == null) {
-    if (!isAdmin && ledTeamIds.size === 0) {
-      return <Box sx={{ p: 2, fontSize: 13 }}>You don't have access to this page.</Box>;
-    }
-    if (!isAdmin && availableTeams.length === 1) {
-      return <CircularProgress sx={{ m: 2 }} />;
-    }
-    return (
-      <Box sx={{ p: "6px", boxSizing: "border-box" }}>
-        <Box
-          sx={{
-            bgcolor: "#fff",
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: "8px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            p: "12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            maxWidth: 320,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Box sx={{ fontSize: 14, fontWeight: 600 }}>Team Management</Box>
-            {isAdmin && (
-              <Button size="small" variant="contained" onClick={() => setCreateTeamOpen(true)}>
-                New Team
-              </Button>
-            )}
-          </Box>
-          {availableTeams.map((t) => (
-            <Box key={t.team_id} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <Button
-                variant="outlined"
-                onClick={() => navigate(`/team-management/${t.team_id}`)}
-                sx={{ justifyContent: "flex-start", flex: 1 }}
-              >
-                {t.name}
-              </Button>
-              {isAdmin && (
-                <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => setRenameTarget(t)}>
-                  <EditIcon sx={ROW_ICON_SX} />
-                </IconButton>
-              )}
-              {isAdmin && (
-                <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => handleDeleteTeam(t)}>
-                  <DeleteIcon sx={ROW_ICON_SX} />
-                </IconButton>
-              )}
-            </Box>
-          ))}
-        </Box>
-
-        {createTeamOpen && (
-          <CreateOrRenameTeamDialog
-            mode="create"
-            people={people.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name))}
-            onClose={() => setCreateTeamOpen(false)}
-          />
-        )}
-        {renameTarget && (
-          <CreateOrRenameTeamDialog mode="rename" team={renameTarget} people={[]} onClose={() => setRenameTarget(null)} />
-        )}
-
-        <Snackbar open={!!snackbarError} autoHideDuration={6000} onClose={() => setSnackbarError(null)}>
-          <Alert severity="error" onClose={() => setSnackbarError(null)}>
-            {snackbarError}
-          </Alert>
-        </Snackbar>
-      </Box>
-    );
-  }
-
   if (!canManageThisTeam) {
     return <Box sx={{ p: 2, fontSize: 13 }}>You don't have access to this page.</Box>;
   }
-
-  const currentTeam = teams.find((t) => t.team_id === id);
 
   return (
     <Box sx={{ p: "6px", boxSizing: "border-box", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -673,26 +463,7 @@ export function TeamManagementPage() {
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Box sx={{ fontSize: 14, fontWeight: 600 }}>Team Management — {currentTeam?.name ?? `Team #${id}`}</Box>
-            {/* A switcher only when there's genuinely more than one Team to
-                switch to (§5.1) — a single-Team Lead sees no switcher at all. */}
-            {availableTeams.length > 1 && (
-              <TextField
-                select
-                size="small"
-                value={id}
-                onChange={(event) => navigate(`/team-management/${event.target.value}`)}
-                sx={{ minWidth: 160 }}
-              >
-                {availableTeams.map((t) => (
-                  <MenuItem key={t.team_id} value={t.team_id}>
-                    {t.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          </Box>
+          <Box sx={{ fontSize: 14, fontWeight: 600 }}>Team: {currentTeam?.name ?? `#${id}`}</Box>
           <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
             Add Person
           </Button>

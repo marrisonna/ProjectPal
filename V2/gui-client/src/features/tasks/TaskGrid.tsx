@@ -18,6 +18,7 @@ import {
   type PersonRoleRecord,
   type ProjectRecord,
   type TaskRecord,
+  type TeamRecord,
 } from "../../api/types";
 import { openItemWindow } from "../../lib/windowNav";
 import { personDisplayName } from "../../lib/people";
@@ -93,6 +94,7 @@ export type TaskGridColumnKey =
   | "description"
   | "component_id"
   | "project_id"
+  | "team_id"
   | "priority"
   | "end_date"
   | "start_date"
@@ -110,6 +112,7 @@ export type TaskGridColumnKey =
   | "detailed_description";
 
 export const DEFAULT_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
+  "team_id",
   "task_id",
   "urgency",
   "resources",
@@ -227,6 +230,16 @@ export interface TaskGridProps {
   components: ComponentRecord[];
   people: PersonRecord[];
   personRoles: PersonRoleRecord[];
+  // Optional, defaulting to `[]` — unlike the reference data above, only
+  // the "team_id" column (AllTaskPage.tsx's own DEFAULT_TASK_GRID_COLUMNS)
+  // actually needs it; Project/Component's own embedded TaskGrid call
+  // sites never request that column (redundant for the Project-embedded
+  // one — every row shares the same Team already — and out of scope for
+  // the Component-embedded one), so making this required would mean
+  // plumbing it through ProjectDetailPage/ComponentDetailPage and their
+  // own Project.tsx/Projects.tsx/Component.tsx/Components.tsx for no
+  // actual benefit there.
+  teams?: TeamRecord[];
   scheduleGraph: ScheduleGraph;
   resourceIdsByTask: Map<number, number[]>;
   attachmentsCountByTask: Map<number, number>;
@@ -257,6 +270,7 @@ export function TaskGrid({
   components,
   people,
   personRoles,
+  teams = [],
   scheduleGraph,
   resourceIdsByTask,
   attachmentsCountByTask,
@@ -290,6 +304,7 @@ export function TaskGrid({
 
   const projectsById = useMemo(() => byId(projects, "project_id"), [projects]);
   const componentsById = useMemo(() => byId(components, "component_id"), [components]);
+  const teamsById = useMemo(() => byId(teams, "team_id"), [teams]);
 
   function projectTeamId(row: TaskRecord): number | undefined {
     return projectsById.get(row.project_id)?.team_id;
@@ -510,6 +525,18 @@ export function TaskGrid({
         valueGetter: (_value, row) => projectsById.get(row.project_id)?.name ?? row.project_id,
       },
       (row) => [projectsById.get(row.project_id)?.name ?? String(row.project_id)],
+      "string",
+    ),
+    // A Task has no team_id of its own — resolved transitively via its own
+    // Project's team_id, the same indirection projectTeamId() already uses
+    // for permission checks elsewhere in this file.
+    team_id: withFilter(
+      {
+        field: "team_id",
+        headerName: "Team",
+        valueGetter: (_value, row) => teamsById.get(projectTeamId(row) ?? -1)?.name ?? "",
+      },
+      (row) => [teamsById.get(projectTeamId(row) ?? -1)?.name ?? ""],
       "string",
     ),
     priority: governed(

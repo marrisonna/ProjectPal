@@ -177,16 +177,15 @@ Deliberately narrow — this guards *self*-demotion only. It doesn't stop a *dif
 <a id="team-screen-structure"></a>
 ### 5.1 Screen Structure, Navigation, and the Team Picker
 
-A new popped-out singleton window. `AppShell.tsx` gets a "Team Management" nav button, rendered when `person?.is_organisation_admin || isTeamLeadOfAnyTeam(person)` is true.
+**Revised by `D1.4-92`** (split into two genuinely separate windows, not one component wearing a no-id/with-id duality — kept here for the original reasoning, see `Plan.md`'s own `D1.4-92` for the final shape): `AppShell.tsx` gets a "Team Management" nav button, rendered when `person?.is_organisation_admin || isTeamLeadOfAnyTeam(person)` is true, and itself decides which of the two windows below to open — the decision originally described as the "no id" mode's own logic now lives there instead of inside either page:
 
-Routes mirror `ProjectDetailPage.tsx`'s own no-id/with-id duality, but the "no id" mode resolves differently depending on who's looking, since — per the user's own note — a Team Lead may lead more than one Team, and an admin can manage any Team at all:
-
-- **`/team-management` (no id):**
-  - An organisation admin sees a picker listing **every** Team (`GET /team`) — they can manage any.
-  - A Team Lead who leads **exactly one** Team is redirected straight to `/team-management/:teamId` for it — no extra click for the common case.
-  - A Team Lead who leads **more than one** sees a picker listing only the Teams they lead.
+- **`TeamsManagementPage.tsx` (plural), `/teams-management`, at most one instance ever:**
+  - An organisation admin sees a list of **every** Team (`GET /team`) — they can manage any, including creating/renaming/deleting one.
+  - A Team Lead who leads **exactly one** Team never sees this window at all — the nav button sends them straight to `/team-management/:teamId` for it instead, no extra click for the common case.
+  - A Team Lead who leads **more than one** sees a list of only the Teams they lead (read-only here — create/rename/delete stay `is_organisation_admin`-only).
   - Anyone who leads none and isn't an admin never sees the nav button; direct navigation shows the same access-denied message as Manage People.
-- **`/team-management/:teamId`:** the main view (§5.2). A Team switcher (a small dropdown, not a full picker page) appears at the top **only when the viewer has more than one Team available to switch to** (multiple Teams led, or any Team at all for an admin) — a single-Team Lead sees no switcher at all, matching this app's own "don't show UI with nothing to do" pattern (e.g. Component has no "Only Active" checkbox at all, since it has no Priority concept to filter by).
+  - Picking a Team opens (or focuses) that Team's own separate `/team-management/:teamId` window via `openItemWindow` — the same singleton-per-item mechanism Tasks/Projects/Components already use — rather than navigating this list window away from the list.
+- **`TeamManagementPage.tsx` (singular), `/team-management/:teamId`, at most one instance *per Team*:** the member-management view (§5.2). **Revised by `D1.4-93`:** no in-window Team switcher — one was tried (a small dropdown, shown only when the viewer had more than one Team available) but felt unnatural once each Team already has its own separate window; picking a different Team always goes through `TeamsManagementPage.tsx`'s own list instead, the same way Task Detail has no "jump to a different Task" control of its own.
   - Access guard, evaluated against *this specific* `teamId`: `is_organisation_admin || isTeamLead(person, teamId)` — exactly `_require_admin_or_team_lead`'s own shape, not just "leads *some* Team."
 
 <a id="team-members-grid"></a>

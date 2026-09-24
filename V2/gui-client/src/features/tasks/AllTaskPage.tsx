@@ -9,6 +9,7 @@ import {
   usePersonRoles,
   useProjects,
   useTasks,
+  useTeams,
 } from "../../api/hooks";
 import { TASK_STATUSES } from "../../api/types";
 import { useSingletonWindowIdentity } from "../../lib/windowNav";
@@ -33,6 +34,7 @@ export function AllTaskPage() {
   const { data: components } = useComponents();
   const { data: people } = usePeople();
   const { data: personRoles } = usePersonRoles();
+  const { data: teams } = useTeams();
   const { data: allDependencies } = useAllDependencies();
   const { data: allTaskResources } = useAllTaskResources();
   const { data: allRemarks } = useAllRemarks();
@@ -141,6 +143,7 @@ export function AllTaskPage() {
     !components ||
     !people ||
     !personRoles ||
+    !teams ||
     !defaultFilterReady ||
     // These four weren't gated here before — the grid could render (and
     // TaskGrid.tsx sees `?? []`, i.e. genuinely empty) a render or two
@@ -165,6 +168,7 @@ export function AllTaskPage() {
       components={components}
       people={people}
       personRoles={personRoles}
+      teams={teams}
       scheduleGraph={scheduleGraph}
       resourceIdsByTask={resourceIdsByTask}
       attachmentsCountByTask={attachmentsCountByTask}
