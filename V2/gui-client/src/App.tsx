@@ -12,6 +12,7 @@ import { SearchPage } from "./features/search/SearchPage";
 import { ManagePeoplePage } from "./features/people/ManagePeoplePage";
 import { TeamManagementPage } from "./features/teams/TeamManagementPage";
 import { TeamsManagementPage } from "./features/teams/TeamsManagementPage";
+import { AdminPage } from "./features/admin/AdminPage";
 
 function AuthenticatedLayout() {
   return (
@@ -78,6 +79,10 @@ export default function App() {
                 the two to open). */}
             <Route path="/teams-management" element={<TeamsManagementPage />} />
             <Route path="/team-management/:teamId" element={<TeamManagementPage />} />
+            {/* D1.4-103 — its own popped-out singleton window, organisation-
+                admin-only (the page itself gates access, same as Manage
+                People). */}
+            <Route path="/admin" element={<AdminPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

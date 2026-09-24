@@ -789,3 +789,57 @@ export function useSearch(q: string) {
       ),
   });
 }
+
+// --- Admin tooling (D1.4-103, UseCases.md's Administer the System) --------
+
+// No response_model server-side (rest-api/app/routes/admin.py) — typed by
+// hand, matching the WhoAmI/Team/SearchResultRecord precedent above for
+// other unmodelled endpoints.
+export interface IntegrityCheckResult {
+  teams_without_a_team_lead_user: { team_id: number; name: string }[];
+  task_resource_assignments_no_longer_valid: {
+    task_id: number;
+    person_id: number;
+    team_id: number;
+  }[];
+}
+
+// Auto-runs on mount like every other list-fetching hook above (Teams,
+// People, ...) — it's a cheap read, and AdminPage.tsx's own "Refresh"
+// button just calls this query's own refetch rather than needing a second,
+// manually-triggered variant.
+export function useIntegrityCheck() {
+  return useQuery({
+    queryKey: ["admin-integrity-check"],
+    queryFn: async () =>
+      unwrap<IntegrityCheckResult>(await apiClient.GET("/admin/integrity-check")),
+  });
+}
+
+// admin.py's own `_TABLES` list (Attachment omitted server-side — its `data`
+// column holds raw file bytes, not JSON-safe) — each value is that table's
+// raw rows, passed straight through to a downloaded file by AdminPage.tsx,
+// never read field-by-field here.
+export type AdminExportData = Record<
+  | "team"
+  | "person"
+  | "person_role"
+  | "component"
+  | "project"
+  | "task"
+  | "task_resource"
+  | "dependency"
+  | "remark",
+  Record<string, unknown>[]
+>;
+
+// A `useMutation`, not a `useQuery`, even though `/admin/export` is a GET —
+// there's nothing to cache or keep fresh, only a one-off "fetch, then
+// trigger a file download" action a button press sets off, which is
+// exactly the shape `useMutation` already fits for every other button-
+// triggered action in this file.
+export function useExportAllData() {
+  return useMutation({
+    mutationFn: async () => unwrap<AdminExportData>(await apiClient.GET("/admin/export")),
+  });
+}

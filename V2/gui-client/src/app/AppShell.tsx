@@ -95,6 +95,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Team Management
               </Button>
             )}
+            {/* D1.4-103 — organisation-admin-only, same gating as Manage
+                People/Team Management above. */}
+            {person?.is_organisation_admin && (
+              <Button color="inherit" onClick={() => openListWindow("admin")}>
+                Admin Tools
+              </Button>
+            )}
           </Box>
           {person?.is_organisation_admin && (
             <Chip label="Admin" color="secondary" size="small" />

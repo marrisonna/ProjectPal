@@ -173,6 +173,10 @@ const TEAM_MANAGEMENT_WINDOW_FEATURES = "width=900,height=600";
 // Team (create/rename/delete); a narrower, shorter card is enough for it,
 // unlike the singular per-Team member grid above.
 const TEAMS_MANAGEMENT_WINDOW_FEATURES = "width=420,height=600";
+// AdminPage.tsx (D1.4-103) — two stacked panels (integrity check, export/
+// import), each with a small grid at most — Teams Management's own
+// narrower shape fits better than the wider People/Search one.
+const ADMIN_WINDOW_FEATURES = "width=560,height=700";
 
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
@@ -182,6 +186,7 @@ function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "people") return PEOPLE_WINDOW_FEATURES;
   if (entityType === "team-management") return TEAM_MANAGEMENT_WINDOW_FEATURES;
   if (entityType === "teams-management") return TEAMS_MANAGEMENT_WINDOW_FEATURES;
+  if (entityType === "admin") return ADMIN_WINDOW_FEATURES;
   return undefined;
 }
 
