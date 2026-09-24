@@ -4,6 +4,7 @@ import {
   useGridApiRef,
   type GridCellParams,
   type GridColDef,
+  type GridColumnVisibilityModel,
   type GridRenderEditCellParams,
   type GridSingleSelectColDef,
   type GridSortModel,
@@ -763,6 +764,15 @@ export interface DenseDataGridProps<T> {
   onCellClick?: (params: GridCellParams<T>) => void;
   processRowUpdate?: (newRow: T, oldRow: T) => Promise<T>;
   onProcessRowUpdateError?: (err: unknown) => void;
+  // D1.4-101 — a one-time seed for which columns start hidden (a plain
+  // field list, checked once via a lazy useState initializer, the same
+  // "initial value, not a controlled prop" shape `useDenseGridColumns`'s
+  // own `initialFilterState` already uses) — a column started this way is
+  // still fully togglable afterward via the right-click "Show Column" menu,
+  // it just doesn't render on first mount. Columns are always passed to
+  // `columns` in full regardless of hidden state; visibility is a pure
+  // rendering concern layered on top via MUI's own `columnVisibilityModel`.
+  initiallyHiddenFields?: string[];
 }
 
 // The shared dense-grid chrome itself (D1.4-73): sizing, border, header
@@ -782,10 +792,23 @@ export function DenseDataGrid<T>({
   onCellClick,
   processRowUpdate,
   onProcessRowUpdateError,
+  initiallyHiddenFields,
 }: DenseDataGridProps<T>) {
   const internalApiRef = useGridApiRef();
   const apiRef = externalApiRef ?? internalApiRef;
-  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; field: string | null } | null>(
+    null,
+  );
+  // D1.4-101 — hover-opens a flyout of hidden columns from the "Show
+  // Column" item, the standard (if slightly manual — MUI has no built-in
+  // nested-menu primitive) pattern for a submenu built from plain Menu/
+  // MenuItem: a second, independently-anchored Menu, controlled by hover.
+  const [showColumnAnchor, setShowColumnAnchor] = useState<HTMLElement | null>(null);
+  const [columnVisibilityModel, setColumnVisibilityModel] = useState<GridColumnVisibilityModel>(() => {
+    const model: GridColumnVisibilityModel = {};
+    for (const field of initiallyHiddenFields ?? []) model[field] = false;
+    return model;
+  });
   const [copyError, setCopyError] = useState<string | null>(null);
 
   // Right-click-anywhere-on-the-grid menu (D1.4-56), reproducing V1.2's own
@@ -795,10 +818,22 @@ export function DenseDataGrid<T>({
   // MUI "anchor a Menu at the click position" recipe.
   function handleContextMenu(event: React.MouseEvent) {
     event.preventDefault();
-    setContextMenu(contextMenu === null ? { mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : null);
+    if (contextMenu !== null) {
+      setContextMenu(null);
+      return;
+    }
+    // D1.4-101 — both a data cell (GridCell.js) and a column header
+    // (GridColumnHeaderItem.js) carry their own `data-field` attribute
+    // (confirmed by reading MUI's own source); climbing to the nearest one
+    // finds which column, if any, the right-click actually landed on,
+    // regardless of what specific element inside it — text, an icon — was
+    // the literal click target.
+    const field = (event.target as HTMLElement).closest("[data-field]")?.getAttribute("data-field") ?? null;
+    setContextMenu({ mouseX: event.clientX + 2, mouseY: event.clientY - 6, field });
   }
   function handleCloseContextMenu() {
     setContextMenu(null);
+    setShowColumnAnchor(null);
   }
 
   // V1.2's own "Copy All" (GridControl.cs's selectAllToolStripMenuItem_Click):
@@ -830,11 +865,40 @@ export function DenseDataGrid<T>({
     handleCloseContextMenu();
   }
 
+  // D1.4-101 — the column the context menu's own right-click landed on (if
+  // any), and whether it's one "Hide Column" should offer at all: the
+  // leading Actions column (Delete/Edit icons) is deliberately excluded —
+  // it's the only way to act on a row at all, with no other UI path back
+  // to that functionality once hidden.
+  const contextMenuColumn = contextMenu?.field ? columns.find((c) => c.field === contextMenu.field) : undefined;
+  const canHideContextMenuColumn = !!contextMenuColumn && contextMenuColumn.type !== "actions";
+  const hiddenColumns = columns.filter((c) => columnVisibilityModel[c.field] === false);
+
+  function hideColumn(field: string) {
+    setColumnVisibilityModel((prev) => ({ ...prev, [field]: false }));
+    handleCloseContextMenu();
+  }
+  function showColumn(field: string) {
+    setColumnVisibilityModel((prev) => {
+      // Deletes rather than sets `true` — MUI treats a field simply absent
+      // from the model as visible, and this keeps the model's own size
+      // down to just however many columns are actually hidden right now,
+      // rather than accumulating a `true` entry for every column ever
+      // shown again over a long session.
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    handleCloseContextMenu();
+  }
+
   return (
     <Box onContextMenu={handleContextMenu}>
       <DataGrid<T>
         apiRef={apiRef}
         rows={rows}
+        columnVisibilityModel={columnVisibilityModel}
+        onColumnVisibilityModelChange={setColumnVisibilityModel}
         // Always sizes to its own content (ProjectsGUIComponent.md §4.5,
         // D1.4-59) — a small embedded grid doesn't need a fixed-height box,
         // and a fixed box would either clip a taller grid or leave dead
@@ -937,6 +1001,16 @@ export function DenseDataGrid<T>({
         onClose={handleCloseContextMenu}
         anchorReference="anchorPosition"
         anchorPosition={contextMenu !== null ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
+        // Zero-duration close: with the default fade, the outer menu stays
+        // mounted and hoverable for the whole exit transition while its own
+        // conditionally-rendered items (Hide Column, Show Column) are
+        // simultaneously re-evaluated against the state that just changed
+        // (contextMenu/hiddenColumns) — so an item can vanish or shift under
+        // a cursor that hasn't moved, and the browser fires a real mouseenter
+        // on whatever now sits there. That's what reopened "Show Column"'s
+        // flyout right after Hide Column ran. Closing instantly removes the
+        // window where that stray hover can happen.
+        transitionDuration={0}
       >
         {filtering && (
           <MenuItem
@@ -944,12 +1018,13 @@ export function DenseDataGrid<T>({
               filtering.onResetFilters();
               handleCloseContextMenu();
             }}
+            onMouseEnter={() => setShowColumnAnchor(null)}
             dense
           >
             Reset All Filters
           </MenuItem>
         )}
-        <MenuItem onClick={handleCopyAll} dense>
+        <MenuItem onClick={handleCopyAll} onMouseEnter={() => setShowColumnAnchor(null)} dense>
           Copy All
         </MenuItem>
         {filtering && (
@@ -958,11 +1033,62 @@ export function DenseDataGrid<T>({
               filtering.onToggleFilterVisible();
               handleCloseContextMenu();
             }}
+            onMouseEnter={() => setShowColumnAnchor(null)}
             dense
           >
             <ListItemText>{filtering.filterVisible ? "Hide filter" : "Show Filter"}</ListItemText>
           </MenuItem>
         )}
+        {canHideContextMenuColumn && (
+          <MenuItem
+            onClick={() => hideColumn(contextMenu!.field!)}
+            onMouseEnter={() => setShowColumnAnchor(null)}
+            dense
+          >
+            Hide Column
+          </MenuItem>
+        )}
+        {hiddenColumns.length > 0 && (
+          <MenuItem
+            dense
+            onMouseEnter={(event) => setShowColumnAnchor(event.currentTarget)}
+            sx={{ justifyContent: "space-between" }}
+          >
+            Show Column
+            <Box component="span" sx={{ ml: 2, fontSize: 12, opacity: 0.6 }}>
+              ▶
+            </Box>
+          </MenuItem>
+        )}
+      </Menu>
+      {/* D1.4-101 — "Show Column"'s own flyout, a second, independently-
+          anchored Menu rather than a true nested submenu (MUI has no
+          built-in primitive for one): opened by hovering "Show Column"
+          above, closed by hovering elsewhere in the outer menu (each of
+          its other items also clears `showColumnAnchor` on its own
+          onMouseEnter, below) or by picking one of its own items. */}
+      <Menu
+        open={showColumnAnchor !== null}
+        anchorEl={showColumnAnchor}
+        onClose={() => setShowColumnAnchor(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        // Never auto-focuses on open — that would steal focus away from
+        // the outer menu's own item the moment a hover (not a click)
+        // opens this one, which reads as broken keyboard/visual focus.
+        autoFocus={false}
+        disableAutoFocusItem
+        // See the outer menu's own transitionDuration comment above — the
+        // same stray-hover-during-close hazard applies to this flyout too
+        // (e.g. un-hiding the last hidden column leaves it briefly visible
+        // and hoverable while its own content has already gone empty).
+        transitionDuration={0}
+      >
+        {hiddenColumns.map((c) => (
+          <MenuItem key={c.field} dense onClick={() => showColumn(c.field)}>
+            {c.headerName ?? c.field}
+          </MenuItem>
+        ))}
       </Menu>
     </Box>
   );

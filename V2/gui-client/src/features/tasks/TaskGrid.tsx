@@ -251,6 +251,11 @@ export interface TaskGridProps {
   columns?: TaskGridColumnKey[];
   showFilters?: boolean;
   initialFilterState?: Record<string, ColumnFilterState>;
+  // Seeds DenseDataGrid's own `initiallyHiddenFields` — read once, at first
+  // mount, same as `initialFilterState` above (AllTaskPage.tsx uses this to
+  // start the "team_id" column hidden when every visible row shares one
+  // Team, so it isn't gated on `defaultFilterReady`-style plumbing here).
+  initiallyHiddenColumns?: TaskGridColumnKey[];
   defaultSort?: { field: string; sort: "asc" | "desc" };
   onRowDoubleClick?: (task: TaskRecord) => void;
 }
@@ -278,6 +283,7 @@ export function TaskGrid({
   columns: columnKeys = DEFAULT_TASK_GRID_COLUMNS,
   showFilters = true,
   initialFilterState,
+  initiallyHiddenColumns,
   defaultSort = { field: "urgency", sort: "desc" as const },
   onRowDoubleClick,
 }: TaskGridProps) {
@@ -814,6 +820,7 @@ export function TaskGrid({
         getRowClassName={rowClassName}
         sx={urgencyRowSx}
         defaultSort={[defaultSort]}
+        initiallyHiddenFields={initiallyHiddenColumns}
         filtering={{
           filterVisible,
           onToggleFilterVisible: () => setFilterVisible((prev) => !prev),

@@ -19,7 +19,7 @@ import { isTeamLeadOfAnyTeam } from "../../lib/permissions";
 import { useAuth } from "../../auth/AuthContext";
 import { buildScheduleGraph } from "../../lib/schedule";
 import type { ColumnFilterState } from "../../components/GridColumnFilter";
-import { DEFAULT_TASK_GRID_COLUMNS, TaskGrid } from "./TaskGrid";
+import { DEFAULT_TASK_GRID_COLUMNS, TaskGrid, type TaskGridColumnKey } from "./TaskGrid";
 
 // The TaskGrid-based All Tasks screen (TaskGridPlan.md §5.2, D1.4-50) — the
 // approved replacement for the original grid (D1.4-65). Team-scoping and
@@ -96,6 +96,25 @@ export function AllTaskPage() {
   const teamScopedTasks = useMemo(
     () => (tasks ?? []).filter((t) => myTeamIds.has(projectsById.get(t.project_id)?.team_id ?? -1)),
     [tasks, projectsById, myTeamIds],
+  );
+
+  // Start the Team column hidden when it wouldn't tell the viewer anything
+  // (every visible row is already the same Team, e.g. a single-Team user).
+  // Read once at TaskGrid's first mount, same as `filterState` above — safe
+  // here because the loading guard below already holds off that mount
+  // until `teamScopedTasks` reflects real data, not an empty placeholder.
+  const uniqueTeamIds = useMemo(
+    () =>
+      new Set(
+        teamScopedTasks
+          .map((t) => projectsById.get(t.project_id)?.team_id)
+          .filter((id): id is number => id != null),
+      ),
+    [teamScopedTasks, projectsById],
+  );
+  const initiallyHiddenColumns = useMemo<TaskGridColumnKey[]>(
+    () => (uniqueTeamIds.size <= 1 ? ["team_id"] : []),
+    [uniqueTeamIds],
   );
 
   const resourceIdsByTask = useMemo(() => {
@@ -176,6 +195,7 @@ export function AllTaskPage() {
       columns={DEFAULT_TASK_GRID_COLUMNS}
       showFilters
       initialFilterState={filterState}
+      initiallyHiddenColumns={initiallyHiddenColumns}
     />
   );
 }
