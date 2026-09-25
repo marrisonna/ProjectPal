@@ -1,4 +1,4 @@
-import type { DependencyRecord } from "../api/types";
+import type { ComponentRecord, DependencyRecord, TaskRecord } from "../api/types";
 import {
   addCalendarDays,
   calendarDayNumber,
@@ -8,6 +8,7 @@ import {
   formatMonthMarker,
   getProjectSchedule,
   getTaskSchedule,
+  type ComputedSchedule,
   type ScheduleGraph,
 } from "./schedule";
 
@@ -38,7 +39,15 @@ export const ROW_HEIGHT = 20;
 const PROJECT_BAR_COLOUR = "#607d8b";
 
 export interface GanttBar {
-  kind: "task" | "project";
+  // "component" (D1.4-109): a Component-scoped Gantt's own container bars
+  // (buildComponentGanttLayout) — kept distinct from "project" rather than
+  // reusing it, even though both render identically as containers
+  // (isContainerBar below), specifically so dependency-arrow matching
+  // (`barByKey`, keyed `${kind}:${id}`) can never confuse a Component's own
+  // id with an unrelated Project's — Dependencies never reference a
+  // Component at all, so a stray `project:<id>` key coincidentally
+  // matching a same-numbered Component would be a real, if narrow, bug.
+  kind: "task" | "project" | "component";
   id: number;
   label: string;
   depth: number;
@@ -187,8 +196,17 @@ export interface GanttLayout {
   todayX: number;
 }
 
+// A bar that renders as a container (bold label, collapse/expand chevron,
+// subtree-extent guide lines) rather than a leaf — every kind except
+// "task". Centralised here rather than repeating `kind === "project" ||
+// kind === "component"` at every one of this module's and PlanPage.tsx's
+// own call sites.
+export function isContainerBar(kind: GanttBar["kind"]): boolean {
+  return kind !== "task";
+}
+
 interface RawRow {
-  kind: "task" | "project";
+  kind: "task" | "project" | "component";
   id: number;
   label: string;
   depth: number;
@@ -339,33 +357,25 @@ function collectRows(
  * Project), or `null` for every top-level active Project (`Plan Display`'s
  * "Top Level Projects" mode, `UserInterfaceWindows.md` §3.7).
  */
-export function buildGanttLayout(
-  graph: ScheduleGraph,
+/**
+ * Turns a flat, already-ordered `RawRow[]` (either `collectRows`'s own
+ * Project walk or `collectComponentRows`'s parallel Component walk below)
+ * into a positioned `GanttLayout` — the day-to-pixel mapping, subtree-extent
+ * bracket-matching, and dependency-arrow resolution are all identical
+ * regardless of which walk produced the rows, so this is shared rather than
+ * duplicated between `buildGanttLayout` and `buildComponentGanttLayout`.
+ */
+function positionRows(
+  rows: RawRow[],
   dependencies: DependencyRecord[],
-  rootProjectId: number | null,
-  today: Date = new Date(),
-  customOrder?: GanttCustomOrder,
-  excludeWeekends = false,
-  collapsedProjectIds?: Set<number>,
+  today: Date,
+  excludeWeekends: boolean,
 ): GanttLayout {
   // The one place this whole layout's day-to-pixel mapping is chosen —
   // every x/width/todayX below goes through this, so the "Weekends"
   // checkbox (D1.4-35) is a single switch here, not a parallel code path.
   const dayOffset = (from: Date, to: Date) =>
     excludeWeekends ? compressedDayOffset(from, to) : calendarDaysBetween(from, to);
-  const rows: RawRow[] = [];
-
-  if (rootProjectId != null) {
-    collectRows(graph, rootProjectId, 0, today, rows, "root", customOrder, collapsedProjectIds);
-  } else {
-    const topLevelProjects = Array.from(graph.projectsById.values())
-      .filter((p) => p.parent_project_id == null && isVisibleProjectPriority(p.priority))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    const orderedTopLevel = applyCustomOrder(topLevelProjects, (p) => `project:${p.project_id}`, customOrder?.root);
-    for (const project of orderedTopLevel) {
-      collectRows(graph, project.project_id, 0, today, rows, "root", customOrder, collapsedProjectIds);
-    }
-  }
 
   let minDate: Date | null = null;
   for (const row of rows) {
@@ -431,7 +441,7 @@ export function buildGanttLayout(
         bars[projectIndex].subtreeBottomY = lastDescendantBar.y + BAR_HEIGHT;
       }
     }
-    if (bars[i].kind === "project") openProjectIndexes.push(i);
+    if (isContainerBar(bars[i].kind)) openProjectIndexes.push(i);
   }
   while (openProjectIndexes.length > 0) {
     const projectIndex = openProjectIndexes.pop()!;
@@ -466,6 +476,382 @@ export function buildGanttLayout(
   const todayX = minDate ? dayOffset(minDate, today) * PIXELS_PER_DAY : 0;
 
   return { bars, arrows, rowCount: rows.length, minDate, todayX };
+}
+
+/**
+ * `rootProjectId`: a single Project's subtree (`Plan Display` scoped to one
+ * Project), or `null` for every top-level active Project (`Plan Display`'s
+ * "Top Level Projects" mode, `UserInterfaceWindows.md` §3.7).
+ */
+export function buildGanttLayout(
+  graph: ScheduleGraph,
+  dependencies: DependencyRecord[],
+  rootProjectId: number | null,
+  today: Date = new Date(),
+  customOrder?: GanttCustomOrder,
+  excludeWeekends = false,
+  collapsedProjectIds?: Set<number>,
+): GanttLayout {
+  const rows: RawRow[] = [];
+
+  if (rootProjectId != null) {
+    collectRows(graph, rootProjectId, 0, today, rows, "root", customOrder, collapsedProjectIds);
+  } else {
+    const topLevelProjects = Array.from(graph.projectsById.values())
+      .filter((p) => p.parent_project_id == null && isVisibleProjectPriority(p.priority))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const orderedTopLevel = applyCustomOrder(topLevelProjects, (p) => `project:${p.project_id}`, customOrder?.root);
+    for (const project of orderedTopLevel) {
+      collectRows(graph, project.project_id, 0, today, rows, "root", customOrder, collapsedProjectIds);
+    }
+  }
+
+  return positionRows(rows, dependencies, today, excludeWeekends);
+}
+
+/**
+ * A Component's own bar span — the min start / max end across every Task
+ * directly tagged to it (`task.component_id`) and every sub-Component's own
+ * span, recursively. Unlike a Project (`getProjectSchedule`, `ScheduleGraph`'s
+ * own memoized dependency-aware resolution), a Component has no stored dates
+ * and no dependency role of its own to resolve — this is a plain bottom-up
+ * aggregation over already-resolved Task schedules (`getTaskSchedule`), not
+ * a second scheduling engine, so it doesn't need `ScheduleGraph` extended to
+ * know about Components at all. `cache`/`visited` mirror `ScheduleGraph`'s
+ * own memoize-once-per-call and cycle-guard shape (`D1.5-3`'s reasoning),
+ * scaled down to this much simpler tree-only (no dependency edges) problem.
+ */
+function computeComponentSpan(
+  graph: ScheduleGraph,
+  childComponentsByParent: Map<number, ComponentRecord[]>,
+  childTasksByComponent: Map<number, TaskRecord[]>,
+  componentId: number,
+  cache: Map<number, ComputedSchedule>,
+  visited: Set<number> = new Set(),
+): ComputedSchedule {
+  const cached = cache.get(componentId);
+  if (cached) return cached;
+  if (visited.has(componentId)) return { startDate: null, endDate: null };
+  visited.add(componentId);
+
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+
+  for (const task of childTasksByComponent.get(componentId) ?? []) {
+    if (!isVisibleTaskStatus(task.status)) continue;
+    const schedule = getTaskSchedule(graph, task.task_id);
+    if (schedule.startDate && (!startDate || schedule.startDate < startDate)) startDate = schedule.startDate;
+    if (schedule.endDate && (!endDate || schedule.endDate > endDate)) endDate = schedule.endDate;
+  }
+  for (const sub of childComponentsByParent.get(componentId) ?? []) {
+    const subSpan = computeComponentSpan(graph, childComponentsByParent, childTasksByComponent, sub.component_id, cache, visited);
+    if (subSpan.startDate && (!startDate || subSpan.startDate < startDate)) startDate = subSpan.startDate;
+    if (subSpan.endDate && (!endDate || subSpan.endDate > endDate)) endDate = subSpan.endDate;
+  }
+
+  const result = { startDate, endDate };
+  cache.set(componentId, result);
+  return result;
+}
+
+// The Component-hierarchy counterpart to `collectRows` — V1.2's own
+// separate `Component → SubComponents` tree-walk (`GanttDisplayHelper.cs`,
+// `Requirements/UserInterfaceWindows.md` §3.7/§3.8's correction), never
+// sharing a tree with `collectRows`' own `Project → SubProjects` walk. A
+// Component's own directly-tagged Tasks (`task.component_id`), not a
+// Project's — the same "Affected Component" a Task's own field is.
+function collectComponentRows(
+  graph: ScheduleGraph,
+  childComponentsByParent: Map<number, ComponentRecord[]>,
+  childTasksByComponent: Map<number, TaskRecord[]>,
+  componentsById: Map<number, ComponentRecord>,
+  spanCache: Map<number, ComputedSchedule>,
+  componentId: number,
+  depth: number,
+  today: Date,
+  rows: RawRow[],
+  parentKey: string,
+  customOrder: GanttCustomOrder | undefined,
+  collapsedComponentIds: Set<number> | undefined,
+): void {
+  const component = componentsById.get(componentId);
+  if (!component) return;
+
+  const span = computeComponentSpan(graph, childComponentsByParent, childTasksByComponent, componentId, spanCache);
+  rows.push({
+    kind: "component",
+    id: componentId,
+    label: component.name,
+    depth,
+    startDate: span.startDate,
+    endDate: span.endDate,
+    color: PROJECT_BAR_COLOUR,
+    hoverLabel: `C: ${component.name}`,
+    parentKey,
+  });
+
+  if (collapsedComponentIds?.has(componentId)) return;
+
+  const tasks = (childTasksByComponent.get(componentId) ?? [])
+    .filter((t) => isVisibleTaskStatus(t.status))
+    .map((t) => ({ task: t, schedule: getTaskSchedule(graph, t.task_id) }))
+    .filter((t) => t.schedule.startDate && t.schedule.endDate)
+    .sort((a, b) => a.schedule.startDate!.getTime() - b.schedule.startDate!.getTime());
+
+  const subComponents = (childComponentsByParent.get(componentId) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+
+  type ChildEntry =
+    | { kind: "task"; key: string; task: (typeof tasks)[number]["task"]; schedule: (typeof tasks)[number]["schedule"] }
+    | { kind: "component"; key: string; component: (typeof subComponents)[number] };
+
+  const children: ChildEntry[] = [
+    ...tasks.map((t): ChildEntry => ({ kind: "task", key: `task:${t.task.task_id}`, task: t.task, schedule: t.schedule })),
+    ...subComponents.map((c): ChildEntry => ({ kind: "component", key: `component:${c.component_id}`, component: c })),
+  ];
+  const childKey = `component:${componentId}`;
+  const orderedChildren = applyCustomOrder(children, (c) => c.key, customOrder?.[childKey]);
+
+  for (const child of orderedChildren) {
+    if (child.kind === "task") {
+      const { task, schedule } = child;
+      const urgency = computeUrgency(task, graph.projectsById, schedule.startDate, schedule.endDate, today);
+      rows.push({
+        kind: "task",
+        id: task.task_id,
+        label: task.description,
+        depth: depth + 1,
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+        color: computeTaskRowColour(task.priority, urgency),
+        hoverLabel: `T: ${task.description} : [${buildProjectChain(graph, task.project_id)}]`,
+        parentKey: childKey,
+      });
+    } else {
+      collectComponentRows(
+        graph,
+        childComponentsByParent,
+        childTasksByComponent,
+        componentsById,
+        spanCache,
+        child.component.component_id,
+        depth + 1,
+        today,
+        rows,
+        childKey,
+        customOrder,
+        collapsedComponentIds,
+      );
+    }
+  }
+}
+
+/**
+ * The Component-scoped counterpart to `buildGanttLayout` (D1.4-109) —
+ * always scoped to one specific Component, unlike the Project version's own
+ * "Top Level Projects" aggregate mode: V1.2's `ComponentWindow` has no
+ * equivalent all-Components view, only a Gantt tab for whichever Component
+ * is already open (`Requirements/UserInterfaceWindows.md` §3.8).
+ */
+export function buildComponentGanttLayout(
+  graph: ScheduleGraph,
+  components: ComponentRecord[],
+  dependencies: DependencyRecord[],
+  rootComponentId: number,
+  today: Date = new Date(),
+  customOrder?: GanttCustomOrder,
+  excludeWeekends = false,
+  collapsedComponentIds?: Set<number>,
+): GanttLayout {
+  const componentsById = new Map(components.map((c) => [c.component_id, c]));
+  const childComponentsByParent = new Map<number, ComponentRecord[]>();
+  for (const c of components) {
+    if (c.parent_component_id == null) continue;
+    const list = childComponentsByParent.get(c.parent_component_id);
+    if (list) list.push(c);
+    else childComponentsByParent.set(c.parent_component_id, [c]);
+  }
+  const childTasksByComponent = new Map<number, TaskRecord[]>();
+  for (const task of graph.tasksById.values()) {
+    if (task.component_id == null) continue;
+    const list = childTasksByComponent.get(task.component_id);
+    if (list) list.push(task);
+    else childTasksByComponent.set(task.component_id, [task]);
+  }
+
+  const rows: RawRow[] = [];
+  collectComponentRows(
+    graph,
+    childComponentsByParent,
+    childTasksByComponent,
+    componentsById,
+    new Map(),
+    rootComponentId,
+    0,
+    today,
+    rows,
+    "root",
+    customOrder,
+    collapsedComponentIds,
+  );
+
+  return positionRows(rows, dependencies, today, excludeWeekends);
+}
+
+// A Project's own subtree contains at least one Task in `allowedTaskIds` —
+// memoized per call (a fresh `cache` per `buildFilteredGanttLayout` call,
+// matching `computeComponentSpan`'s own per-call cache/visited shape), used
+// by `collectFilteredRows` below to prune a Project with nothing allowed
+// inside it anywhere in its own subtree, rather than showing it empty.
+function projectHasAllowedDescendant(
+  graph: ScheduleGraph,
+  projectId: number,
+  allowedTaskIds: Set<number>,
+  cache: Map<number, boolean>,
+  visited: Set<number> = new Set(),
+): boolean {
+  const cached = cache.get(projectId);
+  if (cached != null) return cached;
+  if (visited.has(projectId)) return false;
+  visited.add(projectId);
+
+  const ownMatch = (graph.childTasksByProject.get(projectId) ?? []).some(
+    (t) => isVisibleTaskStatus(t.status) && allowedTaskIds.has(t.task_id),
+  );
+  const result =
+    ownMatch ||
+    (graph.childProjectsByParent.get(projectId) ?? []).some((p) =>
+      projectHasAllowedDescendant(graph, p.project_id, allowedTaskIds, cache, visited),
+    );
+  cache.set(projectId, result);
+  return result;
+}
+
+// The `collectRows` counterpart for a Task-id-set-scoped chart (below) —
+// deliberately a separate function rather than adding an optional
+// task-filter parameter to `collectRows` itself: this needs an extra prune
+// check (`projectHasAllowedDescendant`) `collectRows` has no equivalent of,
+// and keeping the two independent means neither of `buildGanttLayout`'s own
+// two already-shipped, tested modes (single-Project, "Top Level Projects")
+// can be affected by this one's own logic.
+function collectFilteredRows(
+  graph: ScheduleGraph,
+  allowedTaskIds: Set<number>,
+  hasAllowedCache: Map<number, boolean>,
+  projectId: number,
+  depth: number,
+  today: Date,
+  rows: RawRow[],
+  parentKey: string,
+  customOrder: GanttCustomOrder | undefined,
+  collapsedProjectIds: Set<number> | undefined,
+): void {
+  const project = graph.projectsById.get(projectId);
+  if (!project) return;
+  if (!projectHasAllowedDescendant(graph, projectId, allowedTaskIds, hasAllowedCache)) return;
+
+  const projectSchedule = getProjectSchedule(graph, projectId);
+  const ancestorChain = buildAncestorChain(graph, projectId);
+  rows.push({
+    kind: "project",
+    id: projectId,
+    label: project.name,
+    depth,
+    startDate: projectSchedule.startDate,
+    endDate: projectSchedule.endDate,
+    color: PROJECT_BAR_COLOUR,
+    hoverLabel: ancestorChain ? `P: ${project.name} : [${ancestorChain}]` : `P: ${project.name}`,
+    parentKey,
+  });
+
+  if (collapsedProjectIds?.has(projectId)) return;
+
+  const tasks = (graph.childTasksByProject.get(projectId) ?? [])
+    .filter((t) => isVisibleTaskStatus(t.status) && allowedTaskIds.has(t.task_id))
+    .map((t) => ({ task: t, schedule: getTaskSchedule(graph, t.task_id) }))
+    .filter((t) => t.schedule.startDate && t.schedule.endDate)
+    .sort((a, b) => a.schedule.startDate!.getTime() - b.schedule.startDate!.getTime());
+
+  // Not `isVisibleProjectPriority`-filtered, unlike `collectRows`'s own
+  // sub-Projects — a Task the caller's own filter already chose to include
+  // shouldn't be hidden here just because its Project happens to be
+  // Cancelled/Closed; only "does it contain anything allowed" prunes here.
+  const subProjects = (graph.childProjectsByParent.get(projectId) ?? [])
+    .filter((p) => projectHasAllowedDescendant(graph, p.project_id, allowedTaskIds, hasAllowedCache))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  type ChildEntry =
+    | { kind: "task"; key: string; task: (typeof tasks)[number]["task"]; schedule: (typeof tasks)[number]["schedule"] }
+    | { kind: "project"; key: string; project: (typeof subProjects)[number] };
+
+  const children: ChildEntry[] = [
+    ...tasks.map((t): ChildEntry => ({ kind: "task", key: `task:${t.task.task_id}`, task: t.task, schedule: t.schedule })),
+    ...subProjects.map((p): ChildEntry => ({ kind: "project", key: `project:${p.project_id}`, project: p })),
+  ];
+  const childKey = `project:${projectId}`;
+  const orderedChildren = applyCustomOrder(children, (c) => c.key, customOrder?.[childKey]);
+
+  for (const child of orderedChildren) {
+    if (child.kind === "task") {
+      const { task, schedule } = child;
+      const urgency = computeUrgency(task, graph.projectsById, schedule.startDate, schedule.endDate, today);
+      rows.push({
+        kind: "task",
+        id: task.task_id,
+        label: task.description,
+        depth: depth + 1,
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+        color: computeTaskRowColour(task.priority, urgency),
+        hoverLabel: `T: ${task.description} : [${buildProjectChain(graph, task.project_id)}]`,
+        parentKey: childKey,
+      });
+    } else {
+      collectFilteredRows(
+        graph,
+        allowedTaskIds,
+        hasAllowedCache,
+        child.project.project_id,
+        depth + 1,
+        today,
+        rows,
+        childKey,
+        customOrder,
+        collapsedProjectIds,
+      );
+    }
+  }
+}
+
+/**
+ * D1.4-109 — AllTaskPage.tsx's own "View Gantt" button: exactly the Tasks
+ * currently passing its own grid filter (`allowedTaskIds`), with just
+ * enough Project ancestry to place them sensibly. Distinct from
+ * `buildGanttLayout`'s own "Top Level Projects" mode (`rootProjectId:
+ * null`), which shows every visible Project regardless of whether it has
+ * any Tasks at all — here, a Project (at any depth) with zero allowed
+ * Tasks anywhere in its own subtree is pruned entirely, never shown empty.
+ */
+export function buildFilteredGanttLayout(
+  graph: ScheduleGraph,
+  dependencies: DependencyRecord[],
+  allowedTaskIds: Set<number>,
+  today: Date = new Date(),
+  customOrder?: GanttCustomOrder,
+  excludeWeekends = false,
+  collapsedProjectIds?: Set<number>,
+): GanttLayout {
+  const hasAllowedCache = new Map<number, boolean>();
+  const rows: RawRow[] = [];
+
+  const topLevelProjects = Array.from(graph.projectsById.values())
+    .filter((p) => p.parent_project_id == null && projectHasAllowedDescendant(graph, p.project_id, allowedTaskIds, hasAllowedCache))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const orderedTopLevel = applyCustomOrder(topLevelProjects, (p) => `project:${p.project_id}`, customOrder?.root);
+  for (const project of orderedTopLevel) {
+    collectFilteredRows(graph, allowedTaskIds, hasAllowedCache, project.project_id, 0, today, rows, "root", customOrder, collapsedProjectIds);
+  }
+
+  return positionRows(rows, dependencies, today, excludeWeekends);
 }
 
 export interface MonthMarker {

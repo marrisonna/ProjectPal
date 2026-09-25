@@ -65,6 +65,14 @@ export default function App() {
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
             <Route path="/plan" element={<PlanPage />} />
             <Route path="/plan/:projectId" element={<PlanPage />} />
+            {/* D1.4-109 — same PlanPage component, Component-scoped mode.
+                A separate top-level path (not nested under /plan/...) so
+                openItemWindow("plan-component", id)'s own generic
+                `/${entityType}/${entityId}` path construction (windowNav.ts)
+                needs no special-casing, matching every other entityType.
+                No "Top Level Components" mode, unlike Projects — always a
+                specific, already-open Component. */}
+            <Route path="/plan-component/:componentId" element={<PlanPage />} />
             {/* No separate Project List route yet (ProjectDetailPlan.md §1
                 scopes that out) — /projects with no id is ProjectDetailPage's
                 own "Top Level Projects" browsing mode instead, the same

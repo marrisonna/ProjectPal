@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import Box from "@mui/material/Box";
 import {
   useAllAttachments,
   useAllDependencies,
@@ -12,7 +13,8 @@ import {
   useTasks,
   useTeams,
 } from "../../api/hooks";
-import { TASK_STATUSES } from "../../api/types";
+import { TASK_STATUSES, type TaskRecord } from "../../api/types";
+import { DenseButton } from "../../components/DenseField";
 import { useSingletonWindowIdentity } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { personDisplayName } from "../../lib/people";
@@ -21,6 +23,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { buildScheduleGraph } from "../../lib/schedule";
 import type { ColumnFilterState } from "../../components/GridColumnFilter";
 import { DEFAULT_TASK_GRID_COLUMNS, TaskGrid, type TaskGridColumnKey } from "./TaskGrid";
+import { PlanPage } from "../plan/PlanPage";
 
 // The TaskGrid-based All Tasks screen (TaskGridPlan.md §5.2, D1.4-50) — the
 // approved replacement for the original grid (D1.4-65). Team-scoping and
@@ -62,6 +65,35 @@ export function AllTaskPage() {
       exact: new Set(TASK_STATUSES.filter((s) => s !== "Cancelled" && s !== "Closed")),
     },
   }));
+
+  // D1.4-109/D1.4-110 — mirrors TaskGrid's own current filtered row set, fed
+  // back up via its onFilteredTasksChange callback, purely so the "View
+  // Gantt" toggle below knows exactly which Tasks to scope the embedded
+  // Gantt view to.
+  const [filteredTasks, setFilteredTasks] = useState<TaskRecord[]>([]);
+
+  // D1.4-110 — which of the two views is showing right now. Once the Gantt
+  // view has been opened at least once, both it and TaskGrid stay mounted
+  // for the rest of this window's life (toggled via `sx.display`, not
+  // conditional JSX) rather than one replacing the other — unmounting
+  // TaskGrid on every switch would reset any filter edits/sort/scroll
+  // position the user made beyond the initial defaults, undoing exactly the
+  // "same context" continuity this toggle exists to preserve. V1.2's own
+  // TaskWindow used two tabs sharing one in-memory model for the same
+  // reason. The embedded Gantt itself isn't mounted at all until first
+  // requested (`everViewedGantt`), rather than unconditionally from the
+  // very first render — most sessions never open it, and mounting it
+  // upfront would mean every one of them pays for a Gantt-layout
+  // computation nobody asked to see.
+  const [view, setView] = useState<"grid" | "gantt">("grid");
+  const [everViewedGantt, setEverViewedGantt] = useState(false);
+  function toggleView() {
+    setView((v) => {
+      const next = v === "grid" ? "gantt" : "grid";
+      if (next === "gantt") setEverViewedGantt(true);
+      return next;
+    });
+  }
 
   // One-time "default Resources filter to yourself unless you're a Team
   // Lead" behaviour (D-Win-15). TaskGrid only ever reads
@@ -215,6 +247,8 @@ export function AllTaskPage() {
     [tasks, projects, allDependencies, resourceCountByTaskId],
   );
 
+  const filteredTaskIds = useMemo(() => new Set(filteredTasks.map((t) => t.task_id)), [filteredTasks]);
+
   if (
     isLoading ||
     !projects ||
@@ -240,21 +274,48 @@ export function AllTaskPage() {
   }
 
   return (
-    <TaskGrid
-      tasks={scopedTasks}
-      projects={projects}
-      components={components}
-      people={people}
-      personRoles={personRoles}
-      teams={teams}
-      scheduleGraph={scheduleGraph}
-      resourceIdsByTask={resourceIdsByTask}
-      attachmentsCountByTask={attachmentsCountByTask}
-      remarksCountByTask={remarksCountByTask}
-      columns={DEFAULT_TASK_GRID_COLUMNS}
-      showFilters
-      initialFilterState={filterState}
-      initiallyHiddenColumns={initiallyHiddenColumns}
-    />
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "6px", height: "100%", boxSizing: "border-box" }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-start", flexShrink: 0 }}>
+        {/* D1.4-109/D1.4-110 — toggles between the grid and a Gantt of
+            exactly the Tasks currently passing this grid's own filter, with
+            just enough Project ancestry to place them
+            (buildFilteredGanttLayout) — in place, in this same window
+            (V1.2's own TaskWindow used two tabs the same way), not a
+            separate popped-out one. Disabled rather than hidden when
+            there's nothing to show a Gantt of at all, matching this app's
+            own established "always shown, disabled when not applicable"
+            convention (D1.4-98-D1.4-100) over hiding the control outright —
+            but only while still on the grid: once already viewing the
+            Gantt, "View Tasks" must always work, regardless of the
+            (possibly now-zero) filtered count, or there'd be no way back. */}
+        <DenseButton onClick={toggleView} disabled={view === "grid" && filteredTasks.length === 0}>
+          {view === "grid" ? "View Gantt" : "View Tasks"}
+        </DenseButton>
+      </Box>
+      <Box sx={{ display: view === "grid" ? "block" : "none", flex: 1, minHeight: 0, overflow: "auto" }}>
+        <TaskGrid
+          tasks={scopedTasks}
+          projects={projects}
+          components={components}
+          people={people}
+          personRoles={personRoles}
+          teams={teams}
+          scheduleGraph={scheduleGraph}
+          resourceIdsByTask={resourceIdsByTask}
+          attachmentsCountByTask={attachmentsCountByTask}
+          remarksCountByTask={remarksCountByTask}
+          columns={DEFAULT_TASK_GRID_COLUMNS}
+          showFilters
+          initialFilterState={filterState}
+          initiallyHiddenColumns={initiallyHiddenColumns}
+          onFilteredTasksChange={setFilteredTasks}
+        />
+      </Box>
+      {everViewedGantt && (
+        <Box sx={{ display: view === "gantt" ? "block" : "none", flex: 1, minHeight: 0 }}>
+          <PlanPage embeddedTaskIds={filteredTaskIds} />
+        </Box>
+      )}
+    </Box>
   );
 }

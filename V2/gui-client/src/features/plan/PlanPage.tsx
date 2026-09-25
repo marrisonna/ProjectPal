@@ -9,6 +9,7 @@ import { useAuth } from "../../auth/AuthContext";
 import {
   useAllDependencies,
   useAllTaskResources,
+  useComponents,
   useProjects,
   useTasks,
 } from "../../api/hooks";
@@ -17,10 +18,13 @@ import {
   BAR_HEIGHT,
   PIXELS_PER_DAY,
   ROW_HEIGHT,
+  buildComponentGanttLayout,
+  buildFilteredGanttLayout,
   buildGanttLayout,
   compressedDayOffset,
   computeGridLines,
   dateAtCompressedOffset,
+  isContainerBar,
   type GanttBar,
   type GanttCustomOrder,
 } from "../../lib/ganttLayout";
@@ -112,18 +116,55 @@ function clampLabelColumnWidth(value: number): number {
   return Math.min(MAX_LABEL_COLUMN_WIDTH, Math.max(MIN_LABEL_COLUMN_WIDTH, value));
 }
 
+export interface PlanPageProps {
+  // D1.4-110 — AllTaskPage.tsx's own "View Gantt"/"View Tasks" toggle
+  // embeds this same component in place of a separate window (V1.2's own
+  // TaskWindow embedded Gantt *tab*, not a standalone popout, is what this
+  // actually matches — the earlier D1.4-109 standalone `/plan?taskIds=`
+  // route this superseded was closer to Plan Display's own separate-window
+  // shape instead). Presence of this prop (not its own contents) is what
+  // switches this component into embedded mode — a route render never
+  // passes it at all, so `undefined` always means "read from the URL
+  // instead," even for an embedded caller with a currently-empty filter
+  // (`new Set()`, which is truthy as an object).
+  embeddedTaskIds?: Set<number>;
+}
+
 // D1.4-24: the standalone Plan Display's own singleton window (matching
 // Task Detail's D1.4-8 pattern), not in-place navigation — opened via
-// AppShell's "Plan" button (openListWindow("plan")) or, once Project
-// Detail exists (Stage 4), a per-Project "Gantt Display" action
-// (openItemWindow("plan", projectId)).
-export function PlanPage() {
-  const { projectId: projectIdParam } = useParams<{ projectId?: string }>();
-  const projectId = projectIdParam ? Number(projectIdParam) : null;
-  useSingletonWindowIdentity(projectId != null ? `plan-${projectId}` : "plan-list");
+// AppShell's "Plan" button (openListWindow("plan")), a per-Project "View
+// Gantt" action (openItemWindow("plan", projectId)), or a per-Component one
+// at its own separate route, `/plan-component/:componentId` (D1.4-109,
+// openItemWindow("plan-component", componentId); not nested under `/plan`,
+// so `openItemWindow`'s generic `/${entityType}/${entityId}` path
+// construction, windowNav.ts, needs no special-casing). `embeddedTaskIds`
+// (D1.4-110, above) is the one exception to "always its own window" — see
+// that prop's own doc comment.
+export function PlanPage({ embeddedTaskIds }: PlanPageProps = {}) {
+  const embedded = embeddedTaskIds != null;
+  const { projectId: projectIdParam, componentId: componentIdParam } = useParams<{
+    projectId?: string;
+    componentId?: string;
+  }>();
+  const projectId = embedded ? null : projectIdParam ? Number(projectIdParam) : null;
+  const componentId = embedded ? null : componentIdParam ? Number(componentIdParam) : null;
+  const mode: "project" | "component" | "filtered" = embedded ? "filtered" : componentId != null ? "component" : "project";
+  // `null` (skips claiming any window identity at all) when embedded — the
+  // *outer* page embedding this one (AllTaskPage.tsx) already owns this
+  // window's own identity; claiming a second one here would overwrite it.
+  useSingletonWindowIdentity(
+    embedded
+      ? null
+      : componentId != null
+        ? `plan-component-${componentId}`
+        : projectId != null
+          ? `plan-${projectId}`
+          : "plan-list",
+  );
 
   const { person } = useAuth();
   const { data: allProjects, isLoading: projectsLoading } = useProjects();
+  const { data: allComponents, isLoading: componentsLoading } = useComponents();
   const { data: tasks, isLoading: tasksLoading } = useTasks();
   const { data: dependencies, isLoading: dependenciesLoading } = useAllDependencies();
   const { data: allTaskResources } = useAllTaskResources();
@@ -138,6 +179,10 @@ export function PlanPage() {
   const projects = useMemo(
     () => allProjects?.filter((p) => memberTeamIds.has(p.team_id)),
     [allProjects, memberTeamIds],
+  );
+  const components = useMemo(
+    () => allComponents?.filter((c) => memberTeamIds.has(c.team_id)),
+    [allComponents, memberTeamIds],
   );
 
   const resourceCountByTaskId = useMemo(() => {
@@ -190,9 +235,38 @@ export function PlanPage() {
 
   const layout = useMemo(() => {
     if (!projects || !tasks || !dependencies) return null;
+    if (mode === "component" && (!components || componentId == null)) return null;
     const graph = buildScheduleGraph(tasks, projects, dependencies, resourceCountByTaskId);
+    if (mode === "filtered") {
+      return buildFilteredGanttLayout(graph, dependencies, embeddedTaskIds!, new Date(), customOrder, !weekends, collapsedProjectIds);
+    }
+    if (mode === "component") {
+      return buildComponentGanttLayout(
+        graph,
+        components!,
+        dependencies,
+        componentId!,
+        new Date(),
+        customOrder,
+        !weekends,
+        collapsedProjectIds,
+      );
+    }
     return buildGanttLayout(graph, dependencies, projectId, new Date(), customOrder, !weekends, collapsedProjectIds);
-  }, [projects, tasks, dependencies, resourceCountByTaskId, projectId, customOrder, weekends, collapsedProjectIds]);
+  }, [
+    mode,
+    projects,
+    components,
+    componentId,
+    embeddedTaskIds,
+    tasks,
+    dependencies,
+    resourceCountByTaskId,
+    projectId,
+    customOrder,
+    weekends,
+    collapsedProjectIds,
+  ]);
 
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
@@ -569,9 +643,10 @@ export function PlanPage() {
     const anchor = pendingVerticalAnchorRef.current;
     if (!anchor) return;
     const effectiveRowHeight = ROW_HEIGHT * (zoomY / 100);
+    const target = Math.max(0, anchor.contentOffset * effectiveRowHeight - anchor.viewportOffset);
     for (const pane of [drawingAreaRef.current, labelAreaRef.current]) {
       if (!pane) continue;
-      pane.scrollTop = Math.max(0, anchor.contentOffset * effectiveRowHeight - anchor.viewportOffset);
+      pane.scrollTop = target;
     }
     pendingVerticalAnchorRef.current = null;
   }, [zoomY]);
@@ -766,8 +841,15 @@ export function PlanPage() {
   }, [layout]);
 
   const rootProjectName = projectId != null ? projects?.find((p) => p.project_id === projectId)?.name : null;
+  const rootComponentName = componentId != null ? components?.find((c) => c.component_id === componentId)?.name : null;
+  const heading =
+    mode === "filtered"
+      ? `Filtered Tasks (${embeddedTaskIds?.size ?? 0})`
+      : mode === "component"
+        ? (rootComponentName ?? `Component #${componentId}`)
+        : (rootProjectName ?? "Top Level Projects");
 
-  if (projectsLoading || tasksLoading || dependenciesLoading || !layout) {
+  if (projectsLoading || componentsLoading || tasksLoading || dependenciesLoading || !layout) {
     return <CircularProgress sx={{ m: 2 }} />;
   }
 
@@ -796,12 +878,31 @@ export function PlanPage() {
   const barVerticalOffset = ((ROW_HEIGHT - BAR_HEIGHT) / 2) * scaleY;
 
   return (
-    <Box sx={{ p: 1, height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-      <Typography variant="subtitle1" sx={{ mb: 1, flexShrink: 0 }}>
-        {rootProjectName ?? "Top Level Projects"}
-      </Typography>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexShrink: 0 }}>
-        <Typography variant="body2">Zoom:</Typography>
+    // 100vh assumes this is the *whole* window's own content (every
+    // standalone mode) — wrong once embedded inside AllTaskPage.tsx's own
+    // layout (D1.4-110), which already sits below AppShell's nav bar and
+    // wants this to fill whatever space its own parent gives it instead.
+    <Box
+      sx={{
+        p: "6px",
+        height: embedded ? "100%" : "100vh",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: "6px", mb: "4px", flexShrink: 0, flexWrap: "wrap" }}>
+        {/* A plain, tight-line-height heading — matching this app's own
+            established dense-header convention (Dashboard/Admin Tools/
+            Teams Management) — rather than MUI's Typography
+            variant="subtitle1", whose default 1.75 line-height (~28px for
+            16px text) set this whole row's own height once merged onto the
+            same line as the Zoom controls, padding visible empty space
+            above and below everything else in the row along with it. */}
+        <Box sx={{ fontSize: 14, fontWeight: 600 }}>{heading}</Box>
+        <Typography variant="body2" sx={{ ml: "5em" }}>
+          Zoom:
+        </Typography>
         <Typography variant="body2">H</Typography>
         <ZoomPercentInput value={zoomX} onCommit={applyZoomX} />
         <Typography variant="body2">V</Typography>
@@ -866,7 +967,7 @@ export function PlanPage() {
           all; plus the Gantt area's own 1px outer left border). Tracks
           the label column's own resizable width, not a fixed constant —
           see `effectiveLabelColumnWidth` above. */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1, flexShrink: 0 }}>
+      <Box sx={{ display: "flex", alignItems: "center", mb: "4px", flexShrink: 0 }}>
         <Box
           component="input"
           type="text"
@@ -882,7 +983,7 @@ export function PlanPage() {
             outline: "none",
             bgcolor: "transparent",
             px: 0,
-            py: "3px",
+            py: 0,
             color: "rgba(0,0,0,0.6)",
           }}
         />
@@ -900,7 +1001,7 @@ export function PlanPage() {
             outline: "none",
             bgcolor: "transparent",
             px: 0,
-            py: "3px",
+            py: 0,
             color: "rgba(0,0,0,0.6)",
           }}
         />
@@ -1013,9 +1114,11 @@ export function PlanPage() {
                               setLabelTooltip(null);
                             }}
                           />
-                          {bar.kind === "project" && (
+                          {isContainerBar(bar.kind) && (
                             // Collapse/expand chevron (Project.tsx's own
-                            // rotating ChevronRight) — a separate element
+                            // rotating ChevronRight) — also used by a
+                            // Component-scoped chart's own container bars
+                            // (D1.4-109) — a separate element
                             // painted on top of the row's own hit-rect
                             // above, so clicking it toggles collapse
                             // instead of starting a row-reorder drag or
@@ -1063,7 +1166,7 @@ export function PlanPage() {
                             y={bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2}
                             dominantBaseline="central"
                             fontSize={fontSize}
-                            fontWeight={bar.kind === "project" ? 700 : 400}
+                            fontWeight={isContainerBar(bar.kind) ? 700 : 400}
                             style={{ pointerEvents: "none" }}
                           >
                             {bar.label}
@@ -1193,7 +1296,7 @@ export function PlanPage() {
                   marks the same left/right edges these lines would. */}
               {!boxed &&
                 layout.bars.map((bar) =>
-                  bar.kind === "project" && bar.subtreeBottomY != null ? (
+                  isContainerBar(bar.kind) && bar.subtreeBottomY != null ? (
                     <g key={`extent-${bar.id}`}>
                       <line
                         x1={bar.x * scaleX}
@@ -1456,7 +1559,9 @@ function GanttBarRect({
   // outer-to-inner order (collectRows' own preorder walk), so an inner
   // Project's — or a Task's — rect always paints (and hover-hits) on top
   // of whatever it's nested inside.
-  const isBoxedProject = boxed && bar.kind === "project";
+  // Name kept from V1.2's own "Boxed Project" mode; applies equally to a
+  // Component-scoped chart's own container bars (D1.4-109, isContainerBar).
+  const isBoxedProject = boxed && isContainerBar(bar.kind);
   const boxBottomBase = bar.subtreeBottomY ?? bar.y + BAR_HEIGHT;
   return (
     <rect
@@ -1466,7 +1571,7 @@ function GanttBarRect({
       height={isBoxedProject ? (boxBottomBase - bar.y) * scaleY : barHeight}
       fill={isBoxedProject ? PROJECT_BOX_FILL : bar.color}
       stroke={isBoxedProject ? EXTENT_LINE_COLOUR : "rgba(0,0,0,0.3)"}
-      strokeWidth={isBoxedProject ? 1 : bar.kind === "project" ? 1.5 : 1}
+      strokeWidth={isBoxedProject ? 1 : isContainerBar(bar.kind) ? 1.5 : 1}
       style={{ cursor: bar.kind === "task" ? "pointer" : "default" }}
       onDoubleClick={bar.kind === "task" ? () => openItemWindow("tasks", bar.id) : undefined}
       onMouseEnter={() => onHoverChange(bar.hoverLabel)}

@@ -372,6 +372,15 @@ export function ComponentDetailPage() {
               </Box>
             )}
             {id != null && <DenseButton onClick={() => openListWindow("components")}>All Components</DenseButton>}
+            {/* D1.4-109 — this Component's own Gantt view (a Component→
+                SubComponent tree, distinct from Project's own Gantt); unlike
+                Project Detail's own "View Gantt" button, there's no
+                "Top Level Components" aggregate mode to fall back to when no
+                Component is open, matching V1.2's own ComponentWindow, whose
+                Gantt tab is always scoped to one already-open Component. */}
+            {id != null && (
+              <DenseButton onClick={() => openItemWindow("plan-component", id)}>View Gantt</DenseButton>
+            )}
             {canDelete && component && (
               <DenseButton onClick={() => handleDeleteComponent(component)} disabled={deleteComponent.isPending}>
                 Delete

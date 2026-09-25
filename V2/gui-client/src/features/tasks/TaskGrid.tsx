@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GridActionsCellItem,
   useGridApiRef,
@@ -258,6 +258,15 @@ export interface TaskGridProps {
   initiallyHiddenColumns?: TaskGridColumnKey[];
   defaultSort?: { field: string; sort: "asc" | "desc" };
   onRowDoubleClick?: (task: TaskRecord) => void;
+  // D1.4-109 — AllTaskPage.tsx's own "View Gantt" button needs to know
+  // exactly which Tasks currently pass this grid's own filters (its filter
+  // state is otherwise fully internal, via useDenseGridColumns below) —
+  // called only when the actual set of passing Task ids changes, not on
+  // every render (`filteredTasks` is a fresh array reference each time
+  // regardless), so a consumer that stores this in its own state doesn't
+  // get caught in a render loop. Optional and unused by every other
+  // TaskGrid call site (Project/Component Detail's own embedded grids).
+  onFilteredTasksChange?: (tasks: TaskRecord[]) => void;
 }
 
 function byId<T extends Record<K, number>, K extends string>(
@@ -285,6 +294,7 @@ export function TaskGrid({
   initialFilterState,
   initiallyHiddenColumns,
   defaultSort = { field: "urgency", sort: "desc" as const },
+  onFilteredTasksChange,
   onRowDoubleClick,
 }: TaskGridProps) {
   const { person } = useAuth();
@@ -798,6 +808,20 @@ export function TaskGrid({
   // `allColumnDefs`) has already registered its own column's filter, and
   // `getFilteredRows` reads all of them.
   const filteredTasks = getFilteredRows();
+
+  // D1.4-109 — `filteredTasks` is a fresh array every render regardless of
+  // whether the actual set of passing Tasks changed; comparing against the
+  // last id-set actually *sent* (not just re-running on every render) is
+  // what keeps a consumer that stores this in its own state from looping.
+  const filteredTaskIdsKey = filteredTasks.map((t) => t.task_id).join(",");
+  const lastSentFilteredKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onFilteredTasksChange) return;
+    if (lastSentFilteredKeyRef.current === filteredTaskIdsKey) return;
+    lastSentFilteredKeyRef.current = filteredTaskIdsKey;
+    onFilteredTasksChange(filteredTasks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTaskIdsKey, onFilteredTasksChange]);
 
   function isEditableCell(row: TaskRecord, field: string): boolean {
     return GOVERNED_FIELDS.has(field as EditableTaskField) && canEditCell(row, field as EditableTaskField);

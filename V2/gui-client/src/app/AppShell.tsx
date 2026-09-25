@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { person, logout } = useAuth();
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <AppBar position="static">
         {/* minHeight explicit, not just variant="dense"'s 48px — about half
             MUI's default 64px toolbar height (D-Win-11), the same "too much
@@ -121,7 +121,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </Toolbar>
       </AppBar>
-      <Box component="main" sx={{ flexGrow: 1, p: 1 }}>
+      {/* `minHeight: 0` is the fix, not decoration — without it a flex-grow
+          item refuses to shrink below its own content's natural height, so
+          this box (and the whole AppShell column above, previously
+          `minHeight: 100vh` rather than a hard `height`) simply grew to fit
+          whatever a page put inside it, leaving the *browser window* to
+          scroll through the overflow instead of any page's own internal
+          scroll region ever engaging — every page below sets
+          `height: "100%"` expecting a genuinely definite ancestor height,
+          which this never was until now. `overflow: "auto"` gives a page
+          taller than the viewport (Dashboard, a long grid) its own
+          scrollbar here, under a permanently visible nav bar, rather than
+          the whole document scrolling the nav bar out of view with it. */}
+      <Box component="main" sx={{ flexGrow: 1, minHeight: 0, overflow: "auto", p: 1 }}>
         {children}
       </Box>
     </Box>

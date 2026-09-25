@@ -60,8 +60,19 @@ export function registerThisWindow(): void {
  * native name matching and hijack it — navigating it away from whatever
  * it's actually showing.
  */
-export function useSingletonWindowIdentity(name: string): void {
+// `name: null` (D1.4-110) is a genuine no-op — for a page component that's
+// sometimes rendered as its own routed window and sometimes embedded
+// inside a *different* page's own window (PlanPage.tsx's own
+// `embeddedTaskIds` mode, embedded in AllTaskPage.tsx). The embedded case
+// must not claim any window identity at all: doing so would overwrite the
+// *outer* page's own already-claimed name (e.g. "tasks-list") the moment
+// the embedded one mounted, breaking the outer window's own singleton
+// behaviour. A hook can't be called conditionally (Rules of Hooks), so the
+// no-op has to live inside this hook itself, letting every caller call it
+// unconditionally either way.
+export function useSingletonWindowIdentity(name: string | null): void {
   useEffect(() => {
+    if (name == null) return;
     window.name = name;
     markWindowAlive(name);
     function handlePageHide() {

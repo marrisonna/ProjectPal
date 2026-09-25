@@ -382,6 +382,17 @@ export function ProjectDetailPage() {
               </Box>
             )}
             {id != null && <DenseButton onClick={() => openListWindow("projects")}>All Projects</DenseButton>}
+            {/* D1.4-109 — opens the existing standalone Gantt view
+                (`/plan`/`/plan/:projectId`), scoped to this Project when one
+                is open, or "Top Level Projects" mode otherwise — the same
+                singleton-per-item mechanism every other cross-reference in
+                the app uses (openItemWindow), not a second Gantt renderer
+                embedded here. */}
+            <DenseButton
+              onClick={() => (id != null ? openItemWindow("plan", id) : openListWindow("plan"))}
+            >
+              View Gantt
+            </DenseButton>
             {canDelete && project && (
               <DenseButton onClick={() => handleDeleteProject(project)} disabled={deleteProject.isPending}>
                 Delete

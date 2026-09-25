@@ -5,10 +5,12 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import TimelineIcon from "@mui/icons-material/Timeline";
 import type { ProjectRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import { canEditOwnedRecord, hasRoleAtLeast, isTeamLead } from "../../lib/permissions";
 import { isProjectActive } from "../../lib/schedule";
+import { openItemWindow } from "../../lib/windowNav";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
 import { EMBEDDED_TASK_GRID_COLUMNS, TaskGrid } from "../tasks/TaskGrid";
 import { childTasksOf, Projects, type ProjectTreeSharedProps, type TaskVisibility } from "./Projects";
@@ -132,6 +134,19 @@ export function Project({
             <AddIcon sx={ROW_ICON_SX} />
           </IconButton>
         )}
+        {/* D1.4-42/D1.4-109 — a per-row shortcut to this Project's own
+            Gantt view, deferred from Stage 4 and picked back up ahead of
+            Stage 5. Read-only, so no permission gate — anyone who can see
+            this row already has whatever access the Gantt view itself
+            needs. */}
+        <IconButton
+          size="small"
+          sx={ROW_ICON_BUTTON_SX}
+          onClick={() => openItemWindow("plan", project.project_id)}
+          title="Gantt Display"
+        >
+          <TimelineIcon sx={ROW_ICON_SX} />
+        </IconButton>
       </Box>
       {expanded && (
         <Box sx={{ pl: "18px" }}>

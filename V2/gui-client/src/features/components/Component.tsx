@@ -5,9 +5,11 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import TimelineIcon from "@mui/icons-material/Timeline";
 import type { ComponentRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import { canEditOwnedRecord, hasRoleAtLeast } from "../../lib/permissions";
+import { openItemWindow } from "../../lib/windowNav";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
 import { COMPONENT_EMBEDDED_TASK_GRID_COLUMNS, TaskGrid } from "../tasks/TaskGrid";
 import { childTasksOfComponent, Components, type ComponentTreeSharedProps, type TaskVisibility } from "./Components";
@@ -132,6 +134,18 @@ export function Component({
             <AddIcon sx={ROW_ICON_SX} />
           </IconButton>
         )}
+        {/* D1.4-109 — this Component's own Gantt view (the Component→
+            SubComponent tree, distinct from Project's own Gantt — see
+            lib/ganttLayout.ts's buildComponentGanttLayout). Read-only, no
+            permission gate, same reasoning as Project.tsx's own shortcut. */}
+        <IconButton
+          size="small"
+          sx={ROW_ICON_BUTTON_SX}
+          onClick={() => openItemWindow("plan-component", component.component_id)}
+          title="Gantt Display"
+        >
+          <TimelineIcon sx={ROW_ICON_SX} />
+        </IconButton>
       </Box>
       {expanded && (
         <Box sx={{ pl: "18px" }}>
