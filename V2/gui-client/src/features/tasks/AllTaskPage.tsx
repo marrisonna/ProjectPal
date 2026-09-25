@@ -313,7 +313,7 @@ export function AllTaskPage() {
       </Box>
       {everViewedGantt && (
         <Box sx={{ display: view === "gantt" ? "block" : "none", flex: 1, minHeight: 0 }}>
-          <PlanPage embeddedTaskIds={filteredTaskIds} />
+          <PlanPage embedded={{ mode: "filtered", taskIds: filteredTaskIds }} />
         </Box>
       )}
     </Box>

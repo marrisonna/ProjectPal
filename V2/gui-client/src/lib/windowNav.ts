@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 const ALIVE_KEY_PREFIX = "pp-window-alive:";
 function isWindowAlive(windowName: string): boolean {
@@ -62,8 +62,9 @@ export function registerThisWindow(): void {
  */
 // `name: null` (D1.4-110) is a genuine no-op — for a page component that's
 // sometimes rendered as its own routed window and sometimes embedded
-// inside a *different* page's own window (PlanPage.tsx's own
-// `embeddedTaskIds` mode, embedded in AllTaskPage.tsx). The embedded case
+// inside a *different* page's own window (PlanPage.tsx's own `embedded`
+// prop, embedded in AllTaskPage.tsx/ProjectDetailPage.tsx/
+// ComponentDetailPage.tsx). The embedded case
 // must not claim any window identity at all: doing so would overwrite the
 // *outer* page's own already-claimed name (e.g. "tasks-list") the moment
 // the embedded one mounted, breaking the outer window's own singleton
@@ -85,6 +86,53 @@ export function useSingletonWindowIdentity(name: string | null): void {
       window.name = "";
     };
   }, [name]);
+}
+
+/**
+ * D1.4-115 — remembers this window's own outer size separately per `view`
+ * value (e.g. ProjectDetailPage.tsx's/ComponentDetailPage.tsx's own
+ * "detail"/"gantt" toggle, D1.4-113), and tries to restore it with
+ * `window.resizeTo` whenever `view` changes back to a value seen before.
+ * Motivating case: a user grows the window while viewing the Gantt, then
+ * flips back to the compact detail card, which is now left sitting inside
+ * an oversized window — this puts it back to whatever size it was at
+ * last time, and does the same for the Gantt side switching back the other
+ * way, rather than a single "shrink to fit" applied on demand.
+ *
+ * The *first* time `view` ever becomes a given value, there's nothing
+ * remembered for it yet, so no resize happens at all — the window is left
+ * exactly as-is (no worse than not having this feature).
+ *
+ * `window.resizeTo` only works at all on a window opened by script
+ * (`window.open`, which every window this hook is used in already is —
+ * `openItemWindow`/`openNamedWindow` above) and is otherwise governed by
+ * rules that vary by browser and can tighten mid-session (e.g. Chromium
+ * revokes it once a second tab is opened in the same window) — there is no
+ * reliable way to ask in advance whether a given call will actually do
+ * anything. Deliberately not tested for up front: a blocked call is a
+ * silent no-op with no visible sign it was ever attempted, so there is
+ * nothing to gate on — no button, no feature-detection probe, just an
+ * attempt every time `view` changes that either helps or does nothing.
+ *
+ * Capturing the *outgoing* view's size happens here, in this same effect,
+ * rather than inside whatever click handler changed `view` — the window's
+ * own `outerWidth`/`outerHeight` only change via an actual resize (native
+ * or `resizeTo`), never merely because React re-rendered with new content,
+ * so reading them here, right after `view` has changed but before this
+ * value's own restore call below, still reflects the size the window
+ * genuinely was at while the *previous* view was showing.
+ */
+export function useRememberedWindowSize<View extends string>(view: View): void {
+  const sizesRef = useRef<Partial<Record<View, { width: number; height: number }>>>({});
+  const previousViewRef = useRef(view);
+  useLayoutEffect(() => {
+    const previousView = previousViewRef.current;
+    if (previousView === view) return;
+    sizesRef.current[previousView] = { width: window.outerWidth, height: window.outerHeight };
+    const remembered = sizesRef.current[view];
+    if (remembered) window.resizeTo(remembered.width, remembered.height);
+    previousViewRef.current = view;
+  }, [view]);
 }
 
 /**

@@ -116,39 +116,56 @@ function clampLabelColumnWidth(value: number): number {
   return Math.min(MAX_LABEL_COLUMN_WIDTH, Math.max(MIN_LABEL_COLUMN_WIDTH, value));
 }
 
+// D1.4-110 (Tasks) / D1.4-113 (Project/Component) — what a caller embedding
+// this component in place of a separate window (AllTaskPage.tsx's "View
+// Gantt"/"View Tasks", ProjectDetailPage.tsx's/ComponentDetailPage.tsx's own
+// "View Gantt"/"View Project"/"View Component") wants scoped to. A routed
+// render (this component's own standalone singleton window) never
+// constructs one of these at all — it reads `projectId`/`componentId`
+// straight from `useParams` instead — so `embedded === undefined` always
+// means "read from the URL," never "embedded with nothing selected yet."
+export type PlanPageEmbed =
+  | { mode: "project"; projectId: number | null }
+  | { mode: "component"; componentId: number }
+  | { mode: "filtered"; taskIds: Set<number> };
+
 export interface PlanPageProps {
-  // D1.4-110 — AllTaskPage.tsx's own "View Gantt"/"View Tasks" toggle
-  // embeds this same component in place of a separate window (V1.2's own
-  // TaskWindow embedded Gantt *tab*, not a standalone popout, is what this
-  // actually matches — the earlier D1.4-109 standalone `/plan?taskIds=`
-  // route this superseded was closer to Plan Display's own separate-window
-  // shape instead). Presence of this prop (not its own contents) is what
-  // switches this component into embedded mode — a route render never
-  // passes it at all, so `undefined` always means "read from the URL
-  // instead," even for an embedded caller with a currently-empty filter
-  // (`new Set()`, which is truthy as an object).
-  embeddedTaskIds?: Set<number>;
+  embedded?: PlanPageEmbed;
 }
 
 // D1.4-24: the standalone Plan Display's own singleton window (matching
 // Task Detail's D1.4-8 pattern), not in-place navigation — opened via
-// AppShell's "Plan" button (openListWindow("plan")), a per-Project "View
-// Gantt" action (openItemWindow("plan", projectId)), or a per-Component one
-// at its own separate route, `/plan-component/:componentId` (D1.4-109,
-// openItemWindow("plan-component", componentId); not nested under `/plan`,
-// so `openItemWindow`'s generic `/${entityType}/${entityId}` path
-// construction, windowNav.ts, needs no special-casing). `embeddedTaskIds`
-// (D1.4-110, above) is the one exception to "always its own window" — see
-// that prop's own doc comment.
-export function PlanPage({ embeddedTaskIds }: PlanPageProps = {}) {
-  const embedded = embeddedTaskIds != null;
+// AppShell's "Plan" button (openListWindow("plan")), a per-row Project/
+// Component Gantt shortcut (openItemWindow("plan"/"plan-component", id),
+// Project.tsx/Component.tsx — always a *different* Project/Component than
+// whichever window it's clicked from, so a separate popup stays correct
+// there), or Component's own separate route, `/plan-component/:componentId`
+// (D1.4-109, not nested under `/plan`, so `openItemWindow`'s generic
+// `/${entityType}/${entityId}` path construction, windowNav.ts, needs no
+// special-casing). `embedded` (above) is the one exception to "always its
+// own window" — see its own doc comment.
+export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
+  const embedded = embed != null;
   const { projectId: projectIdParam, componentId: componentIdParam } = useParams<{
     projectId?: string;
     componentId?: string;
   }>();
-  const projectId = embedded ? null : projectIdParam ? Number(projectIdParam) : null;
-  const componentId = embedded ? null : componentIdParam ? Number(componentIdParam) : null;
-  const mode: "project" | "component" | "filtered" = embedded ? "filtered" : componentId != null ? "component" : "project";
+  const projectId = embedded
+    ? embed.mode === "project"
+      ? embed.projectId
+      : null
+    : projectIdParam
+      ? Number(projectIdParam)
+      : null;
+  const componentId = embedded
+    ? embed.mode === "component"
+      ? embed.componentId
+      : null
+    : componentIdParam
+      ? Number(componentIdParam)
+      : null;
+  const embeddedTaskIds = embedded && embed.mode === "filtered" ? embed.taskIds : undefined;
+  const mode: "project" | "component" | "filtered" = embedded ? embed.mode : componentId != null ? "component" : "project";
   // `null` (skips claiming any window identity at all) when embedded — the
   // *outer* page embedding this one (AllTaskPage.tsx) already owns this
   // window's own identity; claiming a second one here would overwrite it.
@@ -489,18 +506,12 @@ export function PlanPage({ embeddedTaskIds }: PlanPageProps = {}) {
     localStorage.setItem(ganttOrderStorageKey(person.person_id), JSON.stringify(customOrder));
   }
 
-  // Double-clicking a row's own label opens its related GUI (mirrors the
-  // existing double-click on a Task's own bar, GanttBarRect below). A
-  // Task always has a real Task Detail window to open; a Project doesn't
-  // have an equivalent Project Detail window yet (not built — no "/
-  // projects/:id" route exists in App.tsx), so this opens the Plan view
-  // scoped to that Project instead (`/plan/<id>`, the same singleton
-  // window `PlanPage` itself already opens via `openItemWindow("plan",
-  // id)` — D1.4-24's own plan for this exact case) — the closest thing to
-  // "that Project's own GUI" that actually exists today.
+  // Double-clicking a row's own label opens its related Detail window — the
+  // module-level `openDetailWindow` (defined just above `GanttBarRect`
+  // below), which `GanttBarRect` itself also calls for a double-click on the
+  // bar/box (D1.4-114), so both surfaces always agree.
   function handleRowDoubleClick(bar: GanttBar) {
-    if (bar.kind === "task") openItemWindow("tasks", bar.id);
-    else openItemWindow("plan", bar.id);
+    openDetailWindow(bar);
   }
 
   // The name shown in the read-only label below the zoom controls while
@@ -1526,6 +1537,23 @@ function ZoomPercentInput({ value, onCommit }: { value: number; onCommit: (value
   );
 }
 
+// D1.4-114 — double-clicking a Task/Project/Component's own row (label or
+// bar/box, both call this) opens its real Detail window: Task Detail,
+// Project Detail, or Component Detail. Superseded a much older fallback
+// (opening a Gantt view re-scoped to that Project) written back when Project
+// Detail didn't exist yet at all — it now does (D1.4-70/ComponentDetailPlan),
+// so there's no reason left to treat a Project/Component double-click any
+// differently from a Task's own. A plain module-level function, not a method
+// on `PlanPage` itself: it needs nothing from that component's own closure
+// beyond the bar, so both `handleRowDoubleClick` (the label) and
+// `GanttBarRect` (the bar/box) below can share one definition rather than
+// two independently-maintained copies of the same three-way branch.
+function openDetailWindow(bar: GanttBar) {
+  if (bar.kind === "task") openItemWindow("tasks", bar.id);
+  else if (bar.kind === "project") openItemWindow("projects", bar.id);
+  else openItemWindow("components", bar.id);
+}
+
 function GanttBarRect({
   bar,
   scaleX,
@@ -1566,14 +1594,23 @@ function GanttBarRect({
   return (
     <rect
       x={bar.x * scaleX}
-      y={bar.y * scaleY + (isBoxedProject ? 0 : barVerticalOffset)}
+      // Always offset, boxed or not — a Boxed-mode box's own top must line
+      // up with an ordinary bar's own top (barVerticalOffset centres
+      // BAR_HEIGHT within the taller ROW_HEIGHT band), and since the box's
+      // own height below is a plain (boxBottomBase - bar.y) span with no
+      // offset baked in, shifting only the top by barVerticalOffset shifts
+      // the bottom by the same amount for free — landing it exactly on the
+      // extent guide lines' own bottom endpoint (subtreeBottomY * scaleY +
+      // barVerticalOffset, below), which is itself the bottom edge of the
+      // last descendant's own rendered bar.
+      y={bar.y * scaleY + barVerticalOffset}
       width={bar.width * scaleX}
       height={isBoxedProject ? (boxBottomBase - bar.y) * scaleY : barHeight}
       fill={isBoxedProject ? PROJECT_BOX_FILL : bar.color}
       stroke={isBoxedProject ? EXTENT_LINE_COLOUR : "rgba(0,0,0,0.3)"}
       strokeWidth={isBoxedProject ? 1 : isContainerBar(bar.kind) ? 1.5 : 1}
-      style={{ cursor: bar.kind === "task" ? "pointer" : "default" }}
-      onDoubleClick={bar.kind === "task" ? () => openItemWindow("tasks", bar.id) : undefined}
+      style={{ cursor: "pointer" }}
+      onDoubleClick={() => openDetailWindow(bar)}
       onMouseEnter={() => onHoverChange(bar.hoverLabel)}
       onMouseMove={(event) => onTooltipChange({ text: title, x: event.clientX, y: event.clientY })}
       onMouseLeave={() => {

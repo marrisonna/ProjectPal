@@ -31,7 +31,8 @@ import {
   useUpdateProject,
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, type ProjectRecord } from "../../api/types";
-import { openItemWindow, openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { openItemWindow, openListWindow, useRememberedWindowSize, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { PlanPage } from "../plan/PlanPage";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
 import { canEditOwnedRecord, hasRoleAtLeast, isTeamLead } from "../../lib/permissions";
@@ -108,6 +109,31 @@ export function ProjectDetailPage() {
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+
+  // D1.4-113 — "View Gantt" toggles this window in place, in the same
+  // window (V1.2's own ComponentWindow/ProjectWindow tab shape), rather than
+  // opening a separate standalone popup (D1.4-109's own original behaviour,
+  // now only how a *different* Project's Gantt is reached — a per-row
+  // shortcut icon in `Projects.tsx`'s own tree, or the nav-bar "Plan"
+  // button). Same "keep both mounted, toggle via display" pattern as
+  // `AllTaskPage.tsx`'s own grid/Gantt toggle (D1.4-110) — this page's own
+  // `form`/`dirty` state already lives up here regardless, but the tree
+  // grid below (`Projects.tsx`) and `ProjectSubTabs`'s own sub-tab
+  // selection have their own local state worth preserving across a toggle
+  // too. The Gantt itself isn't mounted at all until first requested
+  // (`everViewedGantt`) — most sessions never open it.
+  const [view, setView] = useState<"detail" | "gantt">("detail");
+  const [everViewedGantt, setEverViewedGantt] = useState(false);
+  // D1.4-115 — restores this window's own last size for whichever of
+  // "detail"/"gantt" it's switching back to, best-effort.
+  useRememberedWindowSize(view);
+  function toggleView() {
+    setView((v) => {
+      const next = v === "detail" ? "gantt" : "detail";
+      if (next === "gantt") setEverViewedGantt(true);
+      return next;
+    });
+  }
 
   const loadedProjectIdRef = useRef<number | null>(null);
   useEffect(() => {
@@ -257,12 +283,33 @@ export function ProjectDetailPage() {
   // "Top Level Projects" (no id) fills the whole window, both axes — a
   // browsing screen, not a form, so there's no reason to leave it capped at
   // a Task-Detail-style card width/height the way a single Project's own
-  // fields view still is.
-  const fillWindow = id == null;
+  // fields view still is. Viewing the Gantt (D1.4-113) fills the window too,
+  // regardless of `fillWindow`'s own value — a Project's own compact,
+  // centred detail card has no use for the Gantt's own need for real width/
+  // height, so the window switches to the same fill-window layout "Top
+  // Level Projects" already uses whenever the Gantt is showing, then back
+  // to the compact card when "View Project" is pressed again.
+  const fillWindow = id == null || view === "gantt";
 
   return (
-    <Box sx={{ p: "6px", boxSizing: "border-box", ...(fillWindow && { height: "100%", display: "flex", flexDirection: "column" }) }}>
-      <Box sx={fillWindow ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } : { width: 700, mx: "auto" }}>
+    <Box sx={{ p: "6px", boxSizing: "border-box", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Permanent, outside the detail card below (unlike D1.4-109's
+          original placement inside its header row) — it has to survive
+          being visible in *both* states, so it can't live inside whichever
+          one is currently hidden. Same placement AllTaskPage.tsx's own
+          "View Gantt"/"View Tasks" button uses (D1.4-110). */}
+      <Box sx={{ display: "flex", justifyContent: "flex-start", flexShrink: 0, mb: "6px" }}>
+        <DenseButton onClick={toggleView}>{view === "detail" ? "View Gantt" : "View Project"}</DenseButton>
+      </Box>
+      <Box
+        sx={
+          view === "gantt"
+            ? { display: "none" }
+            : fillWindow
+              ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
+              : { width: 700, mx: "auto" }
+        }
+      >
         <Box
           sx={{
             bgcolor: "#fff",
@@ -382,17 +429,6 @@ export function ProjectDetailPage() {
               </Box>
             )}
             {id != null && <DenseButton onClick={() => openListWindow("projects")}>All Projects</DenseButton>}
-            {/* D1.4-109 — opens the existing standalone Gantt view
-                (`/plan`/`/plan/:projectId`), scoped to this Project when one
-                is open, or "Top Level Projects" mode otherwise — the same
-                singleton-per-item mechanism every other cross-reference in
-                the app uses (openItemWindow), not a second Gantt renderer
-                embedded here. */}
-            <DenseButton
-              onClick={() => (id != null ? openItemWindow("plan", id) : openListWindow("plan"))}
-            >
-              View Gantt
-            </DenseButton>
             {canDelete && project && (
               <DenseButton onClick={() => handleDeleteProject(project)} disabled={deleteProject.isPending}>
                 Delete
@@ -539,6 +575,11 @@ export function ProjectDetailPage() {
           {id != null && project && <ProjectSubTabs projectId={id} teamId={project.team_id} />}
         </Box>
       </Box>
+      {everViewedGantt && (
+        <Box sx={{ display: view === "gantt" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
+          <PlanPage embedded={{ mode: "project", projectId: id }} />
+        </Box>
+      )}
 
       {dialog?.kind === "create" && (
         <CreateOrRenameProjectDialog

@@ -22,7 +22,8 @@ import {
   useUpdateComponent,
 } from "../../api/hooks";
 import type { ComponentRecord } from "../../api/types";
-import { openItemWindow, openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { openItemWindow, openListWindow, useRememberedWindowSize, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { PlanPage } from "../plan/PlanPage";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
 import { canEditOwnedRecord, hasRoleAtLeast } from "../../lib/permissions";
@@ -94,6 +95,23 @@ export function ComponentDetailPage() {
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+
+  // D1.4-113 — see ProjectDetailPage.tsx's own identical comment: "View
+  // Gantt" toggles this window in place rather than opening a separate
+  // standalone popup (still how a *different* Component's Gantt is reached
+  // — Component.tsx's own per-row shortcut icon).
+  const [view, setView] = useState<"detail" | "gantt">("detail");
+  const [everViewedGantt, setEverViewedGantt] = useState(false);
+  // D1.4-115 — restores this window's own last size for whichever of
+  // "detail"/"gantt" it's switching back to, best-effort.
+  useRememberedWindowSize(view);
+  function toggleView() {
+    setView((v) => {
+      const next = v === "detail" ? "gantt" : "detail";
+      if (next === "gantt") setEverViewedGantt(true);
+      return next;
+    });
+  }
 
   const loadedComponentIdRef = useRef<number | null>(null);
   useEffect(() => {
@@ -247,12 +265,36 @@ export function ComponentDetailPage() {
   // "Top Level Components" (no id) fills the whole window, both axes —
   // same browsing-screen treatment ProjectDetailPage.tsx's own "Top Level
   // Projects" mode already uses, for the same reason: a browsing screen,
-  // not a form.
-  const fillWindow = id == null;
+  // not a form. Viewing the Gantt (D1.4-113) fills the window too, same
+  // reasoning as ProjectDetailPage.tsx's own identical comment (though in
+  // practice `view` can only ever become "gantt" when `id != null`, since
+  // there's no button to trigger it otherwise — see below).
+  const fillWindow = id == null || view === "gantt";
 
   return (
-    <Box sx={{ p: "6px", boxSizing: "border-box", ...(fillWindow && { height: "100%", display: "flex", flexDirection: "column" }) }}>
-      <Box sx={fillWindow ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } : { width: 700, mx: "auto" }}>
+    <Box sx={{ p: "6px", boxSizing: "border-box", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Permanent, outside the detail card below (unlike D1.4-109's
+          original placement inside its header row) — it has to survive
+          being visible in *both* states, so it can't live inside whichever
+          one is currently hidden. Only rendered at all when a Component is
+          actually open — same "no 'Top Level Components' aggregate mode"
+          restriction the button already had (matching V1.2's own
+          ComponentWindow, whose Gantt tab is always scoped to one
+          already-open Component). */}
+      {id != null && (
+        <Box sx={{ display: "flex", justifyContent: "flex-start", flexShrink: 0, mb: "6px" }}>
+          <DenseButton onClick={toggleView}>{view === "detail" ? "View Gantt" : "View Component"}</DenseButton>
+        </Box>
+      )}
+      <Box
+        sx={
+          view === "gantt"
+            ? { display: "none" }
+            : fillWindow
+              ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
+              : { width: 700, mx: "auto" }
+        }
+      >
         <Box
           sx={{
             bgcolor: "#fff",
@@ -372,15 +414,6 @@ export function ComponentDetailPage() {
               </Box>
             )}
             {id != null && <DenseButton onClick={() => openListWindow("components")}>All Components</DenseButton>}
-            {/* D1.4-109 — this Component's own Gantt view (a Component→
-                SubComponent tree, distinct from Project's own Gantt); unlike
-                Project Detail's own "View Gantt" button, there's no
-                "Top Level Components" aggregate mode to fall back to when no
-                Component is open, matching V1.2's own ComponentWindow, whose
-                Gantt tab is always scoped to one already-open Component. */}
-            {id != null && (
-              <DenseButton onClick={() => openItemWindow("plan-component", id)}>View Gantt</DenseButton>
-            )}
             {canDelete && component && (
               <DenseButton onClick={() => handleDeleteComponent(component)} disabled={deleteComponent.isPending}>
                 Delete
@@ -481,6 +514,11 @@ export function ComponentDetailPage() {
           {id != null && component && <ComponentSubTabs componentId={id} teamId={component.team_id} />}
         </Box>
       </Box>
+      {everViewedGantt && id != null && (
+        <Box sx={{ display: view === "gantt" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
+          <PlanPage embedded={{ mode: "component", componentId: id }} />
+        </Box>
+      )}
 
       {dialog?.kind === "create" && (
         <CreateOrRenameComponentDialog
