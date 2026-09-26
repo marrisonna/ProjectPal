@@ -299,7 +299,13 @@ export function ProjectDetailPage() {
           one is currently hidden. Same placement AllTaskPage.tsx's own
           "View Gantt"/"View Tasks" button uses (D1.4-110). */}
       <Box sx={{ display: "flex", justifyContent: "flex-start", flexShrink: 0, mb: "6px" }}>
-        <DenseButton onClick={toggleView}>{view === "detail" ? "View Gantt" : "View Project"}</DenseButton>
+        <DenseButton
+          onClick={toggleView}
+          sx={{ cursor: "default" }}
+          hint={view === "detail" ? "Click: View Gantt for these tasks." : "Click: Return to the Project's own window."}
+        >
+          {view === "detail" ? "View Gantt" : "View Project"}
+        </DenseButton>
       </Box>
       <Box
         sx={

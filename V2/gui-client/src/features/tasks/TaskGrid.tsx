@@ -9,6 +9,7 @@ import {
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { HintTooltip } from "../../components/HintTooltip";
 import { useDeleteTask, useUpdateTaskField } from "../../api/hooks";
 import {
   PRIORITY_LEVELS,
@@ -30,6 +31,7 @@ import {
   type EditableTaskField,
 } from "../../lib/permissions";
 import { useAuth } from "../../auth/AuthContext";
+import { useUneditableDimmingLevel } from "../../lib/settings";
 import {
   computeUrgency,
   formatDdMmmYy,
@@ -38,7 +40,6 @@ import {
   urgencyRowPaletteSx,
   type ScheduleGraph,
 } from "../../lib/schedule";
-import { READONLY_BG } from "../../components/DenseField";
 import { formatApiError } from "../../lib/apiErrors";
 import {
   CELL_FONT_WEIGHT,
@@ -47,6 +48,8 @@ import {
   DenseSingleSelectEditCell,
   HEADER_FONT_WEIGHT,
   measureTextWidth,
+  NOT_EDITABLE_CELL_CLASS,
+  notEditableCellPaletteSx,
   useDenseGridColumns,
 } from "../../components/DenseDataGrid";
 import type { ColumnFilterState } from "../../components/GridColumnFilter";
@@ -309,6 +312,7 @@ export function TaskGrid({
   fillHeight = false,
 }: TaskGridProps) {
   const { person } = useAuth();
+  const uneditableDimmingLevel = useUneditableDimmingLevel();
   const updateTaskField = useUpdateTaskField();
   const deleteTask = useDeleteTask();
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
@@ -457,13 +461,47 @@ export function TaskGrid({
     return scheduledUrgency.get(row.task_id) ?? 100;
   }
 
-  // The urgency-bucket palette itself is shared with Search's own results
-  // grid (`lib/schedule.ts`'s `urgencyRowPaletteSx`, `SearchPlan.md`
-  // D1.4-76) — only the two TaskGrid-specific classes (governed-cell grey,
-  // the delete cell's own always-white fill) stay local here.
+  // UserInteractionPlan.md §4.2 (Stage5-C2/C3) — replaces the old
+  // per-governed-column grey `task-grid-readonly-cell` background with the
+  // shared, grid-wide `notEditableCellPaletteSx()` (`components/
+  // DenseDataGrid.tsx`), applied to *every* cell that isn't editable right
+  // now, not just the 9 (8, since `D1.4-129`) governed ones — a column
+  // that's never inline-editable at all (Description, Project, Component,
+  // Resources, …) reads exactly as "not editable" as a governed column this
+  // row's own permissions happen to block; distinguishing the two visually
+  // wasn't asked for. `D1.4-137` — how strong that dimming actually is
+  // (`uneditableDimmingLevel`, `lib/settings.ts`'s own live-reactive
+  // "Uneditable dimming" setting) is why this `useMemo` depends on it rather
+  // than the empty `[]` it started with — the whole point of a live-reactive
+  // setting is that an already-open window's own styling updates the moment
+  // it changes, not just the next time this grid happens to remount. Two
+  // cursor rules alongside it: every cell defaults to
+  // `default` (the plain arrow — reported back that `pointer`, a hand with a
+  // pointing finger, reads as "this itself is a button/link," which isn't
+  // true of most cells here; the row's own double-click-to-open-Task-Detail
+  // still works everywhere regardless), overridden to `text` on whichever
+  // cell is actually editable right now — a genuine two-level cursor
+  // language matching this grid's own two-level click behaviour (§4.2's own
+  // "Likely implementation shape").
+  const EDITABLE_CELL_CLASS = "task-grid-editable-cell";
   const urgencyRowSx = useMemo(
     () => ({
-      "& .task-grid-readonly-cell": { bgcolor: READONLY_BG },
+      "& .MuiDataGrid-cell": { cursor: "default" },
+      [`& .${EDITABLE_CELL_CLASS}`]: { cursor: "text" },
+      // Stage5-C (UserInteractionPlan.md §4.2) — overrides MUI's own default
+      // `cursor: pointer` on a sortable column header (`GridRootStyles.js`),
+      // which — `cursor` being an inherited CSS property — otherwise cascades
+      // down into everything `renderHeader` draws inside it, reported as a
+      // hand cursor over the whole header *and* the filter row beneath it.
+      // Fixes the label by inheritance alone (it sets no `cursor` of its
+      // own), but `GridColumnFilter.tsx`'s own filter text input and icon
+      // button both still needed their own explicit override on top of this
+      // one — confirmed live that inheritance alone doesn't reach either:
+      // a browser's own UA stylesheet sets `cursor: text` directly on a
+      // text `<input>`, and the icon button already had its own explicit
+      // `cursor: "pointer"` — a directly-declared value on the element
+      // itself always wins over one merely inherited from an ancestor.
+      "& .MuiDataGrid-columnHeader--sortable": { cursor: "default" },
       // No fill at all (not even the row's own urgency tint showing
       // through) — a plain trash icon sitting in its own cell, matching
       // the unfilled rename/delete/add-task icons on Project.tsx's rows.
@@ -472,26 +510,28 @@ export function TaskGrid({
       // show straight through it; an opaque colour is what actually
       // *blocks* that tint from showing in this one cell.
       "& .task-grid-delete-cell": { bgcolor: "#fff" },
+      // Stage5-C — `GridActionsCellItem`'s own TS types don't declare an
+      // `sx` prop (even though the underlying `IconButton` would accept one
+      // at runtime), so its enabled-state `pointer` cursor is overridden via
+      // this descendant selector instead of a prop on the component itself.
+      "& .task-grid-delete-cell button": { cursor: "default" },
       ...urgencyRowPaletteSx(),
+      ...notEditableCellPaletteSx(uneditableDimmingLevel),
     }),
-    [],
+    [uneditableDimmingLevel],
   );
 
   function rowClassName(row: TaskRecord): string {
     return urgencyRowClassName(row.priority, taskUrgency(row));
   }
 
-  // Governed columns (§4.3/§4.5): editable at the DataGrid level, with the
-  // actual per-row/per-user decision made by isCellEditable (grid-wide,
-  // below) and the visual grey treatment by cellClassName here — both call
-  // canEditCell, never a window-supplied override.
-  function governed(col: GridColDef<TaskRecord>, field: EditableTaskField): GridColDef<TaskRecord> {
-    return {
-      ...col,
-      editable: true,
-      cellClassName: (params: GridCellParams<TaskRecord>) =>
-        canEditCell(params.row, field) ? "" : "task-grid-readonly-cell",
-    };
+  // Governed columns (§4.3/§4.5): editable at the DataGrid level — the
+  // actual per-row/per-user decision is made by `isCellEditable` (grid-wide,
+  // below) and by the shared editable/not-editable cell classing applied
+  // uniformly to every column further down (`columns`, Stage5-C2), not per
+  // governed column here any more.
+  function governed(col: GridColDef<TaskRecord>): GridColDef<TaskRecord> {
+    return { ...col, editable: true };
   }
 
   const isTeamLead = isTeamLeadOfAnyTeam(person);
@@ -543,7 +583,6 @@ export function TaskGrid({
         (row) => [row.status ?? ""],
         "string",
       ),
-      "status",
     ),
     // Team-Lead-only visibility (D-Win-15) — decided here, by TaskGrid
     // itself, regardless of whether an embedding window's own `columns`
@@ -561,7 +600,6 @@ export function TaskGrid({
         (row) => [row.tentative_resource_assignment ? "✓" : ""],
         "string",
       ),
-      "tentative_resource_assignment",
     ),
     description: withFilter(
       { field: "description", headerName: "Description" },
@@ -612,7 +650,6 @@ export function TaskGrid({
         (row) => [row.priority ?? ""],
         "string",
       ),
-      "priority",
     ),
     end_date: withFilter(
       {
@@ -676,7 +713,6 @@ export function TaskGrid({
         (row) => [personName(row.owner_person_id, projectsById.get(row.project_id))],
         "string",
       ),
-      "owner_person_id",
     ),
     requestor_person_id: governed(
       withFilter(
@@ -696,7 +732,6 @@ export function TaskGrid({
         (row) => [personName(row.requestor_person_id, projectsById.get(row.project_id))],
         "string",
       ),
-      "requestor_person_id",
     ),
     date_added: withFilter(
       {
@@ -714,7 +749,6 @@ export function TaskGrid({
         (row) => [row.effort_in_days != null ? String(row.effort_in_days) : ""],
         "number",
       ),
-      "effort_in_days",
     ),
     // Deliberately never governed (TaskGridPlan.md §4.4) — changing this can
     // have large knock-on effects on what Effort itself means, so it stays a
@@ -746,7 +780,6 @@ export function TaskGrid({
         ],
         "number",
       ),
-      "percentage_allocation",
     ),
     task_type: governed(
       withFilter(
@@ -760,7 +793,6 @@ export function TaskGrid({
         (row) => [row.task_type ?? ""],
         "string",
       ),
-      "task_type",
     ),
     status_date: withFilter(
       {
@@ -831,21 +863,57 @@ export function TaskGrid({
     // disabled."
     getActions: (params: GridRowParams<TaskRecord>) => {
       const deletable = canDeleteRow(params.row);
-      return [
+      // Stage5-C (UserInteractionPlan.md §4.2) — `GridActionsCellItem`'s own
+      // `label` prop is `aria-label` only (confirmed by reading MUI's own
+      // source), never a visible tooltip of any kind — a `HintTooltip`
+      // wrap is what actually shows one, only while this row's own icon is
+      // enabled (a disabled icon is a real no-op either way; a hint for it
+      // wasn't asked for and MUI's own `disabled` styling already reads as
+      // "not available" on its own). The enabled cursor (`pointer` by
+      // default) is overridden to `default` via `urgencyRowSx`'s own
+      // `& .task-grid-delete-cell button` selector below, not an `sx` prop
+      // here — `GridActionsCellItem`'s own TS types don't declare one, even
+      // though the underlying `IconButton` would accept it at runtime.
+      const icon = (
         <GridActionsCellItem
           key="delete"
           icon={<DeleteIcon fontSize="inherit" sx={{ color: deletable ? "rgba(0,0,0,0.87)" : "rgba(0,0,0,0.18)" }} />}
           label="Delete"
           disabled={!deletable}
           onClick={deletable ? () => handleDeleteTask(params.row) : undefined}
-        />,
+        />
+      );
+      return [
+        deletable ? (
+          <HintTooltip key="delete" hint="Click: Delete this task.">
+            {icon}
+          </HintTooltip>
+        ) : (
+          icon
+        ),
       ];
     },
   };
 
+  // UserInteractionPlan.md §4.2 (Stage5-C2/C3) — applied uniformly to every
+  // column here, once, rather than repeated in each of `allColumnDefs`'s own
+  // ~20 entries: every one of them is either editable right now (governed,
+  // and this row's permissions allow it) or it isn't, and both the dimming
+  // and the cursor swap follow from that one same `isEditableCell` check.
+  // `deleteColumn` is excluded — it's an action button, not a field with an
+  // "editable" concept of its own, and already has its own two-state
+  // (enabled/disabled) icon styling (`D1.4-98`-`D1.4-100`) that this would
+  // only muddy.
   const columns: GridColDef<TaskRecord>[] = [
     deleteColumn,
-    ...effectiveColumnKeys.map((key) => allColumnDefs[key]).filter((c): c is GridColDef<TaskRecord> => !!c),
+    ...effectiveColumnKeys
+      .map((key) => allColumnDefs[key])
+      .filter((c): c is GridColDef<TaskRecord> => !!c)
+      .map((col) => ({
+        ...col,
+        cellClassName: (params: GridCellParams<TaskRecord>) =>
+          isEditableCell(params.row, params.field) ? EDITABLE_CELL_CLASS : NOT_EDITABLE_CELL_CLASS,
+      })),
   ];
 
   // Only safe to call now — every `withFilter` call above (building

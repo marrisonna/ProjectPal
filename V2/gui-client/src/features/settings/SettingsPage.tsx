@@ -6,10 +6,16 @@ import { useSingletonWindowIdentity } from "../../lib/windowNav";
 import {
   getHintMode,
   getNewWindowMode,
+  getShowUserNameInTitleMode,
+  getUneditableDimmingLevel,
   setHintMode,
   setNewWindowMode,
+  setShowUserNameInTitleMode,
+  setUneditableDimmingLevel,
   type HintMode,
   type NewWindowMode,
+  type ShowUserNameInTitleMode,
+  type UneditableDimmingLevel,
 } from "../../lib/settings";
 
 // D1.4-122 — a small, always-the-same-instance popup window (opened via
@@ -30,10 +36,34 @@ export function SettingsPage() {
   // this app's own genuine live-data sync, `lib/liveSync.ts`).
   const [newWindowMode, setNewWindowModeState] = useState<NewWindowMode>(() => getNewWindowMode());
   const [hintMode, setHintModeState] = useState<HintMode>(() => getHintMode());
+  const [showUserNameMode, setShowUserNameModeState] = useState<ShowUserNameInTitleMode>(() =>
+    getShowUserNameInTitleMode(),
+  );
+  const [uneditableDimmingLevel, setUneditableDimmingLevelState] = useState<UneditableDimmingLevel>(() =>
+    getUneditableDimmingLevel(),
+  );
 
   function handleNewWindowModeChange(mode: NewWindowMode) {
     setNewWindowMode(mode);
     setNewWindowModeState(mode);
+  }
+
+  // D1.4-137 — same live-cross-window shape as Hints below (`lib/settings.
+  // ts`'s own `useUneditableDimmingLevel`): a `TaskGrid` window's own cell
+  // styling updates the moment this changes, in every already-open window,
+  // not just the next one.
+  function handleUneditableDimmingLevelChange(level: UneditableDimmingLevel) {
+    setUneditableDimmingLevel(level);
+    setUneditableDimmingLevelState(level);
+  }
+
+  // Stage5 — same live-cross-window shape as Hints below (`lib/settings.ts`'s
+  // own `useShowUserNameInTitle`), since `useDocumentTitle` re-renders (and
+  // re-sets `document.title`) in every already-open window the moment this
+  // changes, not just the next window opened.
+  function handleShowUserNameModeChange(mode: ShowUserNameInTitleMode) {
+    setShowUserNameInTitleMode(mode);
+    setShowUserNameModeState(mode);
   }
 
   // D1.4-124 — unlike New Window above, this one is watched live by every
@@ -89,6 +119,38 @@ export function SettingsPage() {
           >
             <option value="On">On</option>
             <option value="Off">Off</option>
+          </FieldSelect>
+          {/* Stage5 — primarily a testing aid: with several app windows open
+              at once, each logged in as a different Person, this puts that
+              Person's own name/nickname in the OS taskbar/Alt-Tab title so
+              the windows are distinguishable there — otherwise identical.
+              Only visible in its effect while running as an installed app
+              (`useDocumentTitle`'s own `isAppMode` check) — a plain browser
+              tab's title is unaffected either way. */}
+          <FieldSelect
+            label="Show User name in window title"
+            width={140}
+            value={showUserNameMode}
+            onChange={(value) => handleShowUserNameModeChange(value as ShowUserNameInTitleMode)}
+          >
+            <option value="On">On</option>
+            <option value="Off">Off</option>
+          </FieldSelect>
+          {/* D1.4-137 — how strongly TaskGrid.tsx's own non-editable cells
+              are dimmed (text + urgency-tint background), after two rounds
+              of the one fixed amount being reported as wrong. "None" turns
+              the whole affordance off — every cell looks the same regardless
+              of whether it's actually editable. */}
+          <FieldSelect
+            label="Uneditable dimming"
+            width={140}
+            value={uneditableDimmingLevel}
+            onChange={(value) => handleUneditableDimmingLevelChange(value as UneditableDimmingLevel)}
+          >
+            <option value="None">None</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="Max">Max</option>
           </FieldSelect>
         </Box>
       </Box>

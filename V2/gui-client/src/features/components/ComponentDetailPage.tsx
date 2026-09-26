@@ -283,7 +283,13 @@ export function ComponentDetailPage() {
           already-open Component). */}
       {id != null && (
         <Box sx={{ display: "flex", justifyContent: "flex-start", flexShrink: 0, mb: "6px" }}>
-          <DenseButton onClick={toggleView}>{view === "detail" ? "View Gantt" : "View Component"}</DenseButton>
+          <DenseButton
+            onClick={toggleView}
+            sx={{ cursor: "default" }}
+            hint={view === "detail" ? "Click: View Gantt for these tasks." : "Click: Return to the Component's own window."}
+          >
+            {view === "detail" ? "View Gantt" : "View Component"}
+          </DenseButton>
         </Box>
       )}
       <Box

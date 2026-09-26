@@ -29,6 +29,7 @@
 8. [Open Questions for Confirmation](#open-questions)
 9. [Status Tracker](#status-tracker)
 10. [Hints — a fourth affordance, on demand](#hints)
+11. [Implementation Plan](#implementation-plan)
 
 <a id="purpose-and-scope"></a>
 ## 1. Purpose and Scope
@@ -127,18 +128,26 @@ Double-clicking a governed (editable) cell in `TaskGrid` doesn't just open Task 
 Neither is built. Recorded here as a confirmed, real side effect and the two ways to address it, so Stage 5 can decide on it deliberately rather than rediscover it from scratch.
 
 <a id="editable-cell-visual-affordance"></a>
-### 4.2 Editable-cell visual affordance — requested design, not yet built (added 2026-09-26)
+### 4.2 Editable-cell visual affordance — **built (`D1.4-131`, §11 group C)**, corrected 2026-09-26
 
-Follows directly from §4.1's own finding: `TaskGrid` has no visual cue at all today distinguishing an editable cell from a non-editable one — not per-*column* (only 9 of the grid's columns are ever inline-editable, `GOVERNED_FIELDS`), and not per-*row* within those 9 either (`canEditTaskField`'s tiered permission rule, `lib/permissions.ts` — the record's own owner can edit every governed field, someone merely assigned as a Resource can only edit Status/Detailed Description, Owner/Tentative Resource Assignment are Team-Lead-only, everyone else gets nothing). The only cursor change a user sees today — an I-beam over rendered text — is native browser default text-hover behaviour, unrelated to `isCellEditable`, and appears over *any* cell's text regardless of whether it's actually editable. Reported as genuinely confusing, since there's no way to tell which is which without clicking and finding out.
+Follows directly from §4.1's own finding: `TaskGrid` had no visual cue at all distinguishing an editable cell from a non-editable one — not per-*column* (only 8 of the grid's columns are ever inline-editable, `GOVERNED_FIELDS` — 9 briefly, until Detailed Description was removed again at `D1.4-129`, see §10.7), and not per-*row* within those 8 either (`canEditTaskField`'s tiered permission rule, `lib/permissions.ts` — the record's own owner can edit every governed field, someone merely assigned as a Resource can only edit Status *in the grid* (Detailed Description is also part of that same tier-3 permission, but is Task-Detail-only since `D1.4-129`, not inline-editable here at all any more), Owner/Tentative Resource Assignment are Team-Lead-only, everyone else gets nothing). The only cursor change a user saw before this — an I-beam over rendered text — was native browser default text-hover behaviour, unrelated to `isCellEditable`, and appeared over *any* cell's text regardless of whether it was actually editable. Reported as genuinely confusing, since there was no way to tell which is which without clicking and finding out.
 
-**Requested design, two parts, confirmed with the user:**
+**Design, two parts, confirmed with the user, now built:**
 
-1. **A persistent (non-hover) cue**, driven by the same `isCellEditable`/`isEditableCell` result already computed today (`TaskGrid.tsx`) — not a second, separate permission concept to keep in sync with it. A cell that isn't editable (whether because its whole column is never governed at all — Description, Project, Component, Resources, ... — or because *this row's* permission check fails for an otherwise-governed column, e.g. Status on a colleague's Task) is subtly dimmed: its text colour desaturated, and whatever urgency-tint background colour is showing through that cell (`computeTaskRowColour`) desaturated along with it. A genuinely editable cell is left completely unstyled — full-strength text, full-strength urgency tint — so it's the *editable* cells that look normal, and the (for most users, on most rows, most) non-editable ones read as visibly, if subtly, inert. **Likely implementation shape:** a single CSS `filter: grayscale(...)` (paired with a modest opacity reduction) on the cell desaturates *anything* rendered inside it — text and inherited background alike — in one declaration, rather than two separate colour overrides that would need to be kept in sync by hand; worth trying before reaching for anything more involved.
-2. **A hover-only cursor swap, layered on top of (1), not replacing it.** Every cell gets an explicit `cursor: pointer` as its resting hover cursor — not the browser's own native default — since every cell, editable or not, already supports the *row's* own double-click-to-open-Task-Detail (`onRowDoubleClick`/`openTask`). A cell where `isEditableCell` is true swaps that to `cursor: text` instead, specifically flagging the one *additional* action available only there (a single click starts editing it). This gives a genuine two-level cursor language matching the grid's own two-level click behaviour — pointer alone means "double-click opens the Task"; text means "single-click also edits this one" — rather than one generic affordance that can't tell the two apart.
+1. **A persistent (non-hover) cue**, driven by the same `isCellEditable`/`isEditableCell` result already computed today (`TaskGrid.tsx`) — not a second, separate permission concept to keep in sync with it. A cell that isn't editable (whether because its whole column is never governed at all — Description, Project, Component, Resources, ... — or because *this row's* permission check fails for an otherwise-governed column, e.g. Status on a colleague's Task) is subtly dimmed: its text colour desaturated, and whatever urgency-tint background colour is showing through that cell (`computeTaskRowColour`) desaturated along with it. A genuinely editable cell is left completely unstyled — full-strength text, full-strength urgency tint — so it's the *editable* cells that look normal, and the (for most users, on most rows, most) non-editable ones read as visibly, if subtly, inert. **Built as** a single CSS `filter: grayscale(1) opacity(0.55)` on the cell (`components/DenseDataGrid.tsx`'s new `NOT_EDITABLE_CELL_CLASS`/`notEditableCellPaletteSx()`) — desaturates *anything* rendered inside it, text and inherited background alike, in one declaration, replacing the old `task-grid-readonly-cell` grey-background treatment entirely.
+2. **A hover-only cursor swap, layered on top of (1), not replacing it.** Every cell gets an explicit resting cursor — not the browser's own native default — since every cell, editable or not, already supports the *row's* own double-click-to-open-Task-Detail (`onRowDoubleClick`/`openTask`). A cell where `isEditableCell` is true swaps that to `cursor: text` instead, specifically flagging the one *additional* action available only there (a single click starts editing it). This gives a genuine two-level cursor language matching the grid's own two-level click behaviour — text means "single-click also edits this one," the plain arrow means it doesn't — rather than one generic affordance that can't tell the two apart. **Built as** a local `task-grid-editable-cell` class (`TaskGrid.tsx`'s own `urgencyRowSx`), applied alongside the shared class above.
 
-**Scope:** every cell in `TaskGrid`, not just the 9 governed columns — a column that's never inline-editable at all is exactly as "not editable" as a governed column this row's own permissions happen to block, and should read the same way; distinguishing "never editable" from "not editable for you, here" visually wasn't asked for and would only add noise for no benefit. Applies identically to every `TaskGrid` instance (All Tasks and the embedded Project/Component ones) — `isEditableCell` is already the single shared source of truth for this everywhere, per `lib/permissions.ts`'s own doc comment ("a user's experience of what they can edit is identical everywhere a governed Task field appears").
+**Refinements after first use (`D1.4-132`, added 2026-09-26)** — both points above were built once, tried, and reported back on directly:
 
-**Likely implementation shape overall** (for when this is actually built — no code changes made yet, per the user's own explicit request): MUI DataGrid's own per-column `cellClassName` (a function receiving the same `params.row`/`params.field` shape `isCellEditable` already takes) returning a shared CSS class whenever `!isEditableCell(params.row, params.field)`, defined once — likely alongside `DenseDataGrid.tsx`'s other shared chrome constants (`HEADER_FONT`/`CELL_FONT` and friends) so any future grid built on the same chrome can reuse it, rather than redefined per column inside `TaskGrid.tsx`'s own `allColumnDefs`.
+- **The urgency-tint background wasn't visibly dimming at all**, only the text was. Root cause: point 1 above was first built as a single `filter: grayscale(1) opacity(0.55)` on the cell — but the urgency tint is painted on the *row* (`getRowClassName`/`urgencyRowPaletteSx`), an ancestor of the cell, and `filter` only ever affects an element's *own* rendered box; a transparent cell showing a colour through from an ancestor behind it has nothing of that colour in its own filtered layer to desaturate. Text dimmed (it's the cell's own content) while the tint, painted a layer further back, didn't. Fixed by splitting into two independent CSS properties instead of one `filter`: `color` (dims the cell's own text — every `TaskGrid` cell's text is plain, near-black, so a lower-alpha black reads as dimmed without needing an actual grayscale) and `bgcolor`, a real paint on the cell's *own* box this time, laid as a translucent grey wash *over* whatever the row's tint shows through underneath it — greying it by ordinary alpha compositing, regardless of what that colour actually is.
+- **The text dimming itself was too strong.** Halved the distance back toward full strength: `notEditableCellPaletteSx()` now sets `color: "rgba(0,0,0,0.6)"` (was an effective ~0.48 alpha under the old filter) and a "slightly" greyed `bgcolor: "rgba(120,120,120,0.22)"` for the background, per the user's own two separate asks. **Halved again at `D1.4-133`**, to `bgcolor: "rgba(120,120,120,0.11)"` — still too strong even at 0.22. **Made a Settings preference at `D1.4-137`** ("Uneditable dimming," `None`/`Low`/`Medium`/`Max`) rather than guessing at a fourth fixed amount — `Low` is `D1.4-133`'s own `0.11`, `Medium` is `D1.4-132`'s original `0.22`, `Max` doubles it again to `0.44`, and `None` turns the whole affordance off.
+- **The resting cursor read wrong.** `cursor: pointer` — a hand with a pointing finger — implies "this itself is a clickable control," which isn't true of most cells; changed to `cursor: default` (the plain arrow), leaving the editable-cell `cursor: text` override unchanged.
+
+**Scope:** every cell in `TaskGrid`, not just the 8 governed columns — a column that's never inline-editable at all is exactly as "not editable" as a governed column this row's own permissions happen to block, and reads the same way; distinguishing "never editable" from "not editable for you, here" visually wasn't asked for and would only add noise for no benefit. The leading Actions/delete column is the one deliberate exception — it's a button, not a field, and already has its own two-state (enabled/disabled) icon styling (`D1.4-98`-`D1.4-100`) this would only muddy. Applies identically to every `TaskGrid` instance (All Tasks and the embedded Project/Component ones) — `isEditableCell` is already the single shared source of truth for this everywhere, and neither embedding passes any prop that could override or bypass it.
+
+**Implementation shape, as built**: a single `cellClassName` applied uniformly to every column (except the actions column) where `columns` is assembled (`TaskGrid.tsx`), returning the editable or not-editable class per `isEditableCell(params.row, params.field)` — not repeated per column inside `allColumnDefs`. The dimming class itself lives in `components/DenseDataGrid.tsx`, alongside its other shared chrome constants, so any future grid built on the same chrome can reuse it; the cursor-swap classes are local to `TaskGrid.tsx`, since no other grid combines a row-level and a cell-level click action the way this one does.
+
+`tsc -b`/`vitest` (94, unchanged — a styling/cell-classing change, no new pure logic)/`build`/`lint` all clean. Verified interactively (scripted Playwright, computed styles read directly from the DOM, both before and after `D1.4-132`'s revision): on All Tasks, an owned Task's Status/Priority cells come back `color: rgba(0,0,0,0.87)`/`bgcolor: transparent`/`cursor: text`, while Resources/Description/ID come back `color: rgba(0,0,0,0.6)`/`bgcolor: rgba(120,120,120,0.22)`/`cursor: default`, screenshotted to confirm the tint now visibly greys on the non-editable columns. The embedded Project/Component `TaskGrid` instances weren't separately screenshotted this session — confirmed instead by reading both call sites (`Project.tsx`/`Component.tsx`), neither of which passes `sx` or any column override that could affect this — you've since verified C4 directly (§11).
 
 <a id="interaction-affordances"></a>
 ## 5. Interaction Affordances — a shared visual vocabulary
@@ -306,6 +315,12 @@ Every interaction identified as *currently implemented* while writing this secti
 | Gantt bar/label — double-click, drag-to-reorder | Appended to the existing custom tooltip | Custom tooltip extension |
 | Gantt collapse chevron | "Click: Expand."/"Click: Collapse." | `HintTooltip` (§10.5; was SVG `<title>`) |
 | Gantt drawing area — zoom/pan | One combined hint, suppressed while a bar/label tooltip is showing (§10.4) | Custom cursor-following tooltip (`canvasTooltip`, §10.5; was whole-canvas `title`) |
+| Gantt controls row — "Memorise order"/"Zoom Reset"/"Today," Show Names/Boxed/Weekends checkboxes (§10.10) | Per-control, e.g. "Click: Reset zoom to 100%." | `DenseButton`'s own `hint` prop / `HintTooltip` |
+| "View Gantt"/"View Tasks"/"View Project"/"View Component" toggle (§10.10) | Both states now hinted, not just "View Gantt" | `DenseButton`'s own `hint` prop |
+| `TaskGrid.tsx`'s own filterable sort header — click to sort, double-click to auto-size (§10.8) | "Click: Sort." and/or "Double-click: Auto size column.", combined into one when both apply | `HintTooltip` |
+| `TaskGrid.tsx`'s own filter row — text box, checklist icon (§10.8) | "Click: Enter text to filter." / "Click: Select filter values." | `HintTooltip` (replacing the icon's old native `title`) |
+| "View Gantt" button — `AllTaskPage.tsx`/`ProjectDetailPage.tsx`/`ComponentDetailPage.tsx` (§10.8) | "Click: View Gantt for these tasks." (only while showing "View Gantt," not its own toggled-back state) | `HintTooltip` (`DenseButton`'s new `hint` prop) |
+| `TaskGrid.tsx`'s own Delete (bin) icon — enabled only (§10.8) | "Click: Delete this task." | `HintTooltip` (correcting an earlier assumption that `GridActionsCellItem`'s own `label` was already a visible tooltip — it's `aria-label` only) |
 
 **Not yet covered — genuinely new features from §7/§9, not oversights**: none of §7's *new* drag-and-drop features (reparent a Project/Component, move a Task, extended Dependency creation, OS-file-drag Attachments, the corrected §7.7 bar reschedule) have hints yet, since none of them are built yet either — per the user's own instruction, a hint is added *as* each interaction is actually implemented, not speculatively ahead of it. `§4.2`'s own editable-cell visual affordance (dimming) is similarly unbuilt, so `TaskGrid.tsx`'s own hint text above already describes the *intended* editable-field behaviour without yet having the dimming cue to point at.
 
@@ -359,5 +374,176 @@ Reported directly, alongside a fourth, unrelated request folded into the same pa
 Verified interactively (scripted Playwright hover, as `D1.4-128`'s own check did): an editable cell shows only its own `Click: Edit <Name>.` line; an untruncated, non-editable cell shows only the row's hint with nothing extra; a genuinely truncated cell shows its own full text plus the row hint; Detailed Description shows no edit line and a single click no longer starts editing it (confirmed via the cell's own class list, which never gained `cell--editing`).
 
 `tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean.
+
+### 10.8 Filter row, sort header, "View Gantt," and Delete icon (`D1.4-133`/`D1.4-134`, added 2026-09-26)
+
+Reported directly, working through §11 group C: four more controls with a hand cursor where the arrow was expected, three of them with no hint at all, and one (the filter row) showing the *wrong* hint entirely.
+
+- **The filter row was showing this grid's own row-level hint** ("Double-click: Open Task Detail window.") instead of anything about filtering. Root cause: `DenseDataGrid.tsx`'s `onMouseMove` pushed that `hint` string whenever "Hints" was on, with no check that the mouse was actually over a data cell — so it bubbled from the column header/filter row too. Fixed grid-wide (every `DenseDataGrid` consumer had this same latent bug) by gating it on an actual `.MuiDataGrid-cell` match.
+- **The hand cursor on the filter row and the sortable header shared one root cause**: MUI's own `GridRootStyles.js` sets `cursor: pointer` directly on `.MuiDataGrid-columnHeader--sortable`, and — `cursor` being inherited — that cascades into everything a column's `renderHeader` draws inside it. Overridden once, grid-wide in `TaskGrid.tsx`'s `urgencyRowSx`, which fixes the label by inheritance alone; the filter text input and its checklist-icon button each still needed their own explicit override on top, since a browser's UA stylesheet sets `cursor: text` directly on a text `<input>`, and the icon button already had its own explicit `cursor: "pointer"` — a direct declaration always beats an inherited one.
+- **New hints, one per control, wired up alongside its own cursor fix**: `GridColumnFilter.tsx`'s `FilterableHeader` gained a `sortable` prop and now shows `"Click: Sort."` and/or `"Double-click: Auto size column."` on its label (combined into one tooltip when both apply, neither for a `flex` column, which has no manual width to auto-size to); its filter text box and checklist icon each gained their own `HintTooltip` (`"Click: Enter text to filter."` / `"Click: Select filter values."`), the icon's replacing an old *native* `title` that never matched the rest of the app's own pale-yellow look. `components/DenseField.tsx`'s `DenseButton` gained opt-in `sx`/`hint` props (every other `DenseButton` in the app is unaffected), used by all three "View Gantt" buttons (`AllTaskPage.tsx`/`ProjectDetailPage.tsx`/`ComponentDetailPage.tsx`) for `cursor: "default"` and `"Click: View Gantt for these tasks."` — only while actually showing "View Gantt," not the toggled-back state.
+- **The Delete (bin) icon** needed the same cursor fix (via a `& .task-grid-delete-cell button` selector, since `GridActionsCellItem`'s own TS types don't expose an `sx` prop) and a `HintTooltip` (`"Click: Delete this task."`) shown only while enabled — correcting an assumption recorded back at `D1.4-124` that its own `label` prop was already a visible MUI Tooltip; reading MUI's source confirmed it's `aria-label` only, never rendered. **Its disable/grey-out behaviour for a user without delete permission was checked live and confirmed already correct** (a non-Team-Lead viewing a colleague's Task: `disabled: true`, `pointer-events: none`, icon colour `rgba(0,0,0,0.18)`) — not a bug, contrary to what was suspected when this was raised.
+- **A genuine dual-tooltip collision, found while verifying the Delete icon's own new hint**: it showed alongside the grid's own row-level hint, stacked — the actions cell is still a real `.MuiDataGrid-cell`, so the filter-row fix above didn't exclude it. Fixed by excluding any cell whose column `type === "actions"` from the grid-wide `hint` line specifically, leaving only that column's own more specific tooltip.
+- **The non-editable cell background wash (`D1.4-132`) was halved again**, to `rgba(120,120,120,0.11)` — still too strong even at `0.22`.
+
+`tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** (scripted Playwright hover against the real running dev server): filter input/icon, a sortable column's label, and the "View Gantt" button all come back `cursor: default` with their own respective hint text; the Delete icon shows exactly one tooltip when enabled and none when correctly disabled for a non-owning, non-Team-Lead user.
+
+### 10.9 A directional bug and an inconsistent delay on the same three controls (`D1.4-136`, added 2026-09-26)
+
+Reported directly, immediately after §10.8: moving the mouse *upward* from the filter row into the sortable label directly above it never showed the label's own tooltip at all — the filter's own just closed instead — while moving *downward* worked correctly; separately, the filter row, sort header, and "View Gantt" button's own tooltips all showed a noticeable, inconsistent delay the main grid's own `gridHintTooltip` doesn't have.
+
+- **The directional bug**: `HintTooltip.tsx`'s `<Tooltip>` was left at MUI's own default `disableInteractive={false}` (meant for a tooltip whose *own content* needs to be hovered, e.g. a link inside it) — which keeps its popper `pointer-events: auto`. The filter row sits directly under its own sortable label, and a `placement="top"` tooltip renders *above* its own anchor — so the filter input's own (still-open) tooltip popup physically overlapped the label's own screen position above it. Moving upward, the cursor entered that interactive popup first, intercepting the pointer, so the label's own `onMouseEnter` never fired — moving downward never had this problem, since the label's own tooltip renders even further away, never near the filter row beneath it. Fixed by adding `disableInteractive` to every `HintTooltip` app-wide (`pointer-events: none` on the popper) — none of this app's hints have interactive content, so nothing is lost.
+- **The inconsistent delay**: `HintTooltip` gained an `enterDelay` prop (default `400`, unchanged everywhere else — a deliberate hover-intent delay, avoiding a "tooltip storm" while the mouse crosses several hintable elements quickly), passed as `0` at the three call sites sitting right beside the grid's own delay-free mechanism: `GridColumnFilter.tsx`'s label/input/icon, and `DenseButton`'s own internal wrap (today, only the "View Gantt" buttons).
+- The slightly different visual appearance between a MUI `Tooltip` and the grid's own plain custom `Box` was flagged but not asked to be fixed, and wasn't touched.
+
+`tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** (scripted Playwright mouse movement + screenshots at each step, both directions, on the real running dev server): upward movement now correctly shows the label's own tooltip; downward movement still shows the filter's own, as before. A first pass checking DOM presence of `role="tooltip"` elements gave a false positive (an element mid-exit-transition can still be in the DOM) — the actual verification is the screenshots, not that check.
+
+### 10.10 The Gantt view's own controls row and row-reorder drag (`D1.4-138`/`D1.4-139`, added 2026-09-26)
+
+Reported directly, working through the Gantt/Plan view specifically: "Memorise order," "View Tasks"/"Zoom Reset"/"Today," and the three checkboxes all needed hints; the H/V zoom fields only applied on blur; the manual row-reorder drag's own dashed drop-highlight followed the cursor even over illegitimate targets; and, separately, the Dependency arrows needed a different colour and to draw on top of everything else.
+
+- **Hints added**: "Memorise order," "Zoom Reset," "Today," and all three checkboxes (Show Names/Boxed/Weekends) — plus "View Tasks"/"View Project"/"View Component," the toggled-back state of the existing "View Gantt" button (`D1.4-133`), deliberately left unhinted there as "not asked for" and now asked for.
+- **A real bug found wiring these up**: wrapping a `<DenseButton>` *externally* with `<HintTooltip>` (as "Zoom Reset"/"Today"/"Memorise order" originally were) silently never opens a tooltip at all — `DenseButton` is a plain function component, not `React.forwardRef`, so the `ref` a `HintTooltip`'s underlying MUI `Tooltip` needs never reaches the real `<button>` inside it. `DenseButton` already avoids this internally (it applies its own `HintTooltip` to its own inner `Box` directly, which is how "View Gantt"'s own hint, `D1.4-133`, always worked correctly) — routing these three through `DenseButton`'s own `hint` prop instead of wrapping it from outside fixed it immediately.
+- **Live H/V zoom**: `ZoomPercentInput` now commits on every `onChange`, not just blur/Enter. Committing naively broke mid-typing, though — the zoom change feeds back into this same input's own `value` prop on the very next render, and the existing `useEffect` syncing `text` from it would stomp on whatever the user was still typing (e.g. a trailing "." for "150.5") with a rounded value from the *previous* keystroke. Fixed with a `focusedRef`: while the input is focused, that effect never overwrites `text` at all, leaving the user's own keystrokes as the one source of truth until blur.
+- **The row-reorder drag's own dashed highlight**: driven by a plain `onMouseEnter` on every row's own hit-rect, unconditionally — during a drag, moving over a *different* Project's own rows still fired it, with nothing checking whether that row was actually a legitimate drop target. Fixed with a new `isValidDropTarget(candidate)` (renamed and generalised at `D1.4-140`, see §10.11 — it now answers *which row* to highlight, not just whether the one physically hovered qualifies), checked before setting the highlight: `true` when nothing's being dragged; otherwise the same sibling-group scoping (`candidate.parentKey` matches the dragged bar's own) the actual drop-position math was already restricted to, excluding the dragged bar itself.
+- **A design question settled by testing, not assumption, before extending that fix to Project-dragging**: the report described a stricter rule ("a Project can't be dropped onto a Task") than the existing, deliberate `D1.4-27` design, which lets a Task and a sibling Project interleave freely. Verified live first — dragging a Task down past a sibling Project on the real running dev server *did* interleave them — confirming the existing design's behaviour is real. Given that evidence, the decision was to keep interleaving as-is and fix only the highlight to match it, which `isValidDropTarget` already does correctly (it was never kind-restricted); verified for all three cases (different-parent Task: no highlight; same-parent sibling Task while dragging a Project: highlight shows, correctly allowing the interleave; different-parent Project: no highlight).
+- **Dependency arrows**: a new `DEPENDENCY_ARROW_COLOUR = "#00acc1"` (cyan), replacing the old near-black on both the line and its arrowhead marker. Moved from right after the grid lines (*before* every bar) to the very last thing drawn in the chart's own `<svg>` (*after* every bar) — SVG has no `z-index`, only paint order, so an arrow could previously be cut off by a bar or a Boxed-mode box painted over it.
+
+`tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** throughout (scripted Playwright against the real running dev server): every new hint's own text confirmed by hovering; live H/V zoom confirmed by reading the chart's own SVG width mid-typing, before any blur; all three drop-highlight cases confirmed by dragging for real; the arrow's own colour and paint-order position confirmed by reading its `stroke` and DOM position, plus a screenshot showing one crossing visibly over a bar.
+
+### 10.11 The drop highlight over a sibling's own children (`D1.4-140`, added 2026-09-26)
+
+Reported directly, repeating `D1.4-138`'s own drag test: dragging a Task past a sibling Project *onto one of that Project's own child Tasks* showed no highlight at all — the request being that the highlight should stay on the sibling Project the whole time the cursor is over any of its own children, then jump to the *next* sibling once the cursor reaches that one's own subtree, since either way is genuinely where the drop would land.
+
+1. **The core fix**: `isValidDropTarget` (renamed `resolveDropHighlightTarget`) now walks the hovered bar's own `parentKey` chain *upward* — via a new `barsByKey` lookup (every bar keyed by its own `${kind}:${id}` identity) — until it reaches whichever bar's *own* `parentKey` matches the dragged item's own (an actual sibling), and highlights *that* bar, not whatever was literally under the cursor. Hovering the dragged row's own descendants (dragging a Project, hovering one of its own children) walks up to the dragged bar itself, which stays excluded, same as before.
+2. **A second, genuine bug found verifying (1) directly against the real app, not assumed from the first fix alone**: hovering a sibling Project's *own* row — not a descendant, its own literal row — also showed no highlight, confirmed via a scripted hover reading the actual DOM (every leaf-Task row highlighted correctly; every container row didn't). Root cause: a container row's own collapse/expand chevron is a *separate* SVG element painted on top of part of the row's own hit-rect, and the browser correctly treats it as the topmost element there — so the row's own `onMouseLeave` fires the instant the cursor lands on the chevron, unconditionally clearing the highlight, with nothing on the chevron side to restore it.
+3. **Fixed by sharing state, not just intent**: `handleRowHoverEnter(bar)`/`handleRowHoverLeave()`, extracted from the row's own `onMouseEnter`/`onMouseLeave`, are now called by the chevron's own handlers too — previously the chevron only ever touched `overInteractiveTooltipRef` (added at `D1.4-126` for the unrelated whole-canvas-hint suppression). Hovering the chevron now re-asserts the same row-level state the row's own hover already establishes, reading as "still hovering this row," not "left it."
+
+`tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** (scripted Playwright drag against the real running dev server, reading the actual highlighted `<rect>`'s own `y`): hovering a sibling Project directly, or either of its own two child Tasks, all highlight *the same* row; moving on to the next sibling correctly jumps the highlight there instead.
+
+<a id="implementation-plan"></a>
+## 11. Implementation Plan (added 2026-09-26)
+
+A checklist of everything left to finish this document's work, broken into small items that can each be built and tested on their own. Similar changes are grouped together; groups are in a sensible build order (shared pieces first, then the features that use them), but groups E–J don't depend on each other and can be done in any order. Every item that adds a new gesture also adds its hint tooltip (§10) at the same time, per the standing rule that hints are added as each interaction is built.
+
+Items marked **Decide** need your call before the build items after them can start.
+
+**Two separate marks, not one**: `[x]` means the item has been *built*; a trailing **✅ Verified** means *you've* actually tested it yourself and confirmed it works — the two are tracked separately because "built" is a claim, "verified" is your own check on that claim. An item can be `[x]` without being verified yet; it should never be verified without also being `[x]`.
+
+### A. Already done (for the record) — verified 2026-09-26
+
+- [x] A1. Single-click to open on Search, Admin Tools (both grids), Dashboard — `D1.4-123` **✅ Verified**
+- [x] A2. Shared clickable affordance (`clickableCellSx`, `CLICKABLE_SX`) on every navigation target — `D1.4-123` **✅ Verified**
+- [x] A3. Task Detail Project/Component fields and Project/Component Detail "Parent" pickers open on single click — `D1.4-123` **✅ Verified**
+- [x] A4. "Hints" setting and hint tooltips on every existing interaction — `D1.4-124` to `D1.4-129` **✅ Verified**
+- [x] A5. Detailed Description no longer editable from `TaskGrid` — `D1.4-129` **✅ Verified**
+
+### B. Shared drag-and-drop styling (§5.2, §5.3) — refactor only, nothing should look or behave differently — **done (`D1.4-130`), verified 2026-09-26**
+
+- [x] B1. Add `DROP_TARGET_ACTIVE_SX` to `lib/dnd.ts`; switch `DependenciesPanel.tsx`'s own copy over to it. **✅ Verified**
+  *Test:* Ctrl-drag a Task's badge onto another Task Detail's Dependencies tab — the dashed outline looks exactly as before.
+- [x] B2. Add `DRAG_HANDLE_SX` to `lib/dnd.ts`; switch Task Detail's drag badge over to it. **✅ Verified**
+  *Test:* hovering the badge still shows the grab cursor.
+- [x] B3. Add `draggableRowHighlightSx(isHovered)` to `lib/dnd.ts`; switch the Gantt label column's dotted row highlight over to it. **✅ Verified**
+  *Test:* hovering a Gantt label row still shows the dotted outline; drag-to-reorder still works.
+
+### C. `TaskGrid` — show which cells are editable (§4.2) — **done (`D1.4-131`/`D1.4-132`), verified 2026-09-26**
+
+- [x] C1. Add one shared "not editable" cell class to `DenseDataGrid.tsx` (dimmed text colour plus a translucent grey background wash, `D1.4-132` — originally a `filter`, revised after report, §4.2). **✅ Verified**
+- [x] C2. Apply it to every `TaskGrid` cell that isn't editable for this user and row — both columns that are never editable (Description, Project, …) and editable columns this user can't edit on this row. This replaces today's grey `task-grid-readonly-cell` background. **✅ Verified**
+  *Test:* as a Task's owner, the 8 editable columns look normal and everything else is dimmed; on a colleague's Task, nearly everything is dimmed; the urgency tint is dimmed along with the text.
+- [x] C3. Cursor: the plain arrow over every cell, switching to a text cursor over editable cells (`D1.4-132` — originally `pointer`, a hand with a pointing finger, revised after report). **✅ Verified**
+  *Test:* hover across a row — cursor stays the plain arrow except over cells you can edit, where it's a text cursor.
+- [x] C4. Check the same behaviour in the Task lists embedded in Project Detail and Component Detail. **✅ Verified**
+- [x] C5. Update §4.2's own text, which still says 9 editable columns and that Resources can edit Detailed Description in the grid (both out of date since `D1.4-129`). **✅ Verified**
+
+### D. `TaskGrid` — double-clicking an editable cell also starts an edit (§4.1)
+
+- [ ] D1. **Decide**: "let it start, then undo it" (recommended — no delay on normal clicks, brief flicker on double-click) or "delay, then execute" (no flicker, but every single click feels slower).
+- [ ] D2. Build the chosen fix.
+  *Test:* double-click a Status cell — Task Detail opens and no editor is left open in the grid; a single click on Status still starts editing straight away.
+
+### E. Open design questions (§8) — settle before starting the matching feature group
+
+- [ ] E1. **Decide**: Gantt row reorder — confirm it's its own "reorder within a list" exception (recommended), then add it to §6's gesture table.
+- [ ] E2. **Decide**: what the drag handle looks like on Project, Component and Task rows (a new icon, or reuse an existing one) — best decided against a quick mock-up on a real screen. Needed before groups F, G and H.
+- [ ] E3. **Decide**: can a Project or Component be dragged to the top level (no parent)? If so, where do you drop it?
+- [ ] E4. **Decide**: when a Task is dropped onto a Component, must the Component be in the Task's current Project, or does the drop also move the Task to that Component's Project?
+- [ ] E5. **Decide**: should a plain (no Ctrl) drag of Task Detail's badge also move the Task (onto a Project/Component row), to match `TaskGrid`'s new drag handle? Today a plain drag from the badge is cancelled.
+
+### F. Reparent a Project by dragging (§7.1)
+
+- [ ] F1. Confirm the existing Project update call can change a Project's parent; add a `useReparentProject()` hook if a dedicated one is cleaner.
+- [ ] F2. Add a Project drag type to `lib/dnd.ts`.
+- [ ] F3. Add the drag handle (from E2, styled with `DRAG_HANDLE_SX`) to each row in `Project.tsx`; only shown if the user may edit that Project.
+  *Test:* handle appears on your own Projects, not on ones you can't edit; clicking the name still opens the Project.
+- [ ] F4. Make each Project row a drop target, highlighted with `DROP_TARGET_ACTIVE_SX` while a Project is dragged over it.
+- [ ] F5. Block dropping a Project onto itself or one of its own descendants, with an inline message.
+- [ ] F6. On drop, save the new parent and refresh the tree.
+  *Test:* move a Project under another one and check it in the tree and on the Project's own Detail window; try an illegal drop and check it's refused.
+- [ ] F7. Hints: on the handle ("Drag: Move this Project under another Project.") and on rows while a drag is in progress.
+- [ ] F8. Top-level drop, if E3 says yes.
+
+### G. Reparent a Component by dragging (§7.2) — same as F, on `Component.tsx`
+
+- [ ] G1. Confirm the Component update call can change a Component's parent; add `useReparentComponent()` if needed.
+- [ ] G2. Add a Component drag type to `lib/dnd.ts`.
+- [ ] G3. Drag handle on each `Component.tsx` row, permission-gated.
+- [ ] G4. Component rows as drop targets with `DROP_TARGET_ACTIVE_SX`.
+- [ ] G5. Block dropping onto itself or a descendant.
+- [ ] G6. Save on drop and refresh.
+  *Test:* as F6, for Components.
+- [ ] G7. Hints on handle and rows.
+- [ ] G8. Top-level drop, if E3 says yes.
+
+### H. Move a Task into a different Project or Component by dragging (§7.3)
+
+- [ ] H1. Confirm the existing `useReparentTask()` covers both Project and Component moves (per E4).
+- [ ] H2. Add a drag handle beside the Delete icon in `TaskGrid`'s actions column; only shown if the user may move that Task.
+  *Test:* handle appears only on Tasks you can edit; the Delete icon, single-click edit and double-click open all still work.
+- [ ] H3. Project rows (`Project.tsx`) accept a dropped Task — plain drag only, never Ctrl (Ctrl means Link).
+- [ ] H4. Component rows (`Component.tsx`) accept a dropped Task, following the E4 rule.
+- [ ] H5. Dropping onto the Task's current Project/Component does nothing.
+- [ ] H6. On drop, save and refresh every affected Task list.
+  *Test:* move a Task from one Project to another and check it leaves the old list and appears in the new one; same for a Component.
+- [ ] H7. Hints on the handle and on rows while a Task is dragged over them.
+- [ ] H8. Plain-drag Move from Task Detail's badge, if E5 says yes.
+
+### I. Ctrl-drag to create a Dependency on a Project (§7.4)
+
+- [ ] I1. Check whether Ctrl-dragging a Task's badge onto Project Detail's Dependencies tab already works — the drop code in `DependenciesPanel.tsx` is already written to handle a Project owner, but it's never been tried.
+  *Test:* Ctrl-drag onto "Depends upon" and "Dependants" on a Project and check each creates the right Dependency.
+- [ ] I2. Add the automatic switch to the Dependencies tab when a Ctrl-drag enters a Project Detail window — Task Detail already does this; Project Detail doesn't.
+  *Test:* start a Ctrl-drag from a Task, move over a Project Detail window showing a different tab — it switches to Dependencies.
+- [ ] I3. Fix anything I1 turns up.
+- [ ] I4. Correct §7.4, which says "Project/Component": Component Detail has no Dependencies tab at all, so this only applies to Projects.
+
+### J. Drag files from Windows onto an Attachments list (§7.5)
+
+- [ ] J1. Check how `AttachmentsPanel.tsx` adds an attachment today and reuse that same save call.
+- [ ] J2. Make the Attachments list accept dropped files, highlighted with `DROP_TARGET_ACTIVE_SX` while files are dragged over it.
+- [ ] J3. Handle several files in one drop, one attachment each.
+- [ ] J4. Show a clear error for a file that fails (too large, not allowed, network error) without losing the others.
+- [ ] J5. Only accept drops if the user may add attachments here.
+- [ ] J6. Hint: "Drag files here: Attach them."
+  *Test:* drag one file, then several, from File Explorer onto Task Detail's Attachments tab and onto each other window that shows attachments; check they appear and open; try a file that should fail.
+
+### K. Gantt: Shift-drag a bar to reschedule it (§7.7, port from V1.2)
+
+- [ ] K1. **Decide**: Task bars only, or Project bars too? And confirm the V1.2 rules still wanted — business days only, can't move a Task earlier than its predecessors finish (except when delaying).
+- [ ] K2. Shift + mouse-down on a bar starts the gesture; plain click, double-click, and label drag-to-reorder are unaffected.
+- [ ] K3. Show the bar's new position live while dragging, correct at any zoom level and with weekends shown or hidden.
+- [ ] K4. Work out the shift in business days from the distance dragged.
+- [ ] K5. Apply the predecessor limit.
+- [ ] K6. On release, save the new Start Date; the Gantt recalculates.
+- [ ] K7. Only allowed if the user may edit that Task's dates; otherwise Shift-drag does nothing.
+- [ ] K8. Add "Shift+drag: Reschedule." to the bar's tooltip.
+  *Test:* Shift-drag a Task bar forward and back at a few zoom levels; check the saved date on Task Detail; try to drag before a predecessor's end; try on a Task you can't edit.
+
+### L. Finishing up
+
+- [ ] L1. Update §9's Status Tracker and §10.3's hint list to match what's been built.
+- [ ] L2. Full check: `tsc -b`, tests, lint, build; click through every window touched above.
+- [ ] L3. Add each group's decisions to `Plan.md` as it's done.
 
 See `4_GuiClient/Plan.md` §6.5 for how this fits the overall Level 1 build order.

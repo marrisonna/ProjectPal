@@ -35,7 +35,7 @@ import {
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_TYPES } from "../../api/types";
 import { openItemWindow, openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
-import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
+import { DRAG_HANDLE_SX, TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
 import { canEditOwnedRecord, canEditTaskField, editableTaskStatusValues } from "../../lib/permissions";
@@ -436,6 +436,9 @@ export function TaskDetailPage() {
                 event.dataTransfer.setData(TASK_DRAG_MIME_TYPE, String(id));
                 event.dataTransfer.effectAllowed = "link";
               }}
+              // UserInteractionPlan.md §5.3 / Stage5-B2 — the shared
+              // "discrete drag handle" cursor cue (`lib/dnd.ts`), not a
+              // private `cursor: "grab"` here.
               sx={{
                 width: 24,
                 height: 24,
@@ -448,7 +451,7 @@ export function TaskDetailPage() {
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                cursor: "grab",
+                ...DRAG_HANDLE_SX,
               }}
             >
               T

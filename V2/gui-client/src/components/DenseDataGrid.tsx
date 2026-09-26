@@ -21,7 +21,7 @@ import ListItemText from "@mui/material/ListItemText";
 import { branding, DENSE_FONT_SIZE } from "../theme/theme";
 import { formatApiError } from "../lib/apiErrors";
 import { HINT_TOOLTIP_BG } from "./HintTooltip";
-import { useHintsEnabled } from "../lib/settings";
+import { useHintsEnabled, type UneditableDimmingLevel } from "../lib/settings";
 import {
   columnFilterPasses,
   EMPTY_COLUMN_FILTER,
@@ -115,6 +115,65 @@ export function clickableCellSx(field?: string): Record<string, { cursor?: strin
   return {
     [`& ${selector}`]: { cursor: "pointer" },
     [`& ${selector}:hover`]: { textDecoration: "underline" },
+  };
+}
+
+// UserInteractionPlan.md §4.2 (Stage5-C1, revised Stage5-C2-followup) — the
+// shared "this cell isn't editable, right now, for you" visual cue for any
+// grid with inline cell editing (`TaskGrid.tsx` today; any future grid built
+// on this same chrome could reuse it). A grid cell has no `sx`/ref of its
+// own — like `clickableCellSx` above, a cell that qualifies gets this shared
+// class name via its own column's `cellClassName`, and the actual style
+// lives here, on the grid's own root `sx`, targeting that class.
+//
+// Two independent properties, not one `filter` — a single
+// `filter: grayscale(...) opacity(...)` was tried first, and reported back
+// as dimming the text but leaving the urgency-tint background completely
+// untouched. Root cause: that tint is painted on the *row* (`getRowClassName`/
+// `urgencyRowPaletteSx`), an ancestor of the cell, not the cell itself, and
+// `filter` only ever affects an element's *own* rendered box (background,
+// border, content) — a transparent cell showing a colour through from an
+// ancestor behind it has nothing of that colour in its own filtered layer to
+// desaturate. `color` dims the cell's own text (every `TaskGrid` cell's is
+// plain, near-black, so a lower-alpha black reads as "dimmed" without
+// needing an actual grayscale); `bgcolor`, a real paint on the cell's own
+// box this time, paints a translucent grey *over* whatever the row's own
+// tint shows through underneath — greying it by ordinary alpha compositing,
+// regardless of what that colour actually is, without this having to know
+// or duplicate it.
+//
+// `D1.4-137` — the background amount is now the "Uneditable dimming"
+// setting's own concern (`lib/settings.ts`'s `UneditableDimmingLevel`), after
+// two rounds of "this one fixed amount is wrong" (first too strong, then
+// still too strong) made it clear this is a matter of taste, not a single
+// correct value. `color` (the *text* dimming) doesn't have its own level —
+// only the background was ever reported as wrong a second time, so it stays
+// fixed across every level except `"None"`, which restores it to the
+// grid's own ordinary text colour along with the background.
+export const NOT_EDITABLE_CELL_CLASS = "dense-grid-not-editable-cell";
+const UNEDITABLE_DIMMING_BG_ALPHA: Record<UneditableDimmingLevel, number> = {
+  None: 0,
+  // The two shipped-then-revised amounts, oldest (strongest) first — `Low`
+  // is today's own default (`D1.4-133`'s halving of `D1.4-132`'s own
+  // original), `Medium` is what `Low` actually was one round earlier
+  // (`D1.4-132`), before it was reported as still too strong.
+  Low: 0.11,
+  Medium: 0.22,
+  // Doubled again, continuing the same halving/doubling ladder this value
+  // has already been through twice.
+  Max: 0.44,
+};
+export function notEditableCellPaletteSx(
+  level: UneditableDimmingLevel,
+): Record<string, { color: string; bgcolor: string }> {
+  if (level === "None") {
+    return { [`& .${NOT_EDITABLE_CELL_CLASS}`]: { color: "inherit", bgcolor: "transparent" } };
+  }
+  return {
+    [`& .${NOT_EDITABLE_CELL_CLASS}`]: {
+      color: "rgba(0,0,0,0.6)",
+      bgcolor: `rgba(120,120,120,${UNEDITABLE_DIMMING_BG_ALPHA[level]})`,
+    },
   };
 }
 
@@ -638,6 +697,7 @@ export function useDenseGridColumns<T>({
         getOptions={() => getOptionsForField(col.field)}
         columnWidth={params.colDef.computedWidth}
         filterRowVisible={filterVisible}
+        sortable={params.colDef.sortable !== false}
         // Double-click the label to fit this column to its own widest
         // actual content — a deliberately self-contained alternative to
         // MUI's own native "double-click the resize separator to
@@ -887,9 +947,11 @@ export interface DenseDataGridProps<T> {
   // used on today has (at most) one or two gestures naming *where* to click
   // in their own wording, so a per-cell mechanism wasn't worth the extra
   // complexity. Any cell with its own more specific tooltip (e.g.
-  // `GridActionsCellItem`'s own `label`, a real MUI Tooltip) is unaffected —
-  // that takes visual precedence regardless, a completely different,
-  // higher-priority UI layer nested inside this one.
+  // `TaskGrid.tsx`'s own `HintTooltip` wrap of its Delete `GridActionsCellItem`
+  // — correction: `label` alone is `aria-label` only, never a visible
+  // tooltip of any kind, confirmed by reading MUI's own source — Stage5-C)
+  // is unaffected — that takes visual precedence regardless, a completely
+  // different, higher-priority UI layer nested inside this one.
   //
   // A cursor-following custom tooltip (the same mechanism `PlanPage.tsx`'s
   // own `canvasTooltip` uses, D1.4-127), not a plain `HintTooltip` wrap of
@@ -1110,9 +1172,21 @@ export function DenseDataGrid<T>({
           if (text) lines.push(text);
         }
         if (hintsEnabled) {
-          if (hint) lines.push(hint);
-          if (getCellEditHint && cellEl) {
-            const field = cellEl.getAttribute("data-field")!;
+          const field = cellEl?.getAttribute("data-field") ?? null;
+          // D1.4-134 — an actions-type cell (`TaskGrid.tsx`'s own Delete
+          // icon) always has its own specific `HintTooltip` (or nothing at
+          // all, when the action is disabled), so this grid-wide hint is
+          // deliberately excluded there — reported directly as the two
+          // stacking on top of each other over the Delete icon.
+          const isActionsColumn = field != null && apiRef.current.getColumn(field)?.type === "actions";
+          // D1.4-133 — `cellEl` gated here too: without it, this grid-wide
+          // hint bubbled from *anywhere* inside the grid a mousemove could
+          // reach, including the column header/filter row above the data
+          // rows (neither is a `.MuiDataGrid-cell`) — reported directly as
+          // the filter row showing this grid's own row-level hint instead of
+          // anything about filtering.
+          if (hint && cellEl && !isActionsColumn) lines.push(hint);
+          if (getCellEditHint && cellEl && field) {
             const rowId = cellEl.closest("[data-id]")?.getAttribute("data-id");
             if (rowId != null) {
               const editHint = getCellEditHint(apiRef.current.getCellParams(rowId, field));

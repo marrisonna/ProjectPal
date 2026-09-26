@@ -30,6 +30,7 @@ import {
 } from "../../lib/ganttLayout";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { useHintsEnabled } from "../../lib/settings";
+import { draggableRowHighlightSx } from "../../lib/dnd";
 import { HintTooltip, HINT_TOOLTIP_BG } from "../../components/HintTooltip";
 
 const DEFAULT_LABEL_COLUMN_WIDTH = 220;
@@ -64,6 +65,14 @@ const EXTENT_LINE_COLOUR = "rgba(0,0,0,0.3)";
 const GRID_LINE_COLOUR = "rgba(0,0,0,0.07)";
 const WEEK_LINE_WIDTH = 1;
 const MONTH_LINE_WIDTH = 2;
+// Dependency arrows — a distinct hue from everything else on this chart
+// (grid lines/extent guides are all greys, bars are reds/greens/blues) was
+// requested directly, after the original near-black `rgba(0,0,0,0.4)` line
+// proved hard to pick out against a busy chart. Drawn last of all in the
+// SVG (below, after every bar) rather than where they used to sit — right
+// after the grid lines, *before* the bars — so an arrow can no longer be
+// visually cut off by a bar or a Boxed-mode box painted on top of it.
+const DEPENDENCY_ARROW_COLOUR = "#00acc1";
 // "Boxed" mode (V1.2's own Project rendering, Libs/PlanDisplay/Project.cs
 // — a Project is a container its child Tasks/Projects are visually drawn
 // inside, not just a bar at its own row). The normal Project bar colour
@@ -292,6 +301,18 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
     collapsedProjectIds,
   ]);
 
+  // D1.4-140 — every bar, keyed by its own `${kind}:${id}` identity, so a
+  // bar's own `parentKey` (itself just this same `${kind}:${id}` shape, or
+  // `"root"`) can be resolved back to the *bar* it names, one hop at a
+  // time — exactly what `resolveDropHighlightTarget` below needs to walk
+  // "up" the tree from any hovered row to whichever of the dragged item's
+  // own siblings actually contains it.
+  const barsByKey = useMemo(() => {
+    const map = new Map<string, GanttBar>();
+    if (layout) for (const b of layout.bars) map.set(`${b.kind}:${b.id}`, b);
+    return map;
+  }, [layout]);
+
   const labelAreaRef = useRef<HTMLDivElement>(null);
   const drawingAreaRef = useRef<HTMLDivElement>(null);
   // The chart's own horizontal scroll now lives one level up from
@@ -414,6 +435,71 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
   const rowDragRef = useRef<RowDrag | null>(null);
   const [dragLabel, setDragLabel] = useState("");
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+
+  // D1.4-140 — which row the "you could drop it here" highlight should
+  // actually land on while a drag is in progress, given whichever row
+  // `hovered` physically is right now. `null` while nothing's being
+  // dragged is the caller's own cue to fall back to plain hover
+  // highlighting (every row "valid" then, same as before any of this
+  // existed) — this function only has an opinion *during* a drag.
+  //
+  // Not just "is `hovered` itself one of the dragged item's own siblings" —
+  // reported directly, after `D1.4-138`'s own first fix: dragging a Task
+  // down onto a sibling Project's own *child* rows (e.g. onto one of "API
+  // Layer"'s own two Tasks, while dragging a Task that's a sibling of "API
+  // Layer" itself, not one of its children) showed no highlight at all,
+  // even though the actual drop math (`handleRowMouseDown`'s own
+  // `handleMouseUp`) only ever compares the cursor's Y against the
+  // *siblings'* own row midpoints — hovering anywhere within "API Layer"'s
+  // own visual span, including its children's rows, already resolves to
+  // "drops after API Layer" today, the highlight just didn't say so. Fixed
+  // by walking `hovered`'s own `parentKey` chain upward, one hop at a time
+  // (`barsByKey`, above), until it reaches whichever bar's *own* `parentKey`
+  // matches the dragged item's own (i.e. an actual sibling) — that bar,
+  // not `hovered` itself, is what gets highlighted. Hovering the dragged
+  // row's *own* descendants (dragging "API Layer" itself, hovering one of
+  // its own child Tasks) walks up to the dragged bar itself, which is
+  // deliberately not a valid target either.
+  function resolveDropHighlightTarget(hovered: GanttBar): GanttBar | null {
+    const drag = rowDragRef.current;
+    if (!drag) return null;
+    let current: GanttBar | undefined = hovered;
+    while (current) {
+      if (current.parentKey === drag.bar.parentKey) {
+        return current.kind === drag.bar.kind && current.id === drag.bar.id ? null : current;
+      }
+      current = barsByKey.get(current.parentKey);
+    }
+    return null;
+  }
+
+  // D1.4-140 — shared between a row's own hit-rect and its collapse/expand
+  // chevron (below): the chevron is a *separate* SVG element painted on top
+  // of part of the row's own hit-rect (so a click toggles collapse instead
+  // of starting a drag), which means moving the cursor onto it fires the
+  // row's own `onMouseLeave` first — the browser correctly recognises the
+  // chevron, not the rect underneath it, as the topmost element there.
+  // Before this, that unconditionally cleared `hoveredLabelBar`/
+  // `hoveredLabel`, with nothing on the chevron itself to restore them —
+  // reported directly as the drop highlight vanishing specifically while
+  // hovering a container row's *own* chevron, never its plain rows. Calling
+  // this same pair from the chevron's own `onMouseEnter` re-asserts exactly
+  // the same state the row's own hover would have, so hovering the chevron
+  // reads as "still hovering this row," not "left it."
+  function handleRowHoverEnter(bar: GanttBar) {
+    overInteractiveTooltipRef.current = true;
+    const target = rowDragRef.current ? resolveDropHighlightTarget(bar) : bar;
+    if (target) {
+      setHoveredLabelBar(target);
+      setHoveredLabel(target.hoverLabel);
+    }
+  }
+  function handleRowHoverLeave() {
+    overInteractiveTooltipRef.current = false;
+    setHoveredLabelBar(null);
+    setHoveredLabel("");
+    setLabelTooltip(null);
+  }
 
   function handleRowMouseDown(
     bar: GanttBar,
@@ -957,52 +1043,72 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
         <ZoomPercentInput value={zoomX} onCommit={applyZoomX} />
         <Typography variant="body2">V</Typography>
         <ZoomPercentInput value={zoomY} onCommit={applyZoomY} />
+        {/* D1.4-138 — `DenseButton`'s own `hint` prop, not an external
+            `<HintTooltip>` wrap around the whole `<DenseButton>` — it's a
+            plain function component, not wrapped in `forwardRef`, so a ref
+            aimed at it (which `HintTooltip`'s underlying MUI `Tooltip`
+            needs, to attach hover listeners to the real DOM node) never
+            actually reaches the rendered `<button>` inside it; the tooltip
+            silently never opens. `DenseButton` already applies `HintTooltip`
+            correctly *internally*, to its own inner `Box`, which is exactly
+            why routing through its own prop instead of wrapping it from
+            outside works (confirmed live: wrapped externally, no tooltip at
+            all; via the prop, works immediately). */}
         <DenseButton
           onClick={() => {
             applyZoomX(100);
             applyZoomY(100);
           }}
+          hint="Click: Reset zoom to 100%."
         >
           Zoom Reset
         </DenseButton>
-        <DenseButton onClick={() => scrollToToday(TODAY_BUTTON_FRACTION)}>Today</DenseButton>
-        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
-          <Box
-            component="input"
-            type="checkbox"
-            checked={showNames}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const checked = event.target.checked;
-              setShowNames(checked);
-              // Re-checking always comes back at the fixed default width,
-              // never whatever width it happened to be dragged to before
-              // being unchecked — there's nothing to "restore" here.
-              if (checked) setLabelColumnWidth(DEFAULT_LABEL_COLUMN_WIDTH);
-            }}
-            sx={{ m: 0 }}
-          />
-          <Typography variant="body2">Show Names</Typography>
-        </Box>
-        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
-          <Box
-            component="input"
-            type="checkbox"
-            checked={boxed}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setBoxed(event.target.checked)}
-            sx={{ m: 0 }}
-          />
-          <Typography variant="body2">Boxed</Typography>
-        </Box>
-        <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
-          <Box
-            component="input"
-            type="checkbox"
-            checked={weekends}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => handleWeekendsChange(event.target.checked)}
-            sx={{ m: 0 }}
-          />
-          <Typography variant="body2">Weekends</Typography>
-        </Box>
+        <DenseButton onClick={() => scrollToToday(TODAY_BUTTON_FRACTION)} hint="Click: Scroll to today.">
+          Today
+        </DenseButton>
+        <HintTooltip hint="Click: Show or hide the row name column.">
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+            <Box
+              component="input"
+              type="checkbox"
+              checked={showNames}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const checked = event.target.checked;
+                setShowNames(checked);
+                // Re-checking always comes back at the fixed default width,
+                // never whatever width it happened to be dragged to before
+                // being unchecked — there's nothing to "restore" here.
+                if (checked) setLabelColumnWidth(DEFAULT_LABEL_COLUMN_WIDTH);
+              }}
+              sx={{ m: 0 }}
+            />
+            <Typography variant="body2">Show Names</Typography>
+          </Box>
+        </HintTooltip>
+        <HintTooltip hint="Click: Switch Project bars between a thin bar and a box spanning their own subtree.">
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+            <Box
+              component="input"
+              type="checkbox"
+              checked={boxed}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setBoxed(event.target.checked)}
+              sx={{ m: 0 }}
+            />
+            <Typography variant="body2">Boxed</Typography>
+          </Box>
+        </HintTooltip>
+        <HintTooltip hint="Click: Show or hide weekends.">
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", userSelect: "none" }}>
+            <Box
+              component="input"
+              type="checkbox"
+              checked={weekends}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => handleWeekendsChange(event.target.checked)}
+              sx={{ m: 0 }}
+            />
+            <Typography variant="body2">Weekends</Typography>
+          </Box>
+        </HintTooltip>
       </Box>
       {/* Date under the cursor (left, right-aligned, right edge 2em
           before the drawing area's own left edge) and the hovered
@@ -1187,11 +1293,15 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                             fill="transparent"
                             onMouseDown={(event) => handleRowMouseDown(bar, event)}
                             onDoubleClick={() => handleRowDoubleClick(bar)}
-                            onMouseEnter={() => {
-                              overInteractiveTooltipRef.current = true;
-                              setHoveredLabelBar(bar);
-                              setHoveredLabel(bar.hoverLabel);
-                            }}
+                            // D1.4-138/D1.4-140 — `handleRowHoverEnter`'s own
+                            // `resolveDropHighlightTarget` call is what
+                            // makes hovering a sibling's own *child* row
+                            // highlight that sibling instead, since that's
+                            // genuinely where a drop would land; hovering
+                            // something with no valid sibling ancestor at
+                            // all (a different Project's own subtree
+                            // entirely) shows no highlight.
+                            onMouseEnter={() => handleRowHoverEnter(bar)}
                             onMouseMove={(event) => {
                               // D1.4-124 — the gesture hint (when "Hints" is
                               // on) and the full-label-when-truncated
@@ -1208,12 +1318,7 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                                 setLabelTooltip({ text, x: event.clientX, y: event.clientY });
                               }
                             }}
-                            onMouseLeave={() => {
-                              overInteractiveTooltipRef.current = false;
-                              setHoveredLabelBar(null);
-                              setHoveredLabel("");
-                              setLabelTooltip(null);
-                            }}
+                            onMouseLeave={handleRowHoverLeave}
                           />
                           {isContainerBar(bar.kind) && (
                             // Collapse/expand chevron (Project.tsx's own
@@ -1242,17 +1347,20 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                                 }}
                                 // Painted on top of the row's own hit-rect, so
                                 // hovering it directly never bubbles a
-                                // mouseenter/mousemove to that rect — without
-                                // this, overInteractiveTooltipRef would stay
-                                // false while hovering exactly this icon,
-                                // letting the whole-canvas hint show at the
-                                // same time as this element's own.
-                                onMouseEnter={() => {
-                                  overInteractiveTooltipRef.current = true;
-                                }}
-                                onMouseLeave={() => {
-                                  overInteractiveTooltipRef.current = false;
-                                }}
+                                // mouseenter/mousemove to that rect — the
+                                // browser fires the row's own `onMouseLeave`
+                                // instead, recognising this `<g>`, not the
+                                // rect underneath it, as the new topmost
+                                // element. The *same* `handleRowHoverEnter`/
+                                // `Leave` the row itself uses (not just
+                                // `overInteractiveTooltipRef` alone, as this
+                                // used to be) re-asserts that row's own drop
+                                // highlight/hover label too — without this,
+                                // hovering exactly this icon cleared both
+                                // (D1.4-140), on top of the whole-canvas-hint
+                                // suppression this always handled correctly.
+                                onMouseEnter={() => handleRowHoverEnter(bar)}
+                                onMouseLeave={handleRowHoverLeave}
                                 style={{ cursor: "pointer" }}
                               >
                                 <rect
@@ -1303,16 +1411,15 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                         row this outlines is exactly the row a drag would
                         pick up from here. */}
                     {hoveredLabelBar && (
+                      // UserInteractionPlan.md §5.3 / Stage5-B3 — the shared
+                      // "whole draggable row" highlight (`lib/dnd.ts`), not a
+                      // private copy of these SVG attributes here.
                       <rect
                         x={1}
                         y={hoveredLabelBar.y * scaleY + 1}
                         width={labelColumnWidth - 2}
                         height={ROW_HEIGHT * scaleY - 2}
-                        fill="none"
-                        stroke="rgba(0,0,0,0.6)"
-                        strokeWidth={1}
-                        strokeDasharray="2,2"
-                        style={{ pointerEvents: "none" }}
+                        {...draggableRowHighlightSx(true)}
                       />
                     )}
                   </Box>
@@ -1328,7 +1435,23 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                     px: "4px",
                   }}
                 >
-                  {layout.bars.length > 0 && <DenseButton onClick={handleMemoriseOrder}>Memorise order</DenseButton>}
+                  {layout.bars.length > 0 && (
+                    // `DenseButton`'s own `hint` prop (D1.4-138 — see the
+                    // Zoom Reset/Today comment above for why, not an
+                    // external `<HintTooltip>` wrap). Default `placement=
+                    // "top"` (`HintTooltip`'s own internal default) is
+                    // exactly what's wanted here regardless of which way
+                    // it's wired up — this button sits at the very bottom
+                    // of the window (`labelPaneReservedBottom`'s own strip),
+                    // and a bottom-placed tooltip would have nowhere to
+                    // render but off the bottom of the page.
+                    <DenseButton
+                      onClick={handleMemoriseOrder}
+                      hint="Click: Remember this row order, so it's still here next time this view opens."
+                    >
+                      Memorise order
+                    </DenseButton>
+                  )}
                 </Box>
               </Box>
               <Box
@@ -1394,8 +1517,9 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                 by only using one or the other. */}
             <Box component="svg" width={chartWidth} height={chartHeight} sx={{ display: "block", bgcolor: boxed ? "#fff" : "#f5fff7" }}>
               {/* Week (Monday) and month (1st) grid lines — drawn first,
-                  so they sit behind everything else (the extent guides,
-                  arrows, and bars all paint over them). */}
+                  so they sit behind everything else (the extent guides and
+                  bars paint over them; the Dependency arrows, drawn last of
+                  all below, paint over everything in this SVG). */}
               {gridLines.weekLineXs.map((x) => (
                 <line
                   key={`week-${x}`}
@@ -1452,23 +1576,6 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                 strokeWidth={1}
                 strokeDasharray="4 3"
               />
-              {layout.arrows.map((arrow, index) => (
-                <line
-                  key={`arrow-${index}`}
-                  x1={arrow.x1 * scaleX}
-                  y1={arrow.y1 * scaleY + barVerticalOffset}
-                  x2={arrow.x2 * scaleX}
-                  y2={arrow.y2 * scaleY + barVerticalOffset}
-                  stroke="rgba(0,0,0,0.4)"
-                  strokeWidth={1}
-                  markerEnd="url(#gantt-arrow-head)"
-                />
-              ))}
-              <defs>
-                <marker id="gantt-arrow-head" markerWidth={6} markerHeight={6} refX={5} refY={3} orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="rgba(0,0,0,0.4)" />
-                </marker>
-              </defs>
               {layout.bars.map((bar) => (
                 <GanttBarRect
                   key={`bar-${bar.kind}-${bar.id}`}
@@ -1490,6 +1597,27 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                   }}
                 />
               ))}
+              {/* Dependency arrows — deliberately the very last thing drawn
+                  in this SVG (see DEPENDENCY_ARROW_COLOUR's own comment
+                  above), so an arrow always paints over every bar/box/guide
+                  line/grid line, never the other way around. */}
+              {layout.arrows.map((arrow, index) => (
+                <line
+                  key={`arrow-${index}`}
+                  x1={arrow.x1 * scaleX}
+                  y1={arrow.y1 * scaleY + barVerticalOffset}
+                  x2={arrow.x2 * scaleX}
+                  y2={arrow.y2 * scaleY + barVerticalOffset}
+                  stroke={DEPENDENCY_ARROW_COLOUR}
+                  strokeWidth={1}
+                  markerEnd="url(#gantt-arrow-head)"
+                />
+              ))}
+              <defs>
+                <marker id="gantt-arrow-head" markerWidth={6} markerHeight={6} refX={5} refY={3} orient="auto">
+                  <path d="M0,0 L6,3 L0,6 Z" fill={DEPENDENCY_ARROW_COLOUR} />
+                </marker>
+              </defs>
             </Box>
               </Box>
               {/* Month-start footer (D1.4-26) — a fixed-height, non-scrolling
@@ -1651,18 +1779,28 @@ function syncScrollTop(from: HTMLDivElement, to: HTMLDivElement | null) {
   if (to) to.scrollTop = from.scrollTop;
 }
 
-// Uncommitted local text while typing, so a momentarily-invalid value
-// (cleared the box, mid-edit) doesn't get clamped/applied on every
-// keystroke — committed on blur/Enter, same as the rest of this app's
-// field-commit convention (DenseField.tsx).
+// D1.4-138 — every keystroke (or spinner click) applies immediately, not
+// just on blur/Enter, per a direct report: "as the values in H and V
+// change, the Gantt chart should zoom in sync." `focusedRef` — not the
+// `value` prop itself — is what decides whether the effect below is allowed
+// to overwrite `text`: without it, applying a keystroke's own new zoom
+// synchronously feeds straight back into this same input's own `value`
+// prop on the very next render, and the effect's own `Math.round` would
+// stomp on whatever the user was still mid-way through typing (e.g. a
+// trailing "." typing "150.5") before they'd even finished. Skipping that
+// sync entirely while focused leaves the user's own typed text as the one
+// source of truth until they're done — normalised back to the canonical
+// rounded value on blur, same as before.
 function ZoomPercentInput({ value, onCommit }: { value: number; onCommit: (value: number) => void }) {
   const [text, setText] = useState(String(Math.round(value)));
-  useEffect(() => setText(String(Math.round(value))), [value]);
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(Math.round(value)));
+  }, [value]);
 
-  function commit() {
-    const parsed = Number(text);
+  function commit(candidateText: string) {
+    const parsed = Number(candidateText);
     if (Number.isFinite(parsed) && parsed > 0) onCommit(parsed);
-    else setText(String(Math.round(value)));
   }
 
   return (
@@ -1670,8 +1808,23 @@ function ZoomPercentInput({ value, onCommit }: { value: number; onCommit: (value
       component="input"
       type="number"
       value={text}
-      onChange={(event: ChangeEvent<HTMLInputElement>) => setText(event.target.value)}
-      onBlur={commit}
+      onFocus={() => {
+        focusedRef.current = true;
+      }}
+      onChange={(event: ChangeEvent<HTMLInputElement>) => {
+        const next = event.target.value;
+        setText(next);
+        commit(next);
+      }}
+      onBlur={() => {
+        focusedRef.current = false;
+        // Normalises the display (a trailing "." or similar) and falls
+        // back to the last real value if what's left isn't a usable number
+        // at all (e.g. the box was cleared) — `value` itself, by this
+        // point, already reflects the *last successfully committed*
+        // keystroke, not necessarily whatever `text` still shows.
+        setText(String(Math.round(value)));
+      }}
       onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Enter") (event.target as HTMLInputElement).blur();
       }}

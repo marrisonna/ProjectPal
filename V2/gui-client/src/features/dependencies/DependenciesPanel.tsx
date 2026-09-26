@@ -27,7 +27,7 @@ import {
 import type { DependencyRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import { formatApiError } from "../../lib/apiErrors";
-import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
+import { DROP_TARGET_ACTIVE_SX, TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 
 // Either side of a Dependency can be a Task or a Project (KeyConcepts.md's
 // Dependency entry) — one option list combining both, for the "Add
@@ -108,10 +108,10 @@ export function DependenciesPanel({
     }
   }
 
+  // UserInteractionPlan.md §5.2 / Stage5-B1 — the shared app-wide
+  // drop-target cue (`lib/dnd.ts`), not a private copy of it.
   function dropZoneSx(zone: "predecessor" | "successor") {
-    return dragOverZone === zone
-      ? { outline: "2px dashed", outlineColor: "primary.main", outlineOffset: "-2px", borderRadius: "4px" }
-      : {};
+    return dragOverZone === zone ? DROP_TARGET_ACTIVE_SX : {};
   }
 
   function otherSideLabel(dep: DependencyRecord, side: "pre" | "post"): string {

@@ -288,7 +288,12 @@ export function AllTaskPage() {
             but only while still on the grid: once already viewing the
             Gantt, "View Tasks" must always work, regardless of the
             (possibly now-zero) filtered count, or there'd be no way back. */}
-        <DenseButton onClick={toggleView} disabled={view === "grid" && filteredTasks.length === 0}>
+        <DenseButton
+          onClick={toggleView}
+          disabled={view === "grid" && filteredTasks.length === 0}
+          sx={{ cursor: "default" }}
+          hint={view === "grid" ? "Click: View Gantt for these tasks." : "Click: Return to the Task grid."}
+        >
           {view === "grid" ? "View Gantt" : "View Tasks"}
         </DenseButton>
       </Box>

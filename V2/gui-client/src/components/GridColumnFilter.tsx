@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Box from "@mui/material/Box";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { DenseButton } from "./DenseField";
+import { HintTooltip } from "./HintTooltip";
 import { DENSE_FONT_SIZE } from "../theme/theme";
 import { parseDdMmmYy } from "../lib/schedule";
 
@@ -207,6 +208,7 @@ export function FilterableHeader({
   columnWidth,
   filterRowVisible = true,
   onLabelDoubleClick,
+  sortable = true,
 }: {
   label: string;
   state: ColumnFilterState;
@@ -244,6 +246,15 @@ export function FilterableHeader({
    * flag; that swap is gone, only this row's own presence changes now.
    */
   filterRowVisible?: boolean;
+  /**
+   * Whether this column actually sorts on click — MUI's own header-root
+   * click handler sorts regardless of what `renderHeader` draws inside it,
+   * so this label needs to know only in order to decide whether "Click:
+   * Sort." is even true here (`colDef.sortable !== false`, checked by the
+   * caller, `components/DenseDataGrid.tsx`). Defaults to `true`, matching
+   * MUI's own default.
+   */
+  sortable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [popoverProps, setPopoverProps] = useState<{ options: string[]; anchorRect: DOMRect } | null>(
@@ -273,30 +284,57 @@ export function FilterableHeader({
       // otherwise-unfillable dead space, not something to recolour.
       sx={{ display: "flex", flexDirection: "column", width: columnWidth, gap: 0, py: 0 }}
     >
-      <Box
-        onDoubleClick={onLabelDoubleClick}
-        sx={{
-          fontSize: DENSE_FONT_SIZE,
-          fontWeight: 700,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          cursor: onLabelDoubleClick ? "pointer" : undefined,
-          // The ambient MUI header cell padding is zeroed out grid-wide
-          // (TaskGrid.tsx's own sx) so the filter row below can sit
-          // flush with the column's own border lines with no clipping
-          // trickery — this restores that same 10px inset for the title
-          // text only, which still wants it.
-          px: "10px",
-          // The header/sort row's own light grey fill — applied here, on
-          // just the label, rather than as a blanket background on the
-          // whole header cell (TaskGrid.tsx's own sx) — so the filter row
-          // below stays white, not shaded the same as the title above it.
-          bgcolor: "rgba(0,0,0,0.08)",
-        }}
-      >
-        {label}
-      </Box>
+      {(() => {
+        const labelBox = (
+          <Box
+            onDoubleClick={onLabelDoubleClick}
+            sx={{
+              fontSize: DENSE_FONT_SIZE,
+              fontWeight: 700,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              // Stage5-C (UserInteractionPlan.md §4.2) — the plain arrow,
+              // not MUI's own default `pointer` for a sortable header
+              // (`.MuiDataGrid-columnHeader--sortable`, overridden grid-wide
+              // in `TaskGrid.tsx`'s own `urgencyRowSx`) — reported back as
+              // reading like the label itself is a button. Discoverability
+              // is the `HintTooltip` below instead, not the cursor shape.
+              cursor: "default",
+              // The ambient MUI header cell padding is zeroed out grid-wide
+              // (TaskGrid.tsx's own sx) so the filter row below can sit
+              // flush with the column's own border lines with no clipping
+              // trickery — this restores that same 10px inset for the title
+              // text only, which still wants it.
+              px: "10px",
+              // The header/sort row's own light grey fill — applied here, on
+              // just the label, rather than as a blanket background on the
+              // whole header cell (TaskGrid.tsx's own sx) — so the filter row
+              // below stays white, not shaded the same as the title above it.
+              bgcolor: "rgba(0,0,0,0.08)",
+            }}
+          >
+            {label}
+          </Box>
+        );
+        // Two independent gestures on the same label, combined into one
+        // tooltip rather than two competing ones: `sortable` (MUI's own
+        // header-root click, regardless of what's drawn inside it) and
+        // `onLabelDoubleClick` (this column's own auto-size-to-content,
+        // `DenseDataGrid.tsx`'s `withFilter` — absent for a `flex` column,
+        // which has no manual width of its own to fit).
+        const labelHintLines = [
+          sortable ? "Click: Sort." : null,
+          onLabelDoubleClick ? "Double-click: Auto size column." : null,
+        ].filter((line): line is string => line != null);
+        return labelHintLines.length > 0 ? (
+          <HintTooltip hint={labelHintLines.join("\n")} enterDelay={0}>
+            {labelBox}
+          </HintTooltip>
+        ) : (
+          labelBox
+        );
+      })()}
       {filterRowVisible && (
       <Box
         ref={rowRef}
@@ -309,50 +347,64 @@ export function FilterableHeader({
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        <Box
-          component="input"
-          value={state.contains}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onContainsChange(e.target.value)}
-          placeholder="filter…"
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            height: "100%",
-            border: "1px solid rgba(0,0,0,0.25)",
-            borderRadius: "2px 0 0 2px",
-            fontSize: DENSE_FONT_SIZE,
-            fontFamily: "inherit",
-            fontWeight: 400,
-            px: "3px",
-            bgcolor: state.contains.trim() ? ACTIVE_FILTER_BG : "#fff",
-          }}
-        />
-        <Box
-          component="button"
-          ref={buttonRef}
-          onClick={() => (open ? setOpen(false) : openPopover())}
-          title="Filter values…"
-          sx={{
-            width: 20,
-            height: "100%",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid rgba(0,0,0,0.25)",
-            // Collapses onto the input's own right border rather than
-            // doubling it up, so the two read as one joined control with
-            // no gap between them, as asked.
-            ml: "-1px",
-            borderRadius: "0 2px 2px 0",
-            cursor: "pointer",
-            bgcolor: active ? ACTIVE_FILTER_BG : "#fff",
-            color: "rgba(0,0,0,0.7)",
-            "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
-          }}
-        >
-          <FilterListIcon sx={{ fontSize: 13 }} />
-        </Box>
+        <HintTooltip hint="Click: Enter text to filter." enterDelay={0}>
+          <Box
+            component="input"
+            value={state.contains}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onContainsChange(e.target.value)}
+            placeholder="filter…"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              border: "1px solid rgba(0,0,0,0.25)",
+              borderRadius: "2px 0 0 2px",
+              fontSize: DENSE_FONT_SIZE,
+              fontFamily: "inherit",
+              fontWeight: 400,
+              px: "3px",
+              // An explicit override, not left to inherit from the sortable
+              // header ancestor above it (unlike the label, which needed no
+              // override of its own): browsers apply `cursor: text` directly
+              // to a text `<input>` via their own UA stylesheet, and a
+              // directly-declared value on the element itself always beats
+              // an inherited one, regardless of where it came from —
+              // confirmed live (a scripted hover came back `cursor: text`
+              // before this was added).
+              cursor: "default",
+              bgcolor: state.contains.trim() ? ACTIVE_FILTER_BG : "#fff",
+            }}
+          />
+        </HintTooltip>
+        <HintTooltip hint="Click: Select filter values." enterDelay={0}>
+          <Box
+            component="button"
+            ref={buttonRef}
+            onClick={() => (open ? setOpen(false) : openPopover())}
+            sx={{
+              width: 20,
+              height: "100%",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid rgba(0,0,0,0.25)",
+              // Collapses onto the input's own right border rather than
+              // doubling it up, so the two read as one joined control with
+              // no gap between them, as asked.
+              ml: "-1px",
+              borderRadius: "0 2px 2px 0",
+              // Stage5-C — the plain arrow, not `pointer` (reported back the
+              // same way as the label/sort-header cursor above).
+              cursor: "default",
+              bgcolor: active ? ACTIVE_FILTER_BG : "#fff",
+              color: "rgba(0,0,0,0.7)",
+              "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+            }}
+          >
+            <FilterListIcon sx={{ fontSize: 13 }} />
+          </Box>
+        </HintTooltip>
       </Box>
       )}
       {open && popoverProps && (

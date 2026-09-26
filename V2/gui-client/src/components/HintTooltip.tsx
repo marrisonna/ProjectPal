@@ -37,15 +37,46 @@ export const HINT_TOOLTIP_BG = "#fff9c4";
 // each as a real line break) when an element has more than one. Enforced by
 // convention at each call site, not by this component itself — there's
 // nothing here that could validate a caller's own wording.
-export function HintTooltip({ hint, children }: { hint: string; children: ReactElement }): ReactElement {
+export function HintTooltip({
+  hint,
+  children,
+  enterDelay = 400,
+}: {
+  hint: string;
+  children: ReactElement;
+  // Stage5 — 400ms everywhere by default (a deliberate hover-intent delay,
+  // avoiding a "tooltip storm" while the mouse crosses several hintable
+  // elements quickly), but overridable to `0` for a caller sitting directly
+  // beside `DenseDataGrid.tsx`'s own instant, delay-free `gridHintTooltip`
+  // (the filter row's label/input/icon, `GridColumnFilter.tsx`; the "View
+  // Gantt" button, `DenseField.tsx`'s `DenseButton`) — reported as a
+  // noticeable, inconsistent delay right next to a tooltip with none at all.
+  enterDelay?: number;
+}): ReactElement {
   const hintsEnabled = useHintsEnabled();
   if (!hintsEnabled) return children;
   return (
     <Tooltip
       title={hint}
       arrow
-      enterDelay={400}
+      enterDelay={enterDelay}
       placement="top"
+      // Stage5 — MUI's own default (`disableInteractive={false}`) keeps the
+      // popper itself hoverable (`pointer-events: auto`), meant for a
+      // tooltip whose own content needs to be hovered (e.g. a link inside
+      // it) — none of this app's hints have that. Left at the default, a
+      // "top"-placed tooltip on one element can render directly over a
+      // *different* element positioned just above it (`GridColumnFilter.
+      // tsx`'s filter row sits directly under its own sortable label), and
+      // — since the popper intercepts the pointer — moving the mouse
+      // upward into that other element actually enters the tooltip popup
+      // first, never reaching the real element underneath: reported as
+      // "moving the mouse up through the filter/sort header, the sort
+      // header's own tooltip never appears and the filter's just closes."
+      // `disableInteractive` makes the popper `pointer-events: none`,
+      // letting the cursor pass straight through to whatever's really
+      // there, regardless of which direction it's moving.
+      disableInteractive
       slotProps={{
         tooltip: {
           sx: {

@@ -74,3 +74,86 @@ export function useHintsEnabled(): boolean {
   }, []);
   return enabled;
 }
+
+// Stage5 — "Show User name in window title": primarily a testing aid (the
+// user's own stated reason) — with several `ProjectPal` app windows open at
+// once, each logged in as a different Person to exercise multi-user
+// scenarios, the OS taskbar/Alt-Tab switcher otherwise shows an identical
+// title for every one of them. Same live-reactive shape as "Hints" above
+// (`lib/useDocumentTitle.ts`'s effect re-runs on the very next
+// `storage` event, so an already-open window's own title updates
+// immediately, not just the next window opened) rather than "New Window"'s
+// read-once-at-open-time shape.
+const SHOW_USER_NAME_IN_TITLE_KEY = "projectpal.settings.showUserNameInTitle";
+export const SHOW_USER_NAME_IN_TITLE_MODES = ["On", "Off"] as const;
+export type ShowUserNameInTitleMode = (typeof SHOW_USER_NAME_IN_TITLE_MODES)[number];
+const DEFAULT_SHOW_USER_NAME_IN_TITLE_MODE: ShowUserNameInTitleMode = "On";
+
+export function getShowUserNameInTitleMode(): ShowUserNameInTitleMode {
+  const raw = localStorage.getItem(SHOW_USER_NAME_IN_TITLE_KEY);
+  return (SHOW_USER_NAME_IN_TITLE_MODES as readonly string[]).includes(raw ?? "")
+    ? (raw as ShowUserNameInTitleMode)
+    : DEFAULT_SHOW_USER_NAME_IN_TITLE_MODE;
+}
+
+export function setShowUserNameInTitleMode(mode: ShowUserNameInTitleMode): void {
+  localStorage.setItem(SHOW_USER_NAME_IN_TITLE_KEY, mode);
+}
+
+export function useShowUserNameInTitle(): boolean {
+  const [enabled, setEnabled] = useState(() => getShowUserNameInTitleMode() === "On");
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key === SHOW_USER_NAME_IN_TITLE_KEY || event.key === null) {
+        setEnabled(getShowUserNameInTitleMode() === "On");
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+  return enabled;
+}
+
+// UserInteractionPlan.md §4.2 (`D1.4-131`/`D1.4-132`/`D1.4-133`) — how
+// strongly `TaskGrid`'s own non-editable cells (`components/DenseDataGrid.
+// tsx`'s `notEditableCellPaletteSx`) are dimmed, requested as its own
+// setting after two rounds of "this specific fixed amount is wrong" (first
+// too strong, then still too strong). `"Low"` is today's own shipped amount
+// (kept as the default, so this setting's own introduction changes nothing
+// for anyone who hasn't touched it); `"Medium"` is the *background* amount
+// from one round earlier (`D1.4-132`, before it was halved again at
+// `D1.4-133`) — the font colour doesn't get its own level, since only the
+// background was ever reported as wrong a second time; `"Max"` doubles
+// `"Medium"`'s own background amount again, continuing the same halving/
+// doubling ladder this value has already been through twice; `"None"`
+// disables the whole affordance, every cell rendered identically regardless
+// of whether it's actually editable. Same live-reactive shape as "Hints"
+// above — a `TaskGrid` window's own cell styling is continuously visible,
+// not a one-shot "at the moment this opens" concern.
+const UNEDITABLE_DIMMING_KEY = "projectpal.settings.uneditableDimming";
+export const UNEDITABLE_DIMMING_LEVELS = ["None", "Low", "Medium", "Max"] as const;
+export type UneditableDimmingLevel = (typeof UNEDITABLE_DIMMING_LEVELS)[number];
+const DEFAULT_UNEDITABLE_DIMMING_LEVEL: UneditableDimmingLevel = "Low";
+
+export function getUneditableDimmingLevel(): UneditableDimmingLevel {
+  const raw = localStorage.getItem(UNEDITABLE_DIMMING_KEY);
+  return (UNEDITABLE_DIMMING_LEVELS as readonly string[]).includes(raw ?? "")
+    ? (raw as UneditableDimmingLevel)
+    : DEFAULT_UNEDITABLE_DIMMING_LEVEL;
+}
+
+export function setUneditableDimmingLevel(level: UneditableDimmingLevel): void {
+  localStorage.setItem(UNEDITABLE_DIMMING_KEY, level);
+}
+
+export function useUneditableDimmingLevel(): UneditableDimmingLevel {
+  const [level, setLevel] = useState<UneditableDimmingLevel>(() => getUneditableDimmingLevel());
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key === UNEDITABLE_DIMMING_KEY || event.key === null) setLevel(getUneditableDimmingLevel());
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+  return level;
+}

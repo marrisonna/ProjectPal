@@ -289,6 +289,8 @@ export function DenseButton({
   onClick,
   disabled,
   square,
+  sx,
+  hint,
 }: {
   children: ReactNode;
   variant?: "outlined" | "filled";
@@ -299,52 +301,76 @@ export function DenseButton({
    * button's horizontal padding, which otherwise reads as a long, mostly
    * empty rectangle around one character. */
   square?: boolean;
+  /** Merged after this button's own base styling — e.g. overriding its
+   * default `cursor: "pointer"` for a caller that wants the plain arrow
+   * instead (Stage5, `AllTaskPage.tsx`'s/`ProjectDetailPage.tsx`'s/
+   * `ComponentDetailPage.tsx`'s own "View Gantt" button). Omitted, this
+   * button's own look is unaffected — every other `DenseButton` in the app
+   * keeps its current appearance untouched. */
+  sx?: SxProps<Theme>;
+  /** A `HintTooltip` (only while "Hints" is "On") naming this button's own
+   * gesture — omitted entirely (not even an empty wrapper) for the many
+   * `DenseButton`s that don't need one. */
+  hint?: string;
 }) {
-  return (
+  const button = (
     <Box
       component="button"
       onClick={onClick}
       disabled={disabled}
-      sx={{
-        height: 22,
-        width: square ? 22 : undefined,
-        px: square ? 0 : "12px",
-        borderRadius: "3px",
-        fontSize: DENSE_FONT_SIZE,
-        fontWeight: 600,
-        letterSpacing: "0.3px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: square ? "center" : undefined,
-        flexShrink: 0,
-        cursor: disabled ? "default" : "pointer",
-        border: variant === "outlined" ? "1px solid rgba(0,0,0,0.23)" : "1px solid transparent",
-        // Disabled: the same grey used for a read-only field (READONLY_BG/
-        // its text colour above), not a generic opacity fade over whatever
-        // colour the button would otherwise be — opacity would just dim
-        // that colour rather than actually showing this specific grey.
-        bgcolor: disabled ? READONLY_BG : variant === "filled" ? "primary.main" : "rgba(0,0,0,0.04)",
-        color: disabled
-          ? "rgba(0,0,0,0.6)"
-          : variant === "filled"
-            ? "primary.contrastText"
-            : "rgba(0,0,0,0.7)",
-        fontFamily: "inherit",
-        boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
-        "&:hover": disabled
-          ? undefined
-          : {
-              bgcolor: variant === "filled" ? "primary.dark" : "rgba(0,0,0,0.08)",
-            },
-        "&:active": disabled
-          ? undefined
-          : {
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.15)",
-            },
-      }}
+      sx={[
+        {
+          height: 22,
+          width: square ? 22 : undefined,
+          px: square ? 0 : "12px",
+          borderRadius: "3px",
+          fontSize: DENSE_FONT_SIZE,
+          fontWeight: 600,
+          letterSpacing: "0.3px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: square ? "center" : undefined,
+          flexShrink: 0,
+          cursor: disabled ? "default" : "pointer",
+          border: variant === "outlined" ? "1px solid rgba(0,0,0,0.23)" : "1px solid transparent",
+          // Disabled: the same grey used for a read-only field (READONLY_BG/
+          // its text colour above), not a generic opacity fade over whatever
+          // colour the button would otherwise be — opacity would just dim
+          // that colour rather than actually showing this specific grey.
+          bgcolor: disabled ? READONLY_BG : variant === "filled" ? "primary.main" : "rgba(0,0,0,0.04)",
+          color: disabled
+            ? "rgba(0,0,0,0.6)"
+            : variant === "filled"
+              ? "primary.contrastText"
+              : "rgba(0,0,0,0.7)",
+          fontFamily: "inherit",
+          boxShadow: "0 1px 1px rgba(0,0,0,0.08)",
+          "&:hover": disabled
+            ? undefined
+            : {
+                bgcolor: variant === "filled" ? "primary.dark" : "rgba(0,0,0,0.08)",
+              },
+          "&:active": disabled
+            ? undefined
+            : {
+                boxShadow: "inset 0 1px 2px rgba(0,0,0,0.15)",
+              },
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     >
       {children}
     </Box>
+  );
+  // `enterDelay={0}` — reported as a noticeable delay on the "View Gantt"
+  // button specifically, sitting right beside `DenseDataGrid.tsx`'s own
+  // instant, delay-free `gridHintTooltip` on the grid just below it.
+  return hint ? (
+    <HintTooltip hint={hint} enterDelay={0}>
+      {button}
+    </HintTooltip>
+  ) : (
+    button
   );
 }
 
