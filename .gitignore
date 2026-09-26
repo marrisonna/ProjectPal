@@ -6,3 +6,5 @@ obj/
 .vs/
 #*.user
 *.suo
+
+Original\Apps\TaskMan\TaskMan\obj

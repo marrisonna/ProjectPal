@@ -501,7 +501,7 @@ In each of these I'd like you to follow the UserDocumentationGuidelines.md and c
 
 On the Gantt GUI, I'd like projects to be collaspable/expandable.  When collasped, all of the children for project are hidden (tasks and projects).
 There needs to be a small icon to left of each project title that indicates whether the project is collasped or expanded, pressing the icon will
-cause collasped to become expanded or expanded to become collasped.
+cause collasped to become expanded or expanded to become collasped.  Use the same '>' and upsided down '^' as is used on the Project GUI.
 
 On the All Tasks window, the tasks are shown in a grid.  The grid is sortable and has a filter.
 In addition, we need to add some edit capability to some of the columns, to allow the use to directly edit task from the grid, without having to open
@@ -597,3 +597,41 @@ In the Resources list box on TaskDetails for task #10990, Friedel is the assigne
   Q1.4-61 I believe V1.2 offers "Add Task" at every depth, but does not offer "Add Project" at all from the Project GUI component itself.
   Q1.4-62 Let' leave this until polishing - I want to give to it more thought at that time.
   Q1.4-63 I'm not sure, let's keep this open, do an intial implementation and then revisit it.
+
+
+
+
+  When I zoom into or out of the Gantt horizontally (ctrl-mouse scroll), the date under the mouse stays constant.
+  However, when I zoom in or out vertically, the project/task under the mouse moves.  It should stay constant, so that, if I 
+  identify an areas of interest, I can press ctrl+shift+mouse scroll, and zoom in/out on exactly the area under the mouse.
+
+  Horizontal zoom:  When I start to zoom in, if there is no horizontal bar shown, then the date under the mouse changes as I scroll in.  The horizontal scroll
+  bar is part of the Gantt graphical task/project area, it is not the horizontal scroll bar for the window.  As soon as the horizontal scroll bar for the 
+  Gantt graphical task/project area appears, then when I zoom in, the data under the mouse stays constant, after the zoom, the horizontal scroll bar adjust to
+  keep the date the same.
+  Vertical zoom: Firstly, the vertical scroll bar is the Window's own vertical scroll bar, not the scroll bar for the Gantt graphical task/project area.
+  I think this may be the crux of the issue.  When the windows is draw, the bottom of the Gantt chart should always be visible and be at the bottom
+  of the window.  That is, the 'Memorise order' button and the horizontal date ledge should always be the visible, which means the Window itself
+  should not have a vertical scroll bar at all.  When I zoom in vertically, there should be a scroll bar for the just the Gantt graphical task/project area
+  and it should adjust after a zoom in the keep the task/project under the cursor the same (once the vertical scroll bar appears).
+
+  
+  There is a problem with the 'boxes' in the 'Boxed' view in the Gantt view.
+  The boxes are misaligned vertically.
+  The top of the box should be in the same position vertically as the top of a projects bar, when not in 'Boxed' mode.
+  The bottom of the box should be in the same potion vertically as the bottom of the vertical start/end project drop down lines.
+
+  
+  When the 'tasks' window is first rendered, it seems to take longer to first appear.  I suspect this may be because of the Gantt being created during that time.
+  CAn you measure that time and see if it is significant.  Use a Task Grid filtered on the Resource 'Neil'.
+  Is it possible to delay much of the Gantt rendering until 'View Gantt' is actually pressed?
+  Not changes yet, just analysis and thoughts.
+
+  I'd like to add a new 'Status' for Tasks called 'Paused'. 
+
+      -------------
+
+      On the Task Detail Window, if I double click on the Project name, I would like the associated Project Detail Window to open.
+      if I double click on the Component name, I would like the associated Component Detail Window to open.
+
+      On the Projects controls, when there are no sub project the text '---none---' appears, can you change this to '---no subprojects---'
