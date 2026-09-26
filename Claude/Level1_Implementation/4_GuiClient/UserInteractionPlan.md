@@ -421,6 +421,14 @@ Reported directly, repeating `D1.4-138`'s own drag test: dragging a Task past a 
 
 `tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** (scripted Playwright drag against the real running dev server, reading the actual highlighted `<rect>`'s own `y`): hovering a sibling Project directly, or either of its own two child Tasks, all highlight *the same* row; moving on to the next sibling correctly jumps the highlight there instead.
 
+### 10.12 The whole-canvas hint showing outside the actual chart (`D1.4-141`, added 2026-09-26)
+
+Reported directly: the whole-canvas zoom/pan hint (§10.5/§10.6's own `canvasTooltip`) showed over the "Memorise order" button — where Pan genuinely doesn't work either, not just an unrelated second tooltip — over the drawing area's own native horizontal scrollbar, and in the blank space below a chart shorter than `ganttAreaRef` itself, down to the bottom of the window.
+
+All three share one root cause: `ganttAreaRef` is a plain flex container spanning its own full flex-grown bounding box, but the *actual drawn content* (both panes' own `<svg>`, sized to content rather than stretched — `D1.4-121`) can be smaller than that box, leaving real controls, a scrollbar, and dead space filling whatever's left over — none of it inside an `<svg>`. Fixed with one added check, `event.target.closest("svg")`, before showing the tooltip at all — covering all three without hand-listing each one, or making Pan actually work in those places (not asked for).
+
+`tsc -b`/`vitest` (94, unchanged)/`build`/`lint` all clean. **Verified interactively** (scripted Playwright hover against the real running dev server): hovering "Memorise order," the scrollbar's own position, and the blank space near the bottom of the Gantt area all correctly show no tooltip; hovering genuine blank chart canvas nearby still does.
+
 <a id="implementation-plan"></a>
 ## 11. Implementation Plan (added 2026-09-26)
 

@@ -1216,6 +1216,24 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
               setCanvasTooltip(null);
               return;
             }
+            // D1.4-141 — only while genuinely over the drawn chart itself
+            // (either pane's own `<svg>`), not anywhere else `ganttAreaRef`'s
+            // own bounding box happens to cover: the "Memorise order" button
+            // (a real control sitting inside the label pane's own reserved
+            // strip — Pan doesn't actually work there either, reported
+            // directly, so the tooltip claiming it does was actively
+            // misleading, not just redundant with the button's own hint),
+            // the drawing area's own native horizontal scrollbar, and the
+            // blank space below a chart shorter than `ganttAreaRef` itself
+            // (`D1.4-121`'s own `min(px, 100%)` sizing means the panes can be
+            // shorter than this ref, leaving real, hoverable dead space
+            // beneath them that's still technically part of it). None of
+            // those are `<svg>` content, so a single `closest("svg")` check
+            // covers all three without hand-listing each one.
+            if (!(event.target as HTMLElement).closest?.("svg")) {
+              setCanvasTooltip(null);
+              return;
+            }
             setCanvasTooltip({
               text: "Ctrl+scroll: Zoom horizontally.\nShift+scroll: Zoom vertically.\nCtrl+Shift+scroll: Zoom both, centred on the cursor.\nRight-click drag: Pan.",
               x: event.clientX,
