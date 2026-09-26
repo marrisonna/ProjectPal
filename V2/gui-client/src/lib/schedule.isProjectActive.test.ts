@@ -77,6 +77,16 @@ describe("isProjectActive", () => {
     expect(isProjectActive(graph, 1)).toBe(true);
   });
 
+  it("D1.4-116 — is true when a Project's only non-Closed/Cancelled Task is Paused", () => {
+    const project = makeProject({ project_id: 1, priority: "Med" });
+    const tasks = [
+      makeTask({ task_id: 1, project_id: 1, status: "Closed" }),
+      makeTask({ task_id: 2, project_id: 1, status: "Paused" }),
+    ];
+    const graph = buildScheduleGraph(tasks, [project], [], new Map());
+    expect(isProjectActive(graph, 1)).toBe(true);
+  });
+
   it("is true when made active only by a deeply-nested active grandchild sub-Project", () => {
     const root = makeProject({ project_id: 1, priority: "Med" });
     const child = makeProject({ project_id: 2, parent_project_id: 1, priority: "Med" });

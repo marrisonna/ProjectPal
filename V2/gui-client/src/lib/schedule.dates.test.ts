@@ -191,4 +191,23 @@ describe("getProjectSchedule — EndDate aggregation", () => {
     const includedTaskSchedule = getTaskSchedule(graph, 1);
     expect(projectSchedule.endDate?.getTime()).toBe(includedTaskSchedule.endDate?.getTime());
   });
+
+  it("D1.4-116 — a Paused child Task still counts toward the max (not excluded like Closed/Cancelled)", () => {
+    const project = makeProject({ project_id: 1 });
+    const shortTask = makeTask({ task_id: 1, project_id: 1, effort_in_days: 1, status: "NotStarted" });
+    const pausedTask = makeTask({ task_id: 2, project_id: 1, effort_in_days: 20, status: "Paused" });
+    const graph = buildScheduleGraph(
+      [shortTask, pausedTask],
+      [project],
+      [],
+      new Map([
+        [1, 1],
+        [2, 1],
+      ]),
+    );
+
+    const projectSchedule = getProjectSchedule(graph, 1);
+    const pausedTaskSchedule = getTaskSchedule(graph, 2);
+    expect(projectSchedule.endDate?.getTime()).toBe(pausedTaskSchedule.endDate?.getTime());
+  });
 });

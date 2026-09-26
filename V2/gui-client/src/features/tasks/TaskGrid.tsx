@@ -267,6 +267,12 @@ export interface TaskGridProps {
   // get caught in a render loop. Optional and unused by every other
   // TaskGrid call site (Project/Component Detail's own embedded grids).
   onFilteredTasksChange?: (tasks: TaskRecord[]) => void;
+  // D1.4-118 — passed straight through to `DenseDataGrid`'s own prop of the
+  // same name; see its doc comment. `false` (the default) for every embedded
+  // call site (Project/Component's own nested grids, D1.4-59) — only
+  // `AllTaskPage.tsx` opts in, since it alone gives this grid a real, bounded
+  // parent height to fill.
+  fillHeight?: boolean;
 }
 
 function byId<T extends Record<K, number>, K extends string>(
@@ -296,6 +302,7 @@ export function TaskGrid({
   defaultSort = { field: "urgency", sort: "desc" as const },
   onFilteredTasksChange,
   onRowDoubleClick,
+  fillHeight = false,
 }: TaskGridProps) {
   const { person } = useAuth();
   const updateTaskField = useUpdateTaskField();
@@ -306,6 +313,7 @@ export function TaskGrid({
   const {
     withFilter,
     getFilteredRows,
+    fitColumnsToContent,
     filterVisible,
     setFilterVisible,
     resetFilters,
@@ -317,6 +325,39 @@ export function TaskGrid({
     showFilters,
     apiRef,
   });
+
+  // D1.4-117 — Resources/Component/Project default to a width fit for the
+  // widest value across every Task this grid *could* show (every Team-scoped
+  // Task, `getCachedColumnContentWidth`'s own comment) rather than whatever
+  // actually passes the *initial* filter — usually much narrower once a
+  // Resources filter is already pre-applied (e.g. a non-Team-Lead's own
+  // default-to-self filter, D-Win-15), reported as these three columns
+  // opening far wider than their own visible content, only fixed by
+  // double-clicking each label by hand. Runs once, on mount only (`[]`) —
+  // matches "when the window is first opened," not a continuous re-fit that
+  // would otherwise jump these columns around every time a filter or the
+  // row set itself later changes.
+  //
+  // Deferred one frame (`requestAnimationFrame`), not called synchronously
+  // from this effect — confirmed via logging that calling it immediately on
+  // mount *does* correctly update the `columns` prop `<DataGrid>` receives
+  // (the right, narrower `width` was there on the very next render), yet the
+  // column stayed visually at its old, wider size regardless: this early,
+  // before the grid's own internal column-sizing effects (and `apiRef`
+  // itself, which `fitColumnsToContent` also now calls `setColumnWidth`
+  // through directly) have settled, MUI DataGrid doesn't reliably pick up a
+  // `columns`-prop width change the way it does once the grid's been live
+  // for a while (a user's own later double-click-to-fit, going through that
+  // exact same prop, works fine). One frame is enough for that settling to
+  // finish; cancelled on unmount so a fast unmount can't fire it after the
+  // fact.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      fitColumnsToContent(["resources", "component_id", "project_id"]);
+    });
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const projectsById = useMemo(() => byId(projects, "project_id"), [projects]);
   const componentsById = useMemo(() => byId(components, "component_id"), [components]);
@@ -845,6 +886,7 @@ export function TaskGrid({
         sx={urgencyRowSx}
         defaultSort={[defaultSort]}
         initiallyHiddenFields={initiallyHiddenColumns}
+        fillHeight={fillHeight}
         filtering={{
           filterVisible,
           onToggleFilterVisible: () => setFilterVisible((prev) => !prev),

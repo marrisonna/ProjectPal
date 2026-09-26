@@ -876,6 +876,19 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
   const scaleY = zoomY / 100;
   const chartWidth = chartWidthBase * scaleX;
   const chartHeight = chartHeightBase * scaleY;
+  // D1.4-121 — with only a handful of rows, `chartHeight` (their real,
+  // unpadded height) is far shorter than the space this whole Gantt area is
+  // actually given — previously left as blank space *below* the month-footer
+  // row/"Memorise order" button (both `flex: 1`'d to the very bottom of the
+  // available height regardless of how little content sat above them). This
+  // caps both panes' own outer height at their *own* natural content height
+  // (`chartHeight` plus the same fixed footer/scrollbar allowance
+  // `labelPaneReservedBottom` already accounts for — identical on both sides,
+  // since that's exactly what it already is) — `min()` with `100%`, resolved
+  // by CSS itself at layout time, no measurement needed: still fills/scrolls
+  // the full available height exactly as before whenever there's enough
+  // content to actually need it.
+  const ganttAreaTargetHeight = chartHeight + labelPaneReservedBottom;
   const barHeight = BAR_HEIGHT * scaleY;
   const fontSize = BASE_FONT_SIZE * scaleY;
   const todayX = layout.todayX * scaleX;
@@ -1063,7 +1076,15 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                   "Memorise order" button lives in that reserved strip,
                   rather than in a separate row below the whole Gantt
                   area — freeing that space for the chart itself. */}
-              <Box sx={{ flexShrink: 0, width: labelColumnWidth, height: "100%", display: "flex", flexDirection: "column" }}>
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  width: labelColumnWidth,
+                  height: `min(${ganttAreaTargetHeight}px, 100%)`,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <Box
                   ref={labelAreaRef}
                   onScroll={() => syncScrollTop(labelAreaRef.current!, drawingAreaRef.current)}
@@ -1252,7 +1273,10 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
               needed for that axis; and its own native horizontal
               scrollbar, being *this* element's, necessarily renders below
               both of them. */}
-          <Box ref={hScrollAreaRef} sx={{ flexGrow: 1, height: "100%", overflowX: "auto", overflowY: "hidden" }}>
+          <Box
+            ref={hScrollAreaRef}
+            sx={{ flexGrow: 1, height: `min(${ganttAreaTargetHeight}px, 100%)`, overflowX: "auto", overflowY: "hidden" }}
+          >
             <Box sx={{ width: chartWidth, height: "100%", display: "flex", flexDirection: "column" }}>
               <Box
                 ref={drawingAreaRef}

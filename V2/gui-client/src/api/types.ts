@@ -120,6 +120,10 @@ export interface AttachmentRecord {
 // V2's five active levels 1:1 by name, so this is the same 5-level
 // most-urgent-first ordering with V2's own (renamed) values — see
 // 8_ValidationAndVerification/Plan.md Q1.8-4 for confirming that mapping.
+// "Paused" (D1.4-116) has no V1.2 equivalent at all — a genuinely new Status
+// value, not carried over — placed here next to "InProgress" since that's
+// conceptually the status it's most often paused *from*; no other ordering
+// significance.
 export const PRIORITY_LEVELS = [
   "High",
   "MedHigh",
@@ -134,6 +138,7 @@ export const TASK_STATUSES = [
   "Closed",
   "Cancelled",
   "InProgress",
+  "Paused",
   "NotStarted",
   "Ready",
   "Support",

@@ -33,7 +33,7 @@ import {
   useUpdateTask,
 } from "../../api/hooks";
 import { PRIORITY_LEVELS, TASK_TYPES } from "../../api/types";
-import { openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { openItemWindow, openListWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { TASK_DRAG_MIME_TYPE } from "../../lib/dnd";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { formatApiError } from "../../lib/apiErrors";
@@ -802,6 +802,9 @@ export function TaskDetailPage() {
             breadcrumb={buildBreadcrumb(projectTreeItems, (form.project_id as number) ?? null)}
             onSelect={(id) => id != null && setField("project_id", id)}
             readOnly={!canEdit}
+            onBreadcrumbDoubleClick={
+              form.project_id != null ? () => openItemWindow("projects", form.project_id as number) : undefined
+            }
           />
           <FieldTreePicker
             label="Component"
@@ -812,6 +815,9 @@ export function TaskDetailPage() {
             onSelect={(id) => setField("component_id", id)}
             readOnly={!canEdit}
             allowNone
+            onBreadcrumbDoubleClick={
+              form.component_id != null ? () => openItemWindow("components", form.component_id as number) : undefined
+            }
           />
         </Box>
 

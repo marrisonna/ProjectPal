@@ -106,8 +106,8 @@ SELECT setval('project_project_id_seq', 4);
 -- ---------------------------------------------------------------------------
 -- Tasks — a deliberate mix of priority/status/effort-type/task-type values,
 -- a recently-closed task and a long-closed task (for exercising Urgency decay
--- once that's implemented at the API layer), a tentative assignment, and a
--- cancelled task.
+-- once that's implemented at the API layer), a tentative assignment, a
+-- cancelled task, and a paused task.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO task (task_id, project_id, component_id, priority, description, detailed_description,
@@ -145,8 +145,11 @@ INSERT INTO task (task_id, project_id, component_id, priority, description, deta
         1, 3, 15, 'Duration', 1, 'Enhancement',     'Tentative',  NULL,                        true,  30),
     (11, 3, NULL, 'Cancelled', 'Evaluate NoSQL for attachments',
         'Investigated storing Attachment content outside PostgreSQL; not pursued.',
-        1, 3, NULL, NULL, 1,   'Other',           'Cancelled',  now() - interval '90 days', false, NULL);
-SELECT setval('task_task_id_seq', 11);
+        1, 3, NULL, NULL, 1,   'Other',           'Cancelled',  now() - interval '90 days', false, NULL),
+    (12, 2, NULL, 'Med',     'Design multi-tenant partitioning strategy',
+        'On hold pending a decision on shared-schema vs. schema-per-tenant.',
+        1, 2, 4,  'PersonDays', 1, 'Infrastructure',  'Paused',     NULL,                        false, 25);
+SELECT setval('task_task_id_seq', 12);
 
 -- ---------------------------------------------------------------------------
 -- Resource assignment (Task <-> Person)

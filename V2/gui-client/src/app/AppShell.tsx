@@ -84,6 +84,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button color="inherit" onClick={() => openListWindow("search")}>
               Search
             </Button>
+            {/* D1.4-122 — its own popped-out singleton window, open to
+                every signed-in Person (a personal, browser-local preference
+                via localStorage, not privileged data) — no permission gate,
+                unlike the admin-only buttons below. */}
+            <Button color="inherit" onClick={() => openListWindow("settings")}>
+              Settings
+            </Button>
             {/* ManagePeoplePlan.md §4.1 — organisation-admin-only, mirroring
                 the existing "Admin" chip's own conditional. Nav button
                 placement for the growing set of admin-only screens is

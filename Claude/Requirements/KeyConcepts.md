@@ -124,11 +124,11 @@ It feeds directly into the derived-scheduling calculation in `DomainModel.md` an
 <a id="priority-status"></a>
 ## 11. Priority / Status
 
-Priority (e.g. High → Low, plus Closed/Cancelled as special values) and Status (Not Started/In Progress/Closed/Cancelled/etc.) are two related-but-distinct fields on a Task or Project, kept in sync with each other when either reaches Closed/Cancelled.
+Priority (e.g. High → Low, plus Closed/Cancelled as special values) and Status (Not Started/Ready/In Progress/Paused/Tentative/Support/Closed/Cancelled) are two related-but-distinct fields on a Task or Project, kept in sync with each other when either reaches Closed/Cancelled.
 
 They're key because they're the two most basic triage signals a user or a report relies on — importance versus lifecycle state — and together they're the primary inputs to Urgency.
 
-They're used throughout reporting and the Urgency calculation below. The exact status vocabulary is open to revisiting for the new system (`Q-KC-2`), but the two-field shape (importance vs. lifecycle state) is worth keeping.
+They're used throughout reporting and the Urgency calculation below. The status vocabulary was revisited once already for the new system, adding Paused (`D-KC-4`) — the two-field shape (importance vs. lifecycle state) is worth keeping regardless of further changes to either vocabulary.
 
 <a id="urgency"></a>
 ## 12. Urgency
@@ -343,7 +343,6 @@ It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can
 ## 19. Open Questions
 
 - **Q-KC-1: Identity direction** — how a Person authenticates (e.g. federating to an external identity provider, per the Person entry above) is a Foundational Decision (§18) flagged throughout this document (Person, Role / Permission Level) as needing a stated direction — still open; see `Goals.md`'s Level 1/2 "identity direction" framing questions.
-- **Q-KC-2: Status vocabulary** — the exact set of Status values (Priority / Status entry above) is open to revisiting for the new system; only the two-field shape (importance vs. lifecycle state) is settled.
 
 <a id="decisions"></a>
 ## 20. Decisions
@@ -351,3 +350,7 @@ It's used throughout `Goals.md` and `DomainModel.md` to flag which questions can
 - **D-KC-3** (decided 2026-09-12)<br>
   **Question:** `Q-KC-3` — the specific tuned constants in the current Urgency algorithm (§12: the 10-day closed-task decay window, the 60-day time-pressure horizon, the priority-weighting exponents) are hand-picked values from the old implementation, not derived from any external rule — worth validating against real usage rather than treating as fixed requirements when `V2` reimplements this?<br>
   **Decision:** ported unchanged for now — see `Claude/Level1_Implementation/5_UrgencyCalculation/Plan.md`'s `D1.5-1`, the canonical record of this decision. Validating the constants against real usage remains a live possibility later; it isn't resolved or blocked by this.
+
+- **D-KC-4** (decided 2026-09-25)<br>
+  **Question:** `Q-KC-2` — the exact set of Status values was left open to revisiting for the new system; only the two-field shape (importance vs. lifecycle state) was settled.<br>
+  **Decision:** a "Paused" Status was added — a Task that's temporarily stalled but expected to resume, with no V1.2 precedent (checked; no equivalent ever existed there). Treated as an ordinary "open" status everywhere the vocabulary already distinguished open from Closed/Cancelled (visible by default, counts toward a Project's own computed End Date and "is it active" check, uses its End Date in the Urgency calculation same as Ready/Support/Tentative) rather than getting bespoke behaviour of its own — see `Claude/Level1_Implementation/4_GuiClient/Plan.md`'s `D1.4-116`, the canonical record of this decision, for the full list of touched files. This doesn't close the vocabulary question permanently — a further addition remains possible — but the specific case this question raised has been acted on.

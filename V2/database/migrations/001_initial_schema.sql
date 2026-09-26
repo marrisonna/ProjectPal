@@ -21,7 +21,7 @@ CREATE TYPE priority_level AS ENUM
     ('Cancelled', 'Closed', 'Low', 'MedLow', 'Med', 'MedHigh', 'High');
 
 CREATE TYPE task_status AS ENUM
-    ('NotStarted', 'Ready', 'InProgress', 'Tentative', 'Support', 'Closed', 'Cancelled');
+    ('NotStarted', 'Ready', 'InProgress', 'Paused', 'Tentative', 'Support', 'Closed', 'Cancelled');
 
 CREATE TYPE task_type AS ENUM
     ('NewDevelopment', 'Enhancement', 'Maintenance', 'Support', 'Infrastructure', 'Other');

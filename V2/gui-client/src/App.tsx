@@ -15,6 +15,7 @@ import { ManagePeoplePage } from "./features/people/ManagePeoplePage";
 import { TeamManagementPage } from "./features/teams/TeamManagementPage";
 import { TeamsManagementPage } from "./features/teams/TeamsManagementPage";
 import { AdminPage } from "./features/admin/AdminPage";
+import { SettingsPage } from "./features/settings/SettingsPage";
 
 function AuthenticatedLayout() {
   return (
@@ -104,6 +105,10 @@ export default function App() {
                 admin-only (the page itself gates access, same as Manage
                 People). */}
             <Route path="/admin" element={<AdminPage />} />
+            {/* D1.4-122 — its own popped-out singleton window, open to every
+                signed-in Person (a personal, browser-local preference, not
+                privileged data). */}
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

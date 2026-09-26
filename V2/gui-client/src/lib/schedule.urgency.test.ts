@@ -117,6 +117,18 @@ describe("computeUrgency", () => {
     expect(computeUrgency(task, projectsById, null, null, today)).toBe(100);
   });
 
+  it("D1.4-116 — Paused falls into the same 'any other open status -> end date' branch as Ready/Support/Tentative", () => {
+    const today = new Date(2026, 0, 1);
+    const startDate = new Date(2025, 11, 20);
+    const endDate = new Date(2026, 0, 15);
+    const projectsById = new Map([[1, project(1, "Med")]]);
+    const paused = { status: "Paused", status_date: null, priority: "Med", project_id: 1 };
+    const ready = { status: "Ready", status_date: null, priority: "Med", project_id: 1 };
+    expect(computeUrgency(paused, projectsById, startDate, endDate, today)).toBe(
+      computeUrgency(ready, projectsById, startDate, endDate, today),
+    );
+  });
+
   it("walks multiple ancestor Projects root-first, and a cyclic parent chain doesn't hang", () => {
     const today = new Date(2026, 0, 1);
     const cyclicProjects = new Map([

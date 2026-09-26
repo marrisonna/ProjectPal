@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
+import { getNewWindowMode } from "./settings";
 
 const ALIVE_KEY_PREFIX = "pp-window-alive:";
 function isWindowAlive(windowName: string): boolean {
@@ -191,7 +192,17 @@ export function openNamedWindow(path: string, windowName: string, features?: str
     win?.focus();
     return;
   }
-  const win = window.open(window.location.origin + path, windowName, features);
+  // D1.4-122 — the "New Window" setting (Settings.tsx) decides tab vs.
+  // window here, at the one real choke point every caller already goes
+  // through, rather than each `windowFeaturesFor` caller checking it itself.
+  // A `features` string with sizing (`width=`/`height=`) is what makes a
+  // browser open a genuine separate window rather than a new tab — passing
+  // `undefined` instead (this app's own previous, and only, behaviour was to
+  // always pass one) is what "Tab" actually means here. Read fresh on every
+  // call, not cached anywhere — a change made in the Settings window takes
+  // effect starting with the very next window opened, from any window.
+  const effectiveFeatures = getNewWindowMode() === "Tab" ? undefined : features;
+  const win = window.open(window.location.origin + path, windowName, effectiveFeatures);
   win?.focus();
 }
 
@@ -240,6 +251,13 @@ const ADMIN_WINDOW_FEATURES = "width=560,height=700";
 // a full All Tasks grid (many columns), so wider than Search/People's own
 // windows above.
 const TASKS_FOR_RESOURCE_WINDOW_FEATURES = "width=1100,height=700";
+// SettingsPage.tsx (D1.4-122) — a single labelled dropdown, nothing else;
+// smaller than every other window here. Still given real sizing features
+// even though the "New Window" setting it itself controls might currently be
+// "Tab" — `windowFeaturesFor` doesn't know or care what the setting is, that
+// switch lives entirely in `openNamedWindow` above, applied uniformly to
+// every caller including this one.
+const SETTINGS_WINDOW_FEATURES = "width=380,height=260";
 
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;
@@ -249,6 +267,7 @@ function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "people") return PEOPLE_WINDOW_FEATURES;
   if (entityType === "team-management") return TEAM_MANAGEMENT_WINDOW_FEATURES;
   if (entityType === "teams-management") return TEAMS_MANAGEMENT_WINDOW_FEATURES;
+  if (entityType === "settings") return SETTINGS_WINDOW_FEATURES;
   if (entityType === "admin") return ADMIN_WINDOW_FEATURES;
   return undefined;
 }

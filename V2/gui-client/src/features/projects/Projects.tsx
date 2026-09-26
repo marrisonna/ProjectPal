@@ -211,7 +211,7 @@ export function Projects({
       {siblingProjects.length === 0 && ownTasks.length === 0 ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: "4px", m: "1px 0 1px 18px" }}>
           <Box component="hr" sx={{ width: "18px", height: 0, m: 0, border: "none", borderTop: "1px solid rgba(0,0,0,0.4)" }} />
-          <Box sx={{ fontSize: DENSE_FONT_SIZE, color: "rgba(0,0,0,0.4)" }}>none</Box>
+          <Box sx={{ fontSize: DENSE_FONT_SIZE, color: "rgba(0,0,0,0.4)" }}>no subprojects</Box>
           <Box component="hr" sx={{ width: "18px", height: 0, m: 0, border: "none", borderTop: "1px solid rgba(0,0,0,0.4)" }} />
         </Box>
       ) : (

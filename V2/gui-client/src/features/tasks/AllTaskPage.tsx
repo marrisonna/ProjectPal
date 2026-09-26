@@ -292,7 +292,19 @@ export function AllTaskPage() {
           {view === "grid" ? "View Gantt" : "View Tasks"}
         </DenseButton>
       </Box>
-      <Box sx={{ display: view === "grid" ? "block" : "none", flex: 1, minHeight: 0, overflow: "auto" }}>
+      {/* D1.4-118 — `fillHeight` (not the default `autoHeight`, D1.4-59)
+          because this box is this grid's *own* bounded viewport, not a
+          content-sized region inside some taller scrolling page: with
+          `autoHeight`, the grid sized itself to every one of its own rows,
+          and this box's own `overflow: auto` was what actually scrolled —
+          meaning its horizontal scrollbar and footer/pagination sat at the
+          very bottom of that full row count, well below the fold with 100+
+          rows, only reachable by scrolling *past* every row first. With
+          `fillHeight`, the grid itself fills this box and scrolls its own
+          rows internally, so its horizontal scrollbar/footer stay pinned to
+          this box's own bottom edge — this box no longer needs `overflow`
+          of its own at all. */}
+      <Box sx={{ display: view === "grid" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <TaskGrid
           tasks={scopedTasks}
           projects={projects}
@@ -309,6 +321,7 @@ export function AllTaskPage() {
           initialFilterState={filterState}
           initiallyHiddenColumns={initiallyHiddenColumns}
           onFilteredTasksChange={setFilteredTasks}
+          fillHeight
         />
       </Box>
       {everViewedGantt && (

@@ -261,6 +261,13 @@ export function DenseSingleSelectEditCell<T>(props: GridRenderEditCellParams<T>)
 interface FilterConfig<T> {
   getValues: (row: T) => string[];
   sortType: FilterSortType;
+  // D1.4-117 — the same label `withFilter`'s own `headerMinWidth` measures
+  // against, kept here too so `fitColumnsToContent` (below) can recompute
+  // that exact formula for a column without needing its own `GridColDef`
+  // (long gone by the time an effect calls it after mount) — just this
+  // registry, already populated by the time any column-content-width
+  // question gets asked.
+  headerLabel: string;
 }
 
 // A boolean column's "isBoolean" case is a plain fixed width (not
@@ -322,6 +329,22 @@ export interface UseDenseGridColumnsResult<T> {
   // never any earlier), so `filterConfigs` is complete by the time it
   // actually reads from it.
   getFilteredRows: () => T[];
+  // D1.4-117 — sets each of `fields`' own manual width (the same path a
+  // drag-resize or the header-label double-click records into) to fit its
+  // widest content among whichever rows currently pass *every* active
+  // filter — exactly `withFilter`'s own double-click-to-fit gesture, just
+  // triggered programmatically for a caller-chosen set of fields instead of
+  // by the user clicking a specific label. Meant to be called once, from an
+  // effect gated to run only on mount (e.g. `useEffect(() =>
+  // fitColumnsToContent([...]), [])`) — same "only safe once every
+  // `withFilter` call for this render has already happened" timing
+  // constraint as `getFilteredRows` above, satisfied automatically by an
+  // effect (which always runs after the full render commits) regardless of
+  // where in the component it's written. A field not registered via
+  // `withFilter` (not a column this grid actually has) is silently skipped,
+  // not an error — so a caller can safely name fields another embedding of
+  // the same grid might not show.
+  fitColumnsToContent: (fields: string[]) => void;
   filterVisible: boolean;
   setFilterVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
   resetFilters: () => void;
@@ -561,10 +584,11 @@ export function useDenseGridColumns<T>({
     widthCap?: number,
     flex?: number,
   ): GridColDef<T> {
+    const headerLabel = col.headerName ?? col.field;
     // Registered regardless of `filterVisible` — a filter set while the
     // row was visible must keep working after the user hides it (see
     // passesAllFilters's own comment).
-    filterConfigs[col.field] = { getValues, sortType };
+    filterConfigs[col.field] = { getValues, sortType, headerLabel };
     // Always the same renderHeader, never DataGrid's own default one — the
     // label above the filter box must render identically (same bold
     // weight, same position) whether the filter box itself is visible or
@@ -576,7 +600,6 @@ export function useDenseGridColumns<T>({
     // is styled `width: columnWidth` (it always fills whatever the
     // column's *current* width already is), so a DOM measurement of it
     // can only ever report the column's existing width back to itself.
-    const headerLabel = col.headerName ?? col.field;
     const headerMinWidth = Math.ceil(measureTextWidth(headerLabel, HEADER_FONT_WEIGHT)) + HEADER_LABEL_PADDING;
     const renderHeader: GridColDef<T>["renderHeader"] = (params) => (
       <FilterableHeader
@@ -724,6 +747,43 @@ export function useDenseGridColumns<T>({
       const filtered = rows.filter((row) => passesAllFilters(row));
       return filtered.length === rows.length ? rows : filtered;
     },
+    fitColumnsToContent: (fields: string[]) => {
+      const visibleRows = rows.filter((row) => passesAllFilters(row));
+      const fitWidths = new Map<string, number>();
+      for (const field of fields) {
+        const config = filterConfigs[field];
+        if (!config) continue;
+        const headerMinWidth = Math.ceil(measureTextWidth(config.headerLabel, HEADER_FONT_WEIGHT)) + HEADER_LABEL_PADDING;
+        const contentWidth = measureColumnContentWidth(config.getValues, visibleRows, false);
+        fitWidths.set(field, Math.max(headerMinWidth, contentWidth) + fontSafetyMargin);
+      }
+      // Recorded as a manual override too (not just applied via `apiRef`
+      // below) so a *later* render's own `withFilter` call — this column's
+      // own default-width computation runs on every render regardless —
+      // keeps using this fit width rather than recomputing (and reopening)
+      // the too-wide default the moment anything else causes a re-render.
+      setManualColumnWidths((prev) => {
+        const next = new Map(prev);
+        for (const [field, width] of fitWidths) next.set(field, width);
+        return next;
+      });
+      // `apiRef.current.setColumnWidth` *also* called directly, not left to
+      // the `columns` prop change above alone — confirmed via logging
+      // (D1.4-117) that the `columns` prop passed to `<DataGrid>` really did
+      // carry the new, narrower `width` on the very next render, yet the
+      // column stayed visually at its old (wider) size regardless: this
+      // early in a grid's own life (right after first mount, before its own
+      // internal column-sizing effects have settled), MUI DataGrid evidently
+      // doesn't reliably re-derive `computedWidth` from a `columns` prop
+      // change alone the way it does once the grid's been live for a while
+      // (a user's own later double-click-to-fit, going through the exact
+      // same `columns`-prop mechanism, works reliably — this isn't a defect
+      // in that path, just a race specific to how soon after mount this
+      // runs). `setColumnWidth` is the grid's own direct, imperative API for
+      // exactly this, sidestepping whichever internal effect wasn't done
+      // settling yet.
+      for (const [field, width] of fitWidths) apiRef?.current?.setColumnWidth(field, width);
+    },
     filterVisible,
     setFilterVisible,
     resetFilters: () => setFilterState({}),
@@ -773,6 +833,23 @@ export interface DenseDataGridProps<T> {
   // `columns` in full regardless of hidden state; visibility is a pure
   // rendering concern layered on top via MUI's own `columnVisibilityModel`.
   initiallyHiddenFields?: string[];
+  // D1.4-118 — `false` (the default) keeps `autoHeight` (D1.4-59): the grid
+  // sizes itself to its own content, no internal scrollbar of its own — the
+  // right shape for a small embedded grid (Project/Component's own nested
+  // TaskGrid) with no independent viewport of its own to fill. `true` is the
+  // opposite shape, for a grid that *is* the main content of its own
+  // window/panel (All Tasks): it fills 100% of its own parent's height
+  // instead, and scrolls its *own* rows internally — critically, this keeps
+  // its horizontal scrollbar and footer/pagination pinned to the bottom of
+  // that fixed viewport, always visible, rather than wherever the bottom of
+  // however-tall an `autoHeight` grid's full row count happens to land (with
+  // 100+ rows, well below the fold — reported directly: reaching the
+  // horizontal scrollbar needed scrolling *past* every row first). The
+  // caller must give this grid's own parent a real, bounded height (e.g.
+  // `flex: 1, minHeight: 0` in a flex column) for `height: "100%"` to
+  // resolve against — the same containment requirement `AppShell.tsx`
+  // itself needed fixing for exactly this reason (`D1.4-111`).
+  fillHeight?: boolean;
 }
 
 // The shared dense-grid chrome itself (D1.4-73): sizing, border, header
@@ -793,6 +870,7 @@ export function DenseDataGrid<T>({
   processRowUpdate,
   onProcessRowUpdateError,
   initiallyHiddenFields,
+  fillHeight = false,
 }: DenseDataGridProps<T>) {
   const internalApiRef = useGridApiRef();
   const apiRef = externalApiRef ?? internalApiRef;
@@ -893,17 +971,18 @@ export function DenseDataGrid<T>({
   }
 
   return (
-    <Box onContextMenu={handleContextMenu}>
+    <Box onContextMenu={handleContextMenu} sx={fillHeight ? { height: "100%" } : undefined}>
       <DataGrid<T>
         apiRef={apiRef}
         rows={rows}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={setColumnVisibilityModel}
-        // Always sizes to its own content (ProjectsGUIComponent.md §4.5,
-        // D1.4-59) — a small embedded grid doesn't need a fixed-height box,
-        // and a fixed box would either clip a taller grid or leave dead
-        // space under a shorter one.
-        autoHeight
+        // `fillHeight` (D1.4-118) is the one exception — see its own prop
+        // doc comment. Otherwise always sizes to its own content
+        // (ProjectsGUIComponent.md §4.5, D1.4-59): a small embedded grid
+        // doesn't need a fixed-height box, and a fixed box would either clip
+        // a taller grid or leave dead space under a shorter one.
+        autoHeight={!fillHeight}
         // No pagination footer once every row already fits on the current
         // page — nothing to page through. Reappears automatically once
         // there's genuinely more than one page's worth of rows.

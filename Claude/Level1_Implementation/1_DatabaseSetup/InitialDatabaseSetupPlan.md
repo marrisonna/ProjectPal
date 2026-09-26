@@ -76,7 +76,9 @@ Full DDL is in [`database/migrations/001_initial_schema.sql`](../../../V2/databa
 <a id="example-data"></a>
 ## 6. Example Data
 
-[`database/seed/001_example_data.sql`](../../../V2/database/seed/001_example_data.sql) loads a small, entirely fictional dataset: 1 Team ("Platform"), 7 People, a 4-Component tree, 4 Projects (one with two sub-projects), 11 Tasks covering every Priority/Status/Task Type/Effort Type combination worth exercising, a few resource assignments, four Dependencies (including a Project-to-Project one), three Attachments (one of each kind — File/Mail/Link), and four Remarks. (Originally 2 Teams — collapsed into one when `002_team2_from_v1.sql`, below, needed a free `team_id`.)
+[`database/seed/001_example_data.sql`](../../../V2/database/seed/001_example_data.sql) loads a small, entirely fictional dataset: 1 Team ("Platform"), 7 People, a 4-Component tree, 4 Projects (one with two sub-projects), 12 Tasks covering every Priority/Status/Task Type/Effort Type combination worth exercising, a few resource assignments, four Dependencies (including a Project-to-Project one), three Attachments (one of each kind — File/Mail/Link), and four Remarks. (Originally 2 Teams — collapsed into one when `002_team2_from_v1.sql`, below, needed a free `team_id`.)
+
+`task_status` gained an eighth value, `Paused` (`Requirements/KeyConcepts.md` `D-KC-4`, `4_GuiClient/Plan.md` `D1.4-116`) — added directly to this migration file's own enum definition rather than a new migration, per `Claude/Guidelines/ImplementationApproach.md` §5's edit-and-rebuild convention (no live data to preserve yet). A twelfth seed Task (`task_id` 12, "Design multi-tenant partitioning strategy") exercises it.
 
 No real names, descriptions, or content were copied from anywhere in 001. Its *shape* — status/priority mix, how resourcing and dependencies tend to be used — was informed by looking at the old `V1.2` SQL Server database (`ProjectPalDB_1`, on this machine): its table/column layout (confirmed via `INFORMATION_SCHEMA.COLUMNS`) and its distinct enum-like values (e.g. `Priority`, `Status`, `TaskType`, `UserType`) directly informed the enum types in the schema.
 

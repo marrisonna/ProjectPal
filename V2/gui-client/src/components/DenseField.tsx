@@ -349,6 +349,7 @@ export function FieldTreePicker({
   onSelect,
   readOnly,
   allowNone,
+  onBreadcrumbDoubleClick,
 }: {
   label: string;
   width?: number | string;
@@ -359,6 +360,14 @@ export function FieldTreePicker({
   onSelect: (id: number | null) => void;
   readOnly?: boolean;
   allowNone?: boolean;
+  // D1.4-119 — Task Detail's own Project/Component pickers use this to open
+  // that Project's/Component's own Detail window on double-click; every
+  // other `FieldTreePicker` (e.g. Project/Component Detail's own "Parent"
+  // picker) simply omits it. Independent of `readOnly`/`selectedId` — a
+  // navigation action, not an edit, so it fires (when a value is actually
+  // selected; the caller's own responsibility to check) regardless of
+  // whether this field can be changed.
+  onBreadcrumbDoubleClick?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -391,6 +400,7 @@ export function FieldTreePicker({
       <Box sx={{ display: "flex", gap: "4px" }}>
         <Box
           title={breadcrumb}
+          onDoubleClick={onBreadcrumbDoubleClick}
           sx={{
             flex: 1,
             minWidth: 0,
@@ -407,6 +417,7 @@ export function FieldTreePicker({
             color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
             bgcolor: readOnly ? READONLY_BG : "#fff",
             boxSizing: "border-box",
+            cursor: onBreadcrumbDoubleClick ? "pointer" : undefined,
           }}
         >
           {breadcrumb || "(none)"}
