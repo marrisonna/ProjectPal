@@ -29,6 +29,8 @@ import {
   type GanttCustomOrder,
 } from "../../lib/ganttLayout";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
+import { useHintsEnabled } from "../../lib/settings";
+import { HintTooltip, HINT_TOOLTIP_BG } from "../../components/HintTooltip";
 
 const DEFAULT_LABEL_COLUMN_WIDTH = 220;
 const MIN_LABEL_COLUMN_WIDTH = 0;
@@ -180,6 +182,11 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
   );
 
   const { person } = useAuth();
+  // D1.4-124 — read once per render, not wrapped per-element in
+  // `HintTooltip`: this view's own tooltips are custom, cursor-following
+  // floating boxes built well before that setting existed (BarTooltip/label
+  // tooltip, below), not plain elements `HintTooltip` could wrap directly.
+  const hintsEnabled = useHintsEnabled();
   const { data: allProjects, isLoading: projectsLoading } = useProjects();
   const { data: allComponents, isLoading: componentsLoading } = useComponents();
   const { data: tasks, isLoading: tasksLoading } = useTasks();
@@ -532,6 +539,25 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
   // only for a row whose own text is actually clipped by the column's
   // current width (measured below), not for every row.
   const [labelTooltip, setLabelTooltip] = useState<BarTooltip | null>(null);
+  // D1.4-126 — the whole-canvas zoom/pan hint used to be a plain native
+  // `title` on the drawing area's own ancestor, which read fine for a hint
+  // that applies to the whole area (no one specific spot to anchor a
+  // per-element `HintTooltip` to) but couldn't get the same pale-yellow
+  // styling every other hint now has, and a MUI `Tooltip` wrapping the
+  // *whole* (mostly off-screen-scrolled) Gantt area would anchor to a fixed
+  // placement on its bounding box rather than following the cursor the way
+  // a native title does — for an area this large, that reads as pinned in
+  // the wrong place rather than "near the mouse." Same cursor-following
+  // floating-Box mechanism as barTooltip/labelTooltip instead.
+  const [canvasTooltip, setCanvasTooltip] = useState<BarTooltip | null>(null);
+  // Sibling to canvasTooltip, but a ref, not state: it has to be readable
+  // *synchronously within the same mousemove event* that a bar/label's own
+  // onMouseMove just set barTooltip/labelTooltip from, so the ganttAreaRef
+  // handler below (which fires afterwards in the same bubble, since it's an
+  // ancestor of both) can tell "a more specific tooltip just claimed this
+  // hover" immediately — not one render later, by which time both this and
+  // the more specific tooltip would already be showing at once for a frame.
+  const overInteractiveTooltipRef = useRef(false);
   // Which rows' own <text> is wider than the space available for it
   // (`labelColumnWidth` minus its own depth-indent) — recomputed via
   // getComputedTextLength() on the real rendered <text> nodes (SVG has no
@@ -1062,7 +1088,37 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
         // `minHeight: 0` — required so a flex child can shrink to fit
         // instead of growing to its content's height) — the panes below
         // then simply take `height: "100%"` of that.
-        <Box ref={ganttAreaRef} sx={{ display: "flex", flexGrow: 1, minHeight: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}>
+        <Box
+          ref={ganttAreaRef}
+          // D1.4-124/D1.4-125/D1.4-126 — one whole-canvas hint for the
+          // zoom/pan gestures, which apply to the drawing area as a whole
+          // rather than to any one row/bar — the same "grid-wide hint" idea
+          // `components/DenseDataGrid.tsx`'s own `hint` prop uses, but via
+          // canvasTooltip (the same cursor-following floating-Box mechanism
+          // as barTooltip/labelTooltip, D1.4-126) rather than a native
+          // `title`, so it gets the same pale-yellow styling as every other
+          // hint. Suppressed whenever a bar/label tooltip already owns this
+          // hover — checked via overInteractiveTooltipRef (a ref, not
+          // barTooltip/labelTooltip state directly: it has to reflect
+          // what a bar/label's own onMouseMove *just* set, synchronously
+          // within this same bubbled event, not one render later — reading
+          // state here would show both tooltips for a frame on first
+          // entering a bar/label, since this handler and that one both fire
+          // from the same native event before either state update commits).
+          onMouseMove={(event) => {
+            if (!hintsEnabled || overInteractiveTooltipRef.current) {
+              setCanvasTooltip(null);
+              return;
+            }
+            setCanvasTooltip({
+              text: "Ctrl+scroll: Zoom horizontally.\nShift+scroll: Zoom vertically.\nCtrl+Shift+scroll: Zoom both, centred on the cursor.\nRight-click drag: Pan.",
+              x: event.clientX,
+              y: event.clientY,
+            });
+          }}
+          onMouseLeave={() => setCanvasTooltip(null)}
+          sx={{ display: "flex", flexGrow: 1, minHeight: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: "6px" }}
+        >
           {showNames && (
             <>
               {/* The label column's own outer box is a flex column, not
@@ -1132,15 +1188,28 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                             onMouseDown={(event) => handleRowMouseDown(bar, event)}
                             onDoubleClick={() => handleRowDoubleClick(bar)}
                             onMouseEnter={() => {
+                              overInteractiveTooltipRef.current = true;
                               setHoveredLabelBar(bar);
                               setHoveredLabel(bar.hoverLabel);
                             }}
                             onMouseMove={(event) => {
-                              if (truncatedLabelKeys.has(key) && !isDraggingRef.current) {
-                                setLabelTooltip({ text: bar.label, x: event.clientX, y: event.clientY });
+                              // D1.4-124 — the gesture hint (when "Hints" is
+                              // on) and the full-label-when-truncated
+                              // tooltip (D1.4-32) share this same floating
+                              // box rather than compete for the same hover;
+                              // shown whenever either has something to say,
+                              // not only when the label is actually clipped.
+                              const truncated = truncatedLabelKeys.has(key);
+                              const hint = hintsEnabled
+                                ? "Double-click: Open its own Detail window.\nDrag: Reorder among its own siblings."
+                                : "";
+                              if ((truncated || hint) && !isDraggingRef.current) {
+                                const text = [truncated ? bar.label : null, hint || null].filter(Boolean).join("\n");
+                                setLabelTooltip({ text, x: event.clientX, y: event.clientY });
                               }
                             }}
                             onMouseLeave={() => {
+                              overInteractiveTooltipRef.current = false;
                               setHoveredLabelBar(null);
                               setHoveredLabel("");
                               setLabelTooltip(null);
@@ -1157,27 +1226,49 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                             // opening this Project's own scoped chart
                             // (stopPropagation keeps the click from
                             // reaching either of that rect's handlers).
-                            <g
-                              onMouseDown={(event) => event.stopPropagation()}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleProjectCollapsed(bar.id);
-                              }}
-                              style={{ cursor: "pointer" }}
-                            >
-                              <rect
-                                x={8 + bar.depth * 14 - 3}
-                                y={bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2 - 7}
-                                width={14}
-                                height={14}
-                                fill="transparent"
-                              />
-                              <path
-                                d="M -2.5,-3.5 L 2.5,0 L -2.5,3.5 Z"
-                                fill="rgba(0,0,0,0.55)"
-                                transform={`translate(${8 + bar.depth * 14 + 4}, ${bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2}) rotate(${collapsedProjectIds.has(bar.id) ? 0 : 90})`}
-                              />
-                            </g>
+                            // D1.4-126 — `HintTooltip` (a real MUI Tooltip)
+                            // rather than a plain SVG `<title>`: a `<g>`
+                            // forwards a ref like any DOM node, so it wraps
+                            // just as well as a plain element does, and this
+                            // way it gets the same pale-yellow look as every
+                            // other hint instead of the browser's own native
+                            // tooltip styling.
+                            <HintTooltip hint={collapsedProjectIds.has(bar.id) ? "Click: Expand." : "Click: Collapse."}>
+                              <g
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleProjectCollapsed(bar.id);
+                                }}
+                                // Painted on top of the row's own hit-rect, so
+                                // hovering it directly never bubbles a
+                                // mouseenter/mousemove to that rect — without
+                                // this, overInteractiveTooltipRef would stay
+                                // false while hovering exactly this icon,
+                                // letting the whole-canvas hint show at the
+                                // same time as this element's own.
+                                onMouseEnter={() => {
+                                  overInteractiveTooltipRef.current = true;
+                                }}
+                                onMouseLeave={() => {
+                                  overInteractiveTooltipRef.current = false;
+                                }}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <rect
+                                  x={8 + bar.depth * 14 - 3}
+                                  y={bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2 - 7}
+                                  width={14}
+                                  height={14}
+                                  fill="transparent"
+                                />
+                                <path
+                                  d="M -2.5,-3.5 L 2.5,0 L -2.5,3.5 Z"
+                                  fill="rgba(0,0,0,0.55)"
+                                  transform={`translate(${8 + bar.depth * 14 + 4}, ${bar.y * scaleY + (ROW_HEIGHT * scaleY) / 2}) rotate(${collapsedProjectIds.has(bar.id) ? 0 : 90})`}
+                                />
+                              </g>
+                            </HintTooltip>
                           )}
                           <text
                             ref={(el) => {
@@ -1387,8 +1478,10 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
                   barHeight={barHeight}
                   barVerticalOffset={barVerticalOffset}
                   boxed={boxed}
+                  hintsEnabled={hintsEnabled}
                   onHoverChange={setHoveredLabel}
                   onTooltipChange={(tooltip) => {
+                    overInteractiveTooltipRef.current = tooltip !== null;
                     // Always allow clearing (tooltip === null, e.g. the
                     // mouse left the bar); only suppress showing a *new*
                     // tooltip while some other drag (row reorder,
@@ -1471,12 +1564,18 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
             position: "fixed",
             left: barTooltip.x + TOOLTIP_OFFSET_X,
             top: barTooltip.y + TOOLTIP_OFFSET_Y,
-            bgcolor: "#ffffff",
-            border: "1px solid rgba(0,0,0,0.4)",
+            // D1.4-125 — same pale-yellow, plain-weight look every other
+            // tooltip in the app now uses (`components/HintTooltip.tsx`'s
+            // own `HINT_TOOLTIP_BG`), applied here regardless of whether
+            // this particular hover happens to include a hint line — one
+            // consistent tooltip appearance app-wide, not two.
+            bgcolor: HINT_TOOLTIP_BG,
+            border: "1px solid rgba(0,0,0,0.25)",
             borderRadius: "2px",
             px: "4px",
             py: "2px",
             fontSize: DENSE_FONT_SIZE,
+            fontWeight: 400,
             pointerEvents: "none",
             zIndex: 1300,
             whiteSpace: "pre",
@@ -1497,18 +1596,46 @@ export function PlanPage({ embedded: embed }: PlanPageProps = {}) {
             position: "fixed",
             left: labelTooltip.x + TOOLTIP_OFFSET_X,
             top: labelTooltip.y + TOOLTIP_OFFSET_Y,
-            bgcolor: "#ffffff",
-            border: "1px solid rgba(0,0,0,0.4)",
+            bgcolor: HINT_TOOLTIP_BG,
+            border: "1px solid rgba(0,0,0,0.25)",
             borderRadius: "2px",
             px: "4px",
             py: "2px",
             fontSize: DENSE_FONT_SIZE,
+            fontWeight: 400,
             pointerEvents: "none",
             zIndex: 1300,
             whiteSpace: "pre",
           }}
         >
           {labelTooltip.text}
+        </Box>
+      )}
+      {/* Whole-canvas zoom/pan hint (D1.4-126) — same floating-box mechanism
+          as barTooltip/labelTooltip above, replacing what used to be a
+          native `title` on ganttAreaRef so it gets the same pale-yellow
+          styling; mutually exclusive with those two via
+          overInteractiveTooltipRef, checked in the onMouseMove that sets
+          this, above. */}
+      {canvasTooltip && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: canvasTooltip.x + TOOLTIP_OFFSET_X,
+            top: canvasTooltip.y + TOOLTIP_OFFSET_Y,
+            bgcolor: HINT_TOOLTIP_BG,
+            border: "1px solid rgba(0,0,0,0.25)",
+            borderRadius: "2px",
+            px: "4px",
+            py: "2px",
+            fontSize: DENSE_FONT_SIZE,
+            fontWeight: 400,
+            pointerEvents: "none",
+            zIndex: 1300,
+            whiteSpace: "pre",
+          }}
+        >
+          {canvasTooltip.text}
         </Box>
       )}
     </Box>
@@ -1585,6 +1712,7 @@ function GanttBarRect({
   barHeight,
   barVerticalOffset,
   boxed,
+  hintsEnabled,
   onHoverChange,
   onTooltipChange,
 }: {
@@ -1594,11 +1722,19 @@ function GanttBarRect({
   barHeight: number;
   barVerticalOffset: number;
   boxed: boolean;
+  hintsEnabled: boolean;
   onHoverChange: (label: string) => void;
   onTooltipChange: (tooltip: BarTooltip | null) => void;
 }) {
   if (!bar.startDate || !bar.endDate) return null;
-  const title = `${bar.label}\n${formatDdMmmYy(bar.startDate)} → ${formatDdMmmYy(bar.endDate)}`;
+  // D1.4-124 — appended to the existing name/date-range tooltip rather than
+  // shown as a second, competing one: this bar already has its own
+  // cursor-following custom tooltip (BarTooltip, built pre-D1.4-124
+  // specifically because a native tooltip's position can't be offset from
+  // the cursor), so the gesture hint just becomes one more line of it.
+  const title = `${bar.label}\n${formatDdMmmYy(bar.startDate)} → ${formatDdMmmYy(bar.endDate)}${
+    hintsEnabled ? "\nDouble-click: Open its own Detail window." : ""
+  }`;
   // Boxed mode (V1.2's own Project rendering): a Project's own rect grows
   // downward to cover its whole subtree (falling back to its own row when
   // it has no children — subtreeBottomY is null there — so it still

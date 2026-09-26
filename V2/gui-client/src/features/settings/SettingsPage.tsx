@@ -3,7 +3,14 @@ import Box from "@mui/material/Box";
 import { FieldSelect } from "../../components/DenseField";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { useSingletonWindowIdentity } from "../../lib/windowNav";
-import { getNewWindowMode, setNewWindowMode, type NewWindowMode } from "../../lib/settings";
+import {
+  getHintMode,
+  getNewWindowMode,
+  setHintMode,
+  setNewWindowMode,
+  type HintMode,
+  type NewWindowMode,
+} from "../../lib/settings";
 
 // D1.4-122 — a small, always-the-same-instance popup window (opened via
 // AppShell.tsx's own nav bar, beside Search), for preferences that live in
@@ -22,10 +29,20 @@ export function SettingsPage() {
   // ever change it (there's no cross-window sync to listen for here, unlike
   // this app's own genuine live-data sync, `lib/liveSync.ts`).
   const [newWindowMode, setNewWindowModeState] = useState<NewWindowMode>(() => getNewWindowMode());
+  const [hintMode, setHintModeState] = useState<HintMode>(() => getHintMode());
 
   function handleNewWindowModeChange(mode: NewWindowMode) {
     setNewWindowMode(mode);
     setNewWindowModeState(mode);
+  }
+
+  // D1.4-124 — unlike New Window above, this one is watched live by every
+  // *other* open window's own `useHintsEnabled` (`lib/settings.ts`, via the
+  // native `storage` event) — a change here takes effect immediately in
+  // whatever windows are already open, not just the next one opened.
+  function handleHintModeChange(mode: HintMode) {
+    setHintMode(mode);
+    setHintModeState(mode);
   }
 
   return (
@@ -57,6 +74,21 @@ export function SettingsPage() {
           >
             <option value="Window">Window</option>
             <option value="Tab">Tab</option>
+          </FieldSelect>
+          {/* D1.4-124 — whether every interactive element in the app (a
+              double-clickable row, a Ctrl-draggable badge, an editable
+              cell, ...) shows a tooltip naming its own available gesture(s)
+              and what each does. Applies immediately to every already-open
+              window, not just future ones (lib/settings.ts's own
+              useHintsEnabled). */}
+          <FieldSelect
+            label="Hints"
+            width={140}
+            value={hintMode}
+            onChange={(value) => handleHintModeChange(value as HintMode)}
+          >
+            <option value="On">On</option>
+            <option value="Off">Off</option>
           </FieldSelect>
         </Box>
       </Box>

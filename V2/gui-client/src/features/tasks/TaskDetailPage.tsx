@@ -14,6 +14,7 @@ import {
   FieldTreePicker,
 } from "../../components/DenseField";
 import { buildBreadcrumb, type TreeItem } from "../../components/TreePicker";
+import { HintTooltip } from "../../components/HintTooltip";
 import {
   useAllDependencies,
   useAllTaskResources,
@@ -416,41 +417,43 @@ export function TaskDetailPage() {
             Task's own Description as its title, instead of a full labelled
             field (§3.11's "collapse identity into one compact header"). */}
         <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: "10px" }}>
-          <Box
-            draggable
-            onDragStart={(event) => {
-              // D1.4-10: Ctrl-drag this Task's icon badge (standing in for
-              // its title — the description field next to it is a
-              // live-editable <input>, not a plain label, so it can't
-              // double as the drag source without colliding with native
-              // text-selection drag) onto a different, already open Task
-              // Detail window's Dependencies tab, matching V1.2's own
-              // Ctrl-drag-creates-a-Dependency convention
-              // (Requirements/UserInterfaceWindows.md §4).
-              if (!event.ctrlKey) {
-                event.preventDefault();
-                return;
-              }
-              event.dataTransfer.setData(TASK_DRAG_MIME_TYPE, String(id));
-              event.dataTransfer.effectAllowed = "link";
-            }}
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: "5px",
-              bgcolor: "primary.dark",
-              color: "primary.contrastText",
-              fontSize: 12,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              cursor: "grab",
-            }}
-          >
-            T
-          </Box>
+          <HintTooltip hint="Ctrl+drag onto another Task's own Dependencies tab: Create a Dependency on this Task.">
+            <Box
+              draggable
+              onDragStart={(event) => {
+                // D1.4-10: Ctrl-drag this Task's icon badge (standing in for
+                // its title — the description field next to it is a
+                // live-editable <input>, not a plain label, so it can't
+                // double as the drag source without colliding with native
+                // text-selection drag) onto a different, already open Task
+                // Detail window's Dependencies tab, matching V1.2's own
+                // Ctrl-drag-creates-a-Dependency convention
+                // (Requirements/UserInterfaceWindows.md §4).
+                if (!event.ctrlKey) {
+                  event.preventDefault();
+                  return;
+                }
+                event.dataTransfer.setData(TASK_DRAG_MIME_TYPE, String(id));
+                event.dataTransfer.effectAllowed = "link";
+              }}
+              sx={{
+                width: 24,
+                height: 24,
+                borderRadius: "5px",
+                bgcolor: "primary.dark",
+                color: "primary.contrastText",
+                fontSize: 12,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                cursor: "grab",
+              }}
+            >
+              T
+            </Box>
+          </HintTooltip>
           <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
             <Box sx={{ fontSize: 9, color: "rgba(0,0,0,0.5)" }}>
               TASK #{id}
@@ -802,9 +805,10 @@ export function TaskDetailPage() {
             breadcrumb={buildBreadcrumb(projectTreeItems, (form.project_id as number) ?? null)}
             onSelect={(id) => id != null && setField("project_id", id)}
             readOnly={!canEdit}
-            onBreadcrumbDoubleClick={
+            onBreadcrumbClick={
               form.project_id != null ? () => openItemWindow("projects", form.project_id as number) : undefined
             }
+            breadcrumbHint="Click: Open this Project's own window."
           />
           <FieldTreePicker
             label="Component"
@@ -815,9 +819,10 @@ export function TaskDetailPage() {
             onSelect={(id) => setField("component_id", id)}
             readOnly={!canEdit}
             allowNone
-            onBreadcrumbDoubleClick={
+            onBreadcrumbClick={
               form.component_id != null ? () => openItemWindow("components", form.component_id as number) : undefined
             }
+            breadcrumbHint="Click: Open this Component's own window."
           />
         </Box>
 

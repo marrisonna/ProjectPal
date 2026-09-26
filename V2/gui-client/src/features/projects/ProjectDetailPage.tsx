@@ -494,6 +494,12 @@ export function ProjectDetailPage() {
                 onSelect={(pid) => setField("parent_project_id", pid)}
                 readOnly={!canEdit}
                 allowNone
+                // D1.4-123 (UserInteractionPlan.md) — previously had no
+                // click action at all; now opens the parent Project's own
+                // Detail window, matching Task Detail's own Project/
+                // Component pickers.
+                onBreadcrumbClick={parentProjectId != null ? () => openItemWindow("projects", parentProjectId) : undefined}
+                breadcrumbHint="Click: Open the parent Project's own window."
               />
 
               <FieldTextArea

@@ -17,7 +17,7 @@ import {
 import type { ComponentRecord, TaskRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
 import { DenseButton } from "../../components/DenseField";
-import { DenseDataGrid, useDenseGridColumns } from "../../components/DenseDataGrid";
+import { DenseDataGrid, clickableCellSx, useDenseGridColumns } from "../../components/DenseDataGrid";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { personDisplayName } from "../../lib/people";
@@ -492,9 +492,14 @@ export function SearchPage() {
               rows={filteredRows}
               columns={columns}
               getRowId={(row) => row.rowKey}
-              onRowDoubleClick={openResult}
+              // D1.4-123 (UserInteractionPlan.md) — single click, not
+              // double: this grid has no inline editing to conflict with,
+              // so it follows the app-wide "opening an item is a single
+              // click" rule rather than TaskGrid's own one stated exception.
+              onCellClick={(params) => openResult(params.row)}
+              hint="Click: Open the result."
               getRowClassName={rowClassName}
-              sx={urgencyRowPaletteSx()}
+              sx={[urgencyRowPaletteSx(), clickableCellSx()]}
               onColumnResize={onColumnResize}
               defaultSort={[
                 { field: "type", sort: "asc" },

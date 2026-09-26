@@ -1,7 +1,24 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { TreePicker, type TreeItem } from "./TreePicker";
+import { HintTooltip } from "./HintTooltip";
 import { DENSE_FONT_SIZE } from "../theme/theme";
+import { useHintsEnabled } from "../lib/settings";
+
+// D1.4-123 (UserInteractionPlan.md §5.1) — the app-wide "this can be clicked
+// to navigate to a different window" affordance, for a plain element (not a
+// MUI DataGrid cell — components/DenseDataGrid.tsx's own `clickableCellSx`
+// is the equivalent for those, since a cell needs a `data-field` selector on
+// the grid's own root rather than a style on itself). Originates from
+// `TeamsManagementPage.tsx`'s own Name column, generalised here rather than
+// left as three independently hand-written copies (`Project.tsx`,
+// `Component.tsx`, `FieldTreePicker` below all used to write this out by
+// hand, in slightly different but equivalent forms).
+export const CLICKABLE_SX: SxProps<Theme> = {
+  cursor: "pointer",
+  "&:hover": { textDecoration: "underline" },
+};
 
 // Dense, WinForms-like field controls matching the Claude Design mockup
 // ("Task Detail Compact Mockups.dc.html", option 1a) pixel-for-pixel —
@@ -349,7 +366,8 @@ export function FieldTreePicker({
   onSelect,
   readOnly,
   allowNone,
-  onBreadcrumbDoubleClick,
+  onBreadcrumbClick,
+  breadcrumbHint,
 }: {
   label: string;
   width?: number | string;
@@ -360,17 +378,25 @@ export function FieldTreePicker({
   onSelect: (id: number | null) => void;
   readOnly?: boolean;
   allowNone?: boolean;
-  // D1.4-119 — Task Detail's own Project/Component pickers use this to open
-  // that Project's/Component's own Detail window on double-click; every
-  // other `FieldTreePicker` (e.g. Project/Component Detail's own "Parent"
-  // picker) simply omits it. Independent of `readOnly`/`selectedId` — a
-  // navigation action, not an edit, so it fires (when a value is actually
-  // selected; the caller's own responsibility to check) regardless of
-  // whether this field can be changed.
-  onBreadcrumbDoubleClick?: () => void;
+  // D1.4-119, single-click since D1.4-123 (UserInteractionPlan.md's
+  // navigation-consistency pass) — opens the breadcrumb's own referenced
+  // Project's/Component's Detail window: Task Detail's Project/Component
+  // pickers, and Project/Component Detail's own "Parent" picker (added by
+  // that same pass — previously this field had no click action at all).
+  // Independent of `readOnly`/`selectedId` — a navigation action, not an
+  // edit, so it fires (when a value is actually selected; the caller's own
+  // responsibility to check) regardless of whether this field can be
+  // changed. Omitted entirely by any `FieldTreePicker` that doesn't want it.
+  onBreadcrumbClick?: () => void;
+  // D1.4-124 — the hint text shown (only while "Hints" is "On") when
+  // `onBreadcrumbClick` is also given; differs per caller ("this Project's
+  // own window" vs. "this Component's own window" vs. the parent-picker
+  // wording), so it's the caller's own responsibility, not derived here.
+  breadcrumbHint?: string;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hintsEnabled = useHintsEnabled();
 
   useEffect(() => {
     if (!open) return;
@@ -398,30 +424,50 @@ export function FieldTreePicker({
     >
       <FieldLabel>{label}</FieldLabel>
       <Box sx={{ display: "flex", gap: "4px" }}>
-        <Box
-          title={breadcrumb}
-          onDoubleClick={onBreadcrumbDoubleClick}
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            height: 22,
-            px: "5px",
-            border: BORDER,
-            borderRadius: "3px",
-            display: "flex",
-            alignItems: "center",
-            fontSize: DENSE_FONT_SIZE,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-            color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
-            bgcolor: readOnly ? READONLY_BG : "#fff",
-            boxSizing: "border-box",
-            cursor: onBreadcrumbDoubleClick ? "pointer" : undefined,
-          }}
-        >
-          {breadcrumb || "(none)"}
-        </Box>
+        {(() => {
+          const breadcrumbBox = (
+            <Box
+              // Native `title` (the full path, useful once ellipsis
+              // truncates it) always applies, regardless of the "Hints"
+              // setting — it's a plain overflow affordance, not a gesture
+              // hint. Omitted only while a `HintTooltip` is actually
+              // mounted on this same element (Hints "On" *and* a click
+              // handler/hint given) so the two don't compete for the same
+              // hover; falls back to this native title otherwise, including
+              // whenever Hints is "Off".
+              title={onBreadcrumbClick && breadcrumbHint && hintsEnabled ? undefined : breadcrumb}
+              onClick={onBreadcrumbClick}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                height: 22,
+                px: "5px",
+                border: BORDER,
+                borderRadius: "3px",
+                display: "flex",
+                alignItems: "center",
+                fontSize: DENSE_FONT_SIZE,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                color: readOnly ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.87)",
+                bgcolor: readOnly ? READONLY_BG : "#fff",
+                boxSizing: "border-box",
+                ...(onBreadcrumbClick ? CLICKABLE_SX : null),
+              }}
+            >
+              {breadcrumb || "(none)"}
+            </Box>
+          );
+          // D1.4-125 — the hint alone, not the breadcrumb's own name/path
+          // (that's already visible as the field's own content — a tooltip
+          // repeating it added nothing).
+          return onBreadcrumbClick && breadcrumbHint ? (
+            <HintTooltip hint={breadcrumbHint}>{breadcrumbBox}</HintTooltip>
+          ) : (
+            breadcrumbBox
+          );
+        })()}
         {!readOnly && (
           <DenseButton square onClick={() => setOpen((o) => !o)}>
             {open ? "−" : "+"}

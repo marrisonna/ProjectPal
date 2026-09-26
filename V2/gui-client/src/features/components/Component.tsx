@@ -8,6 +8,8 @@ import AddIcon from "@mui/icons-material/Add";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import type { ComponentRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
+import { CLICKABLE_SX } from "../../components/DenseField";
+import { HintTooltip } from "../../components/HintTooltip";
 import { canEditOwnedRecord, hasRoleAtLeast } from "../../lib/permissions";
 import { openItemWindow } from "../../lib/windowNav";
 import { DENSE_FONT_SIZE } from "../../theme/theme";
@@ -99,26 +101,29 @@ export function Component({
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: "4px", py: "2px" }}>
-        <IconButton
-          size="small"
-          sx={EXPAND_TOGGLE_SX}
-          onClick={() => setExpanded((e) => !e)}
-          aria-label={expanded ? "Collapse" : "Expand"}
-        >
-          <ChevronRightIcon sx={expandChevronSx(expanded)} />
-        </IconButton>
-        <Box
-          component="span"
-          onClick={() => onOpenComponent(component)}
-          sx={{
-            fontWeight: 700,
-            fontSize: DENSE_FONT_SIZE,
-            cursor: "pointer",
-            "&:hover": { textDecoration: "underline" },
-          }}
-        >
-          {component.name}
-        </Box>
+        <HintTooltip hint={expanded ? "Click: Collapse." : "Click: Expand."}>
+          <IconButton
+            size="small"
+            sx={EXPAND_TOGGLE_SX}
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? "Collapse" : "Expand"}
+          >
+            <ChevronRightIcon sx={expandChevronSx(expanded)} />
+          </IconButton>
+        </HintTooltip>
+        <HintTooltip hint="Click: Open this Component's own window.">
+          <Box
+            component="span"
+            onClick={() => onOpenComponent(component)}
+            sx={{
+              fontWeight: 700,
+              fontSize: DENSE_FONT_SIZE,
+              ...CLICKABLE_SX,
+            }}
+          >
+            {component.name}
+          </Box>
+        </HintTooltip>
         {canRename && (
           <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => onRenameComponent(component)}>
             <EditIcon sx={ROW_ICON_SX} />

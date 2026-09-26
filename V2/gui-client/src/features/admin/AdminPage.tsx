@@ -8,7 +8,7 @@ import Tooltip from "@mui/material/Tooltip";
 import { useGridApiRef } from "@mui/x-data-grid";
 import { useExportAllData, useIntegrityCheck, usePeople, useTasks, useTeams } from "../../api/hooks";
 import { useAuth } from "../../auth/AuthContext";
-import { DenseDataGrid, useDenseGridColumns } from "../../components/DenseDataGrid";
+import { DenseDataGrid, clickableCellSx, useDenseGridColumns } from "../../components/DenseDataGrid";
 import { formatApiError } from "../../lib/apiErrors";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
@@ -159,16 +159,18 @@ export function AdminPage() {
                 <Box sx={{ fontSize: 12, fontWeight: 600, mb: "4px" }}>
                   Teams without a Team Lead ({leaderlessTeamRows.length})
                 </Box>
-                {/* Double-click opens that Team's own Team Management
-                    window (the same singleton-per-Team mechanism the rest
-                    of the app uses) so fixing it is one click away, not a
-                    dead-end report. */}
+                {/* D1.4-123 (UserInteractionPlan.md) — single click opens
+                    that Team's own Team Management window (the same
+                    singleton-per-Team mechanism the rest of the app uses)
+                    so fixing it is one click away, not a dead-end report. */}
                 <DenseDataGrid<LeaderlessTeamRow>
                   apiRef={leaderlessApiRef}
                   rows={leaderless.getFilteredRows()}
                   columns={leaderlessColumns}
                   getRowId={(row) => row.team_id}
-                  onRowDoubleClick={(row) => openItemWindow("team-management", row.team_id)}
+                  onCellClick={(params) => openItemWindow("team-management", params.row.team_id)}
+                  hint="Click: Open the Team's own Team Management window."
+                  sx={clickableCellSx()}
                   onColumnResize={leaderless.onColumnResize}
                   filtering={{
                     filterVisible: leaderless.filterVisible,
@@ -183,14 +185,17 @@ export function AdminPage() {
                 <Box sx={{ fontSize: 12, fontWeight: 600, mb: "4px" }}>
                   Stale resource assignments ({staleResourceRows.length})
                 </Box>
-                {/* Double-click opens the Task itself, where the
-                    assignment actually gets fixed. */}
+                {/* D1.4-123 (UserInteractionPlan.md) — single click opens
+                    the Task itself, where the assignment actually gets
+                    fixed. */}
                 <DenseDataGrid<StaleResourceRow>
                   apiRef={staleResourceApiRef}
                   rows={staleResource.getFilteredRows()}
                   columns={staleResourceColumns}
                   getRowId={(row) => row.rowKey}
-                  onRowDoubleClick={(row) => openItemWindow("tasks", row.task_id)}
+                  onCellClick={(params) => openItemWindow("tasks", params.row.task_id)}
+                  hint="Click: Open the Task."
+                  sx={clickableCellSx()}
                   onColumnResize={staleResource.onColumnResize}
                   filtering={{
                     filterVisible: staleResource.filterVisible,

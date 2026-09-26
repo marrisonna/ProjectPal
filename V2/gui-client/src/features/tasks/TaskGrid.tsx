@@ -203,12 +203,17 @@ export const COMPONENT_EMBEDDED_TASK_GRID_COLUMNS: TaskGridColumnKey[] = [
   "external_reference_url",
 ];
 
-// The 9 columns ever editable in a cell (TaskGridPlan.md §4.4, up from the
-// original 8 once Detailed Description joined per D1.4-52) — Effort Type is
-// deliberately excluded on purpose (large knock-on effects on what Effort
+// The 8 columns ever editable in a cell (TaskGridPlan.md §4.4) — Effort Type
+// is deliberately excluded on purpose (large knock-on effects on what Effort
 // itself means), and every other catalog column (computed fields, counts,
 // system-set dates) is never editable from the grid without a further
-// explicit decision.
+// explicit decision. Detailed Description briefly joined this set at
+// `D1.4-52` and was removed again at `D1.4-129`, by request — inline-editing
+// a long free-text field in a dense one-line grid cell wasn't a good fit,
+// and it's still fully editable via Task Detail's own multi-line field
+// either way, governed by the exact same `canEditTaskField` permission tiers
+// (`lib/permissions.ts`) — this is a *this-window* restriction only, not a
+// change to who's allowed to edit the field at all.
 const GOVERNED_FIELDS = new Set<EditableTaskField>([
   "status",
   "tentative_resource_assignment",
@@ -218,7 +223,6 @@ const GOVERNED_FIELDS = new Set<EditableTaskField>([
   "percentage_allocation",
   "task_type",
   "requestor_person_id",
-  "detailed_description",
 ]);
 
 export interface TaskGridProps {
@@ -774,14 +778,13 @@ export function TaskGrid({
       "string",
       maxWidths.external_reference_url,
     ),
-    detailed_description: governed(
-      withFilter(
-        { field: "detailed_description", headerName: "Detailed Description" },
-        (row) => [row.detailed_description ?? ""],
-        "string",
-        maxWidths.detailed_description,
-      ),
-      "detailed_description",
+    // D1.4-129 — read-only in this grid (not `governed`): see
+    // `GOVERNED_FIELDS`'s own comment above for why.
+    detailed_description: withFilter(
+      { field: "detailed_description", headerName: "Detailed Description" },
+      (row) => [row.detailed_description ?? ""],
+      "string",
+      maxWidths.detailed_description,
     ),
   };
 
@@ -887,6 +890,26 @@ export function TaskGrid({
         defaultSort={[defaultSort]}
         initiallyHiddenFields={initiallyHiddenColumns}
         fillHeight={fillHeight}
+        // D1.4-124 — this grid's own row-level gesture: whole-row
+        // double-click always opens Task Detail, regardless of which cell.
+        // D1.4-129 — the *other* gesture, single-click to edit a governed
+        // field, is no longer listed here up front (every editable column
+        // named at once, whether or not it's under the cursor) — it's now
+        // `getCellEditHint` below, naming only the one field actually under
+        // the cursor, only when it's actually editable right now.
+        hint="Double-click: Open Task Detail window."
+        // D1.4-129 — per-cell half of the combined hint tooltip: "Click:
+        // Edit <this column's own header>." for whichever governed cell the
+        // current user can actually edit right now, nothing for any other
+        // cell (an ungoverned column, or a governed one this user/row
+        // combination can't edit) — replacing the old fixed list of every
+        // editable column's name, shown identically regardless of what was
+        // actually under the cursor.
+        getCellEditHint={(params) => {
+          if (!GOVERNED_FIELDS.has(params.field as EditableTaskField)) return null;
+          if (!canEditCell(params.row, params.field as EditableTaskField)) return null;
+          return `Click: Edit ${params.colDef.headerName ?? params.field}.`;
+        }}
         filtering={{
           filterVisible,
           onToggleFilterVisible: () => setFilterVisible((prev) => !prev),

@@ -257,7 +257,7 @@ const TASKS_FOR_RESOURCE_WINDOW_FEATURES = "width=1100,height=700";
 // "Tab" — `windowFeaturesFor` doesn't know or care what the setting is, that
 // switch lives entirely in `openNamedWindow` above, applied uniformly to
 // every caller including this one.
-const SETTINGS_WINDOW_FEATURES = "width=380,height=260";
+const SETTINGS_WINDOW_FEATURES = "width=380,height=300";
 
 function windowFeaturesFor(entityType: string): string | undefined {
   if (entityType === "tasks") return TASK_DETAIL_WINDOW_FEATURES;

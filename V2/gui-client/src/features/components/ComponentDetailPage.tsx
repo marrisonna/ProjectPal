@@ -445,6 +445,14 @@ export function ComponentDetailPage() {
               onSelect={(cid) => setField("parent_component_id", cid)}
               readOnly={!canEdit}
               allowNone
+              // D1.4-123 (UserInteractionPlan.md) — previously had no click
+              // action at all; now opens the parent Component's own Detail
+              // window, matching Task Detail's own Project/Component
+              // pickers.
+              onBreadcrumbClick={
+                parentComponentId != null ? () => openItemWindow("components", parentComponentId) : undefined
+              }
+              breadcrumbHint="Click: Open the parent Component's own window."
             />
           )}
 

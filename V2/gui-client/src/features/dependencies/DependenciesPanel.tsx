@@ -15,6 +15,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { HintTooltip } from "../../components/HintTooltip";
 import {
   useCreateDependency,
   useDeleteDependency,
@@ -204,82 +205,86 @@ export function DependenciesPanel({
       <Typography variant="caption" color="text.secondary">
         Depends upon (predecessors)
       </Typography>
-      <List
-        dense
-        sx={dropZoneSx("predecessor")}
-        onDragOver={(event) => {
-          if (!isDraggedTask(event)) return;
-          event.preventDefault();
-          setDragOverZone("predecessor");
-        }}
-        onDragLeave={() => setDragOverZone((zone) => (zone === "predecessor" ? null : zone))}
-        onDrop={(event) => {
-          if (!isDraggedTask(event)) return;
-          handleDropOnZone(event, "predecessor");
-        }}
-      >
-        {predecessors.map((dep) => (
-          <ListItem
-            key={dep.dependency_id}
-            secondaryAction={
-              <IconButton
-                edge="end"
-                size="small"
-                onClick={() => deleteDependency.mutate(dep.dependency_id)}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            }
-          >
-            <ListItemText primary={otherSideLabel(dep, "pre")} />
-          </ListItem>
-        ))}
-        {predecessors.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
-            None.
-          </Typography>
-        )}
-      </List>
+      <HintTooltip hint="Ctrl+drag a Task's own title badge here: Make it a predecessor of this one.">
+        <List
+          dense
+          sx={dropZoneSx("predecessor")}
+          onDragOver={(event) => {
+            if (!isDraggedTask(event)) return;
+            event.preventDefault();
+            setDragOverZone("predecessor");
+          }}
+          onDragLeave={() => setDragOverZone((zone) => (zone === "predecessor" ? null : zone))}
+          onDrop={(event) => {
+            if (!isDraggedTask(event)) return;
+            handleDropOnZone(event, "predecessor");
+          }}
+        >
+          {predecessors.map((dep) => (
+            <ListItem
+              key={dep.dependency_id}
+              secondaryAction={
+                <IconButton
+                  edge="end"
+                  size="small"
+                  onClick={() => deleteDependency.mutate(dep.dependency_id)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              }
+            >
+              <ListItemText primary={otherSideLabel(dep, "pre")} />
+            </ListItem>
+          ))}
+          {predecessors.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
+              None.
+            </Typography>
+          )}
+        </List>
+      </HintTooltip>
 
       <Typography variant="caption" color="text.secondary">
         Dependants (successors)
       </Typography>
-      <List
-        dense
-        sx={dropZoneSx("successor")}
-        onDragOver={(event) => {
-          if (!isDraggedTask(event)) return;
-          event.preventDefault();
-          setDragOverZone("successor");
-        }}
-        onDragLeave={() => setDragOverZone((zone) => (zone === "successor" ? null : zone))}
-        onDrop={(event) => {
-          if (!isDraggedTask(event)) return;
-          handleDropOnZone(event, "successor");
-        }}
-      >
-        {successors.map((dep) => (
-          <ListItem
-            key={dep.dependency_id}
-            secondaryAction={
-              <IconButton
-                edge="end"
-                size="small"
-                onClick={() => deleteDependency.mutate(dep.dependency_id)}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            }
-          >
-            <ListItemText primary={otherSideLabel(dep, "post")} />
-          </ListItem>
-        ))}
-        {successors.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
-            None.
-          </Typography>
-        )}
-      </List>
+      <HintTooltip hint="Ctrl+drag a Task's own title badge here: Make it a successor of this one.">
+        <List
+          dense
+          sx={dropZoneSx("successor")}
+          onDragOver={(event) => {
+            if (!isDraggedTask(event)) return;
+            event.preventDefault();
+            setDragOverZone("successor");
+          }}
+          onDragLeave={() => setDragOverZone((zone) => (zone === "successor" ? null : zone))}
+          onDrop={(event) => {
+            if (!isDraggedTask(event)) return;
+            handleDropOnZone(event, "successor");
+          }}
+        >
+          {successors.map((dep) => (
+            <ListItem
+              key={dep.dependency_id}
+              secondaryAction={
+                <IconButton
+                  edge="end"
+                  size="small"
+                  onClick={() => deleteDependency.mutate(dep.dependency_id)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              }
+            >
+              <ListItemText primary={otherSideLabel(dep, "post")} />
+            </ListItem>
+          ))}
+          {successors.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
+              None.
+            </Typography>
+          )}
+        </List>
+      </HintTooltip>
 
       <Dialog
         open={dialogOpen}

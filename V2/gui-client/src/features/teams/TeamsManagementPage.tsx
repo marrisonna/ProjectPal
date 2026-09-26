@@ -30,7 +30,7 @@ import {
 } from "../../api/hooks";
 import type { PersonRecord, TeamRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
-import { DenseDataGrid, DENSE_ROW_HEIGHT, useDenseGridColumns } from "../../components/DenseDataGrid";
+import { DenseDataGrid, DENSE_ROW_HEIGHT, clickableCellSx, useDenseGridColumns } from "../../components/DenseDataGrid";
 import { formatApiError } from "../../lib/apiErrors";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { openItemWindow, useSingletonWindowIdentity } from "../../lib/windowNav";
@@ -314,13 +314,12 @@ export function TeamsManagementPage() {
           }}
           // Link-like affordance on the one clickable cell, since a plain
           // grid cell otherwise gives no visual hint it opens something —
-          // matches `data-field`, the attribute MUI DataGrid already
-          // stamps on every cell, so this only ever touches the Name
-          // column, never the Actions cell beside it.
-          sx={{
-            "& .MuiDataGrid-cell[data-field='name']": { cursor: "pointer" },
-            "& .MuiDataGrid-cell[data-field='name']:hover": { textDecoration: "underline" },
-          }}
+          // the app-wide shared primitive this screen's own original
+          // version of this rule was generalised into (D1.4-123,
+          // UserInteractionPlan.md §5.1); scoped to just the Name column so
+          // it never touches the Actions cell beside it.
+          sx={clickableCellSx("name")}
+          hint="Click: Open the Team's own Team Management window."
           onColumnResize={onColumnResize}
           defaultSort={[{ field: "name", sort: "asc" }]}
           filtering={{

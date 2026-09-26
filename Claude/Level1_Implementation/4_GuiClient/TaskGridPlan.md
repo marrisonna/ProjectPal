@@ -265,7 +265,7 @@ The "T" column's own **visibility** (as opposed to editability) stays exactly as
 <a id="editable-columns"></a>
 ### 4.4 Editable Columns — Level 1
 
-Of the 22 catalog columns, 9 are ever editable in a cell, each behind `canEditTaskField` — up from the 8 first proposed: **Detailed Description joins the list** (`D1.4-52`), since it's one of V1.2's own two tier-3 (Resource) fields and there's no reason to make it editable for a Resource but not for the Task's own owner, who already had full rights to it in V1.2 too.
+Of the 22 catalog columns, 9 are ever editable in a cell, each behind `canEditTaskField` — up from the 8 first proposed: **Detailed Description joins the list** (`D1.4-52`), since it's one of V1.2's own two tier-3 (Resource) fields and there's no reason to make it editable for a Resource but not for the Task's own owner, who already had full rights to it in V1.2 too. **Reverted at `D1.4-129`** (`Claude/Level1_Implementation/4_GuiClient/Plan.md`) — back to 8 columns ever editable *in the grid specifically*; Detailed Description is still governed by exactly the same `canEditTaskField` permission tiers on Task Detail's own field, this only ever removed its inline-in-a-dense-grid-cell editing.
 
 | Column | Editor | Notes |
 |---|---|---|

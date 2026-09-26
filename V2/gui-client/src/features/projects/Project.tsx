@@ -8,6 +8,8 @@ import AddIcon from "@mui/icons-material/Add";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import type { ProjectRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
+import { CLICKABLE_SX } from "../../components/DenseField";
+import { HintTooltip } from "../../components/HintTooltip";
 import { canEditOwnedRecord, hasRoleAtLeast, isTeamLead } from "../../lib/permissions";
 import { isProjectActive } from "../../lib/schedule";
 import { openItemWindow } from "../../lib/windowNav";
@@ -96,29 +98,32 @@ export function Project({
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: "4px", py: "2px" }}>
-        <IconButton
-          size="small"
-          sx={EXPAND_TOGGLE_SX}
-          onClick={() => setExpanded((e) => !e)}
-          aria-label={expanded ? "Collapse" : "Expand"}
-        >
-          <ChevronRightIcon sx={expandChevronSx(expanded)} />
-        </IconButton>
-        <Box
-          component="span"
-          onClick={() => onOpenProject(project)}
-          sx={{
-            fontWeight: 700,
-            fontSize: DENSE_FONT_SIZE,
-            // Muted, not hidden — a Project with no open Task and no active
-            // sub-Project still needs to stay reachable to browse into.
-            color: active ? "inherit" : "rgba(0,0,0,0.45)",
-            cursor: "pointer",
-            "&:hover": { textDecoration: "underline" },
-          }}
-        >
-          {project.name}
-        </Box>
+        <HintTooltip hint={expanded ? "Click: Collapse." : "Click: Expand."}>
+          <IconButton
+            size="small"
+            sx={EXPAND_TOGGLE_SX}
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? "Collapse" : "Expand"}
+          >
+            <ChevronRightIcon sx={expandChevronSx(expanded)} />
+          </IconButton>
+        </HintTooltip>
+        <HintTooltip hint="Click: Open this Project's own window.">
+          <Box
+            component="span"
+            onClick={() => onOpenProject(project)}
+            sx={{
+              fontWeight: 700,
+              fontSize: DENSE_FONT_SIZE,
+              // Muted, not hidden — a Project with no open Task and no active
+              // sub-Project still needs to stay reachable to browse into.
+              color: active ? "inherit" : "rgba(0,0,0,0.45)",
+              ...CLICKABLE_SX,
+            }}
+          >
+            {project.name}
+          </Box>
+        </HintTooltip>
         {canRename && (
           <IconButton size="small" sx={ROW_ICON_BUTTON_SX} onClick={() => onRenameProject(project)}>
             <EditIcon sx={ROW_ICON_SX} />

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DataGrid,
   useGridApiRef,
   type GridCellParams,
   type GridColDef,
   type GridColumnVisibilityModel,
+  type GridRenderCellParams,
   type GridRenderEditCellParams,
   type GridSingleSelectColDef,
   type GridSortModel,
@@ -19,6 +20,8 @@ import MenuItem from "@mui/material/MenuItem";
 import ListItemText from "@mui/material/ListItemText";
 import { branding, DENSE_FONT_SIZE } from "../theme/theme";
 import { formatApiError } from "../lib/apiErrors";
+import { HINT_TOOLTIP_BG } from "./HintTooltip";
+import { useHintsEnabled } from "../lib/settings";
 import {
   columnFilterPasses,
   EMPTY_COLUMN_FILTER,
@@ -89,6 +92,31 @@ export const CELL_FONT_WEIGHT = 400;
 // .check`/`.load`), which requires exactly this CSS font shorthand syntax.
 export const HEADER_FONT = `${HEADER_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
 export const CELL_FONT = `${CELL_FONT_WEIGHT} ${DENSE_FONT_SIZE}px ${branding.fontFamily}`;
+
+// D1.4-123 (UserInteractionPlan.md §5.1) — the app-wide "this can be clicked
+// to navigate to a different window" affordance, for a MUI DataGrid cell
+// specifically: a cell has no `sx` prop of its own, so this has to be
+// applied on the *grid's own root* `sx`, targeting cells via the
+// `data-field` attribute MUI DataGrid already stamps on every one — the
+// same technique `TeamsManagementPage.tsx` originated for its own Name
+// column, generalised here. `components/DenseField.tsx`'s own `CLICKABLE_SX`
+// is the equivalent for a plain element outside a grid (e.g.
+// `FieldTreePicker`'s breadcrumb) — same visual rule, different mechanism,
+// since a grid cell needs a selector rather than a direct style.
+//
+// `field` omitted entirely (rather than passed one specific column) means
+// "every cell in the row" — for a grid where double-clicking *anywhere* on
+// the row already opened something (Search/Admin Tools/Dashboard, none of
+// which single out one column the way TeamsManagementPage's own Name-only
+// affordance does), converting to single-click should keep that same
+// whole-row scope, not narrow it down to an arbitrarily chosen column.
+export function clickableCellSx(field?: string): Record<string, { cursor?: string; textDecoration?: string }> {
+  const selector = field ? `.MuiDataGrid-cell[data-field="${field}"]` : ".MuiDataGrid-cell";
+  return {
+    [`& ${selector}`]: { cursor: "pointer" },
+    [`& ${selector}:hover`]: { textDecoration: "underline" },
+  };
+}
 
 // Every column is sized to its own heading/content by measuring real text
 // against the grid's own font via an offscreen canvas, computed directly in
@@ -850,6 +878,59 @@ export interface DenseDataGridProps<T> {
   // resolve against — the same containment requirement `AppShell.tsx`
   // itself needed fixing for exactly this reason (`D1.4-111`).
   fillHeight?: boolean;
+  // D1.4-124/D1.4-126/D1.4-128 (UserInteractionPlan.md §10) — one plain-text
+  // description of this grid's own gesture(s) (e.g. "Double-click: Open its
+  // Task Detail window."), shown while hovering *anywhere* in the grid, only
+  // while the "Hints" setting is "On". Deliberately a single grid-wide hint
+  // on the outer container, not a per-cell one — a grid cell has no
+  // `sx`/ref of its own the way a plain element has, and every grid this is
+  // used on today has (at most) one or two gestures naming *where* to click
+  // in their own wording, so a per-cell mechanism wasn't worth the extra
+  // complexity. Any cell with its own more specific tooltip (e.g.
+  // `GridActionsCellItem`'s own `label`, a real MUI Tooltip) is unaffected —
+  // that takes visual precedence regardless, a completely different,
+  // higher-priority UI layer nested inside this one.
+  //
+  // A cursor-following custom tooltip (the same mechanism `PlanPage.tsx`'s
+  // own `canvasTooltip` uses, D1.4-127), not a plain `HintTooltip` wrap of
+  // the whole grid container — `D1.4-127` tried exactly that first, and a
+  // real, tall grid (`AllTaskPage.tsx`'s `fillHeight`, spanning nearly the
+  // full window) exposed why it doesn't work: MUI's `Tooltip` anchors to a
+  // *placement relative to the wrapped element's own bounding box*, and for
+  // an anchor that tall, "top" placement lands the popup above the whole
+  // grid — off the top of the browser window entirely when the grid itself
+  // starts near the page's own top edge, confirmed via a scripted hover
+  // (`getBoundingClientRect()` came back with a negative `y`). Reported as
+  // "the grid doesn't appear to have any tooltip" — it was rendering, just
+  // off-screen.
+  //
+  // D1.4-129 — combined with two more things into the *same* tooltip,
+  // rather than two/three separate ones stacking on top of each other:
+  // 1. MUI's own default cell rendering sets a native `title` on *every*
+  //    plain cell unconditionally (`GridCell.js`: `title = valueString`
+  //    whenever a column has no `renderCell` of its own) — a plain white
+  //    browser tooltip repeating content already fully visible for most
+  //    (untruncated, auto-fit) cells, reported directly as two competing
+  //    tooltips on the same cell. Suppressed grid-wide (see `effectiveColumns`
+  //    below) and replaced with this cursor-following tooltip's own text —
+  //    but *only* when that cell's own rendered text is actually clipped
+  //    (`scrollWidth > clientWidth` on the hovered `.MuiDataGrid-cell`), so
+  //    an already-fully-visible cell adds nothing.
+  // 2. `getCellEditHint` (below) supplies a *per-cell* line naming what a
+  //    click on this specific cell would do — only ever present for a cell
+  //    that's actually editable right now, rather than this `hint` string
+  //    listing every editable column up front regardless of what's under
+  //    the cursor.
+  hint?: string;
+  // D1.4-129 — the per-cell half of the combined tooltip above: called for
+  // whichever cell is currently under the cursor, returning the line to add
+  // (e.g. `` `Click: Edit ${colDef.headerName}.` ``) when that cell is
+  // editable right now, or `null`/`undefined` when it isn't — TaskGrid is
+  // the only caller today (a read-only grid has nothing to say here).
+  // Recomputed on every hover, not cached: whether a given cell is editable
+  // can depend on the row's own data (who owns it, current Status) as well
+  // as the column, so it has to be re-evaluated per row, not just per column.
+  getCellEditHint?: (params: GridCellParams<T>) => string | null | undefined;
 }
 
 // The shared dense-grid chrome itself (D1.4-73): sizing, border, header
@@ -871,9 +952,18 @@ export function DenseDataGrid<T>({
   onProcessRowUpdateError,
   initiallyHiddenFields,
   fillHeight = false,
+  hint,
+  getCellEditHint,
 }: DenseDataGridProps<T>) {
   const internalApiRef = useGridApiRef();
   const apiRef = externalApiRef ?? internalApiRef;
+  const hintsEnabled = useHintsEnabled();
+  // D1.4-128/D1.4-129 — cursor-following, not a `HintTooltip` wrap of the
+  // whole grid container (see the `hint` prop's own doc comment above for
+  // why); now carries its own combined text too, not just a position — what
+  // it says can differ cell-to-cell (truncated content, `getCellEditHint`),
+  // where `hint`/`canvasTooltip`'s equivalent everywhere else is fixed.
+  const [gridHintTooltip, setGridHintTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; field: string | null } | null>(
     null,
   );
@@ -970,8 +1060,75 @@ export function DenseDataGrid<T>({
     handleCloseContextMenu();
   }
 
-  return (
-    <Box onContextMenu={handleContextMenu} sx={fillHeight ? { height: "100%" } : undefined}>
+  // D1.4-129 — suppresses MUI's own default per-cell native `title` (see the
+  // `hint` prop's own doc comment) by giving every column that doesn't
+  // already have a `renderCell` a trivial one that renders the exact same
+  // text MUI would have anyway — `GridCell.js` only sets that `title` in the
+  // `children === undefined` branch, i.e. exactly when there's no custom
+  // `renderCell`. A column whose `type` already supplies its own default
+  // `renderCell` internally (checkboxes, the actions column) is left alone:
+  // that merge happens inside `DataGrid` itself, after this component ever
+  // sees the raw `columns` prop, so `col.renderCell` still reads `undefined`
+  // for one of these here even though it won't once actually rendered —
+  // injecting our own would incorrectly replace their real icon/button
+  // rendering with plain text.
+  const effectiveColumns = useMemo(
+    () =>
+      columns.map((col) => {
+        if (col.renderCell) return col;
+        if (col.type === "actions" || col.type === "boolean") return col;
+        return {
+          ...col,
+          renderCell: (params: GridRenderCellParams<T>) => params.formattedValue ?? params.value ?? "",
+        };
+      }),
+    [columns],
+  );
+
+  const gridBox = (
+    <Box
+      onContextMenu={handleContextMenu}
+      // D1.4-128/D1.4-129 — cursor-following, matching the position the
+      // mouse is actually at (regardless of how tall this grid is or where
+      // its own top edge sits on the page), rather than a `HintTooltip`
+      // anchored to this container's own bounding box — see the `hint`
+      // prop's own doc comment for why that broke on a full-page-height
+      // grid. Always attached, not just when `hint`/`getCellEditHint` are
+      // given — the truncated-cell-text line below is a baseline affordance
+      // every grid needs now that its native replacement is suppressed
+      // grid-wide (`effectiveColumns` above), not something tied to having
+      // a gesture hint to show.
+      onMouseMove={(event) => {
+        const cellEl = (event.target as HTMLElement).closest(".MuiDataGrid-cell[data-field]") as HTMLElement | null;
+        const lines: string[] = [];
+        // Only when this cell's own rendered text is actually clipped —
+        // exactly the condition MUI's own (now-suppressed) native `title`
+        // never checked, which is what made it show for every cell
+        // regardless of whether truncation ever applied (D1.4-129).
+        if (cellEl && cellEl.scrollWidth > cellEl.clientWidth) {
+          const text = cellEl.textContent?.trim();
+          if (text) lines.push(text);
+        }
+        if (hintsEnabled) {
+          if (hint) lines.push(hint);
+          if (getCellEditHint && cellEl) {
+            const field = cellEl.getAttribute("data-field")!;
+            const rowId = cellEl.closest("[data-id]")?.getAttribute("data-id");
+            if (rowId != null) {
+              const editHint = getCellEditHint(apiRef.current.getCellParams(rowId, field));
+              if (editHint) lines.push(editHint);
+            }
+          }
+        }
+        if (lines.length === 0) {
+          setGridHintTooltip(null);
+          return;
+        }
+        setGridHintTooltip({ x: event.clientX, y: event.clientY, text: lines.join("\n") });
+      }}
+      onMouseLeave={() => setGridHintTooltip(null)}
+      sx={fillHeight ? { height: "100%" } : undefined}
+    >
       <DataGrid<T>
         apiRef={apiRef}
         rows={rows}
@@ -1002,7 +1159,7 @@ export function DenseDataGrid<T>({
           onColumnResize ? (params) => onColumnResize(params.colDef.field, params.width) : undefined
         }
         getRowId={getRowId}
-        columns={columns}
+        columns={effectiveColumns}
         onCellClick={onCellClick}
         onCellDoubleClick={
           onRowDoubleClick
@@ -1035,40 +1192,49 @@ export function DenseDataGrid<T>({
         }}
         sortingOrder={["asc", "desc"]}
         getRowClassName={getRowClassName ? (params) => getRowClassName(params.row) : undefined}
-        sx={{
-          fontSize: DENSE_FONT_SIZE,
-          // A fine, dark grey outline around the whole grid — MUI's own
-          // default border reads as too faint to clearly separate the grid
-          // from whatever it's embedded in.
-          border: "1px solid rgba(0,0,0,0.4)",
-          "& .MuiDataGrid-columnHeader": { paddingLeft: 0, paddingRight: 0 },
-          // The header/sort row's own grey fill lives on FilterableHeader's
-          // own label Box instead (GridColumnFilter.tsx) — not here — since
-          // this container wraps the filter row too, and that needs to
-          // stay white, not shaded the same as the label above it.
-          "& .MuiDataGrid-columnHeaders": {
-            bgcolor: "#fff",
-            // Darkens the vertical divider *between header cells specifically*
-            // (both the label row and, once darkened this way, the filter row
-            // underneath it too — the two aren't independently stylable, since
-            // MUI paints one border per header cell spanning its full height,
-            // not two). Overriding MUI's own CSS variable directly, scoped to
-            // this container only (never touching `.MuiDataGrid-virtualScroller`,
-            // the data rows' own separate container, so the main grid's own
-            // vertical lines stay at MUI's default shade) — not a custom
-            // element layered on top of MUI's own separator, which is what
-            // three earlier attempts tried and each broke under a filter-row-
-            // visible/hidden difference that resisted diagnosis from source
-            // alone (confirmed via DevTools: MUI's own `.MuiDataGrid-
-            // columnSeparator` sits above anything `colDef.renderHeader`
-            // produces, in a stacking context our own content has no way to
-            // out-rank — the border MUI paints on the header cell itself,
-            // not that separator overlay, is what was actually ever visible,
-            // and is what this recolours directly instead of fighting).
-            "--DataGrid-rowBorderColor": "rgba(0,0,0,0.4)",
+        sx={[
+          {
+            fontSize: DENSE_FONT_SIZE,
+            // A fine, dark grey outline around the whole grid — MUI's own
+            // default border reads as too faint to clearly separate the grid
+            // from whatever it's embedded in.
+            border: "1px solid rgba(0,0,0,0.4)",
+            "& .MuiDataGrid-columnHeader": { paddingLeft: 0, paddingRight: 0 },
+            // The header/sort row's own grey fill lives on FilterableHeader's
+            // own label Box instead (GridColumnFilter.tsx) — not here — since
+            // this container wraps the filter row too, and that needs to
+            // stay white, not shaded the same as the label above it.
+            "& .MuiDataGrid-columnHeaders": {
+              bgcolor: "#fff",
+              // Darkens the vertical divider *between header cells specifically*
+              // (both the label row and, once darkened this way, the filter row
+              // underneath it too — the two aren't independently stylable, since
+              // MUI paints one border per header cell spanning its full height,
+              // not two). Overriding MUI's own CSS variable directly, scoped to
+              // this container only (never touching `.MuiDataGrid-virtualScroller`,
+              // the data rows' own separate container, so the main grid's own
+              // vertical lines stay at MUI's default shade) — not a custom
+              // element layered on top of MUI's own separator, which is what
+              // three earlier attempts tried and each broke under a filter-row-
+              // visible/hidden difference that resisted diagnosis from source
+              // alone (confirmed via DevTools: MUI's own `.MuiDataGrid-
+              // columnSeparator` sits above anything `colDef.renderHeader`
+              // produces, in a stacking context our own content has no way to
+              // out-rank — the border MUI paints on the header cell itself,
+              // not that separator overlay, is what was actually ever visible,
+              // and is what this recolours directly instead of fighting).
+              "--DataGrid-rowBorderColor": "rgba(0,0,0,0.4)",
+            },
           },
-          ...sx,
-        }}
+          // The caller's own `sx` (e.g. TaskGrid's urgency palette as a plain
+          // object, or Dashboard/Search's `[urgencyRowPaletteSx(),
+          // clickableCellSx()]` as an array) — MUI's own array-of-`sx` form,
+          // not an object spread: `...sx` on an array-typed `sx` here would
+          // spread numeric indices instead of merging style rules, silently
+          // dropping every selector it contains (found live on Dashboard's
+          // urgency tint, D1.4-126).
+          ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+        ]}
       />
       <Snackbar open={!!copyError} autoHideDuration={6000} onClose={() => setCopyError(null)}>
         <Alert severity="error" onClose={() => setCopyError(null)}>
@@ -1169,6 +1335,28 @@ export function DenseDataGrid<T>({
           </MenuItem>
         ))}
       </Menu>
+      {gridHintTooltip && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: gridHintTooltip.x + 16,
+            top: gridHintTooltip.y + 12,
+            bgcolor: HINT_TOOLTIP_BG,
+            border: "1px solid rgba(0,0,0,0.25)",
+            borderRadius: "2px",
+            px: "4px",
+            py: "2px",
+            fontSize: DENSE_FONT_SIZE,
+            fontWeight: 400,
+            pointerEvents: "none",
+            zIndex: 1300,
+            whiteSpace: "pre-line",
+          }}
+        >
+          {gridHintTooltip.text}
+        </Box>
+      )}
     </Box>
   );
+  return gridBox;
 }

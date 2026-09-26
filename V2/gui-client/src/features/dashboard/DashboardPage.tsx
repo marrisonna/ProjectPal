@@ -12,7 +12,7 @@ import {
 } from "../../api/hooks";
 import type { ProjectRecord, TaskRecord } from "../../api/types";
 import { useAuth } from "../../auth/AuthContext";
-import { DenseDataGrid, useDenseGridColumns } from "../../components/DenseDataGrid";
+import { DenseDataGrid, clickableCellSx, useDenseGridColumns } from "../../components/DenseDataGrid";
 import { buildScheduleGraph, computeUrgency, getTaskSchedule, urgencyRowPaletteSx } from "../../lib/schedule";
 import {
   buildResourceWorkloadRows,
@@ -278,7 +278,11 @@ export function DashboardPage() {
             rows={getFilteredRows()}
             columns={columns}
             getRowId={(row) => row.key}
-            onRowDoubleClick={openFilteredTasks}
+            // D1.4-123 (UserInteractionPlan.md) — single click; no inline
+            // editing here to conflict with. A no-op on the "Total" summary
+            // row, same as before (openFilteredTasks's own guard).
+            onCellClick={(params) => openFilteredTasks(params.row)}
+            hint="Click: See the Resource's own filtered Tasks."
             onColumnResize={onColumnResize}
             // Highest Max Urgency first — "Total" still pinned last
             // regardless, via this column's own `getSortComparator`
@@ -292,7 +296,7 @@ export function DashboardPage() {
               onResetFilters: resetFilters,
             }}
             getRowClassName={(row) => dashboardUrgencyRowClassName(resourceWorkloadAvgUrgency(row))}
-            sx={urgencyRowPaletteSx()}
+            sx={[urgencyRowPaletteSx(), clickableCellSx()]}
           />
         )}
       </Box>
